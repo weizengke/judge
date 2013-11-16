@@ -13,24 +13,11 @@
 
 #include "tlhelp32.h"
 
-/* BEGIN: Added by weizengke, 2013/11/15 for debug center*/
-#include "..\..\include\pdt_common_inc.h"
-/* END:   Added by weizengke, 2013/11/15 */
-
-#include "..\include\psapi.h"
 
 #include "..\include\judge_inc.h"
 
 
- /* 必须在mysql.h之前，因为里面用到socket  #include <winsock2.h> ,windows.h貌似已经包含 */
-#include "..\..\thirdpart\mysql\include\mysql.h"
-
 using namespace std;
-
-#pragma  comment(lib,"..\..\..\..\..\build\lib\psapi.lib")
-
-#pragma comment(lib,"ws2_32")
-#pragma comment(lib, "..\..\..\..\..\build\lib\libmysql.lib")
 
 
 char INI_filename[]="GDOJ\\data.ini";
@@ -110,7 +97,7 @@ extern void pdt_debug_print(const char *format, ...);
 ////////////////////////////////////////////////////socket
 #define PORT 5000
 #define BUFFER 1024
-#pragma comment(lib,"WSOCK32.lib")   //必须的
+
 int port=PORT;
 
 typedef struct
@@ -638,13 +625,13 @@ int RUN_solution(int solutionId)
 		PROCESS_MEMORY_COUNTERS   pmc;
 		unsigned long tmp_memory=0;
 
-		/*
+		#if 0
 		 //del for mingw
 		if(GetProcessMemoryInfo(G_pi.hProcess,&pmc,sizeof(pmc))) {
 			tmp_memory=pmc.PeakWorkingSetSize/1024;
 			if(tmp_memory>GL_memory) GL_memory=tmp_memory;
 		}
-       */
+        #endif
 
 		//get process state
 		GetExitCodeProcess(G_pi.hProcess, &g_dwCode);

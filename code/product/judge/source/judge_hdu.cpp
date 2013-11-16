@@ -12,10 +12,6 @@
 
 #include "tlhelp32.h"
 
-/* BEGIN: Added by weizengke, 2013/11/15 for debug center*/
-#include "..\..\include\pdt_common_inc.h"
-/* END:   Added by weizengke, 2013/11/15 */
-
 
 #include "..\include\judge_inc.h"
 
