@@ -31,7 +31,7 @@
 static const char* VERDICT_NAME[] = {"ALL", "Queuing", "Compiling", "Compilation Error", "Running","Accepted",
 									"Wrong Answer","Runtime Error","Time Limit Exceeded",
 									"Memory Limit Exceeded","Presentation Error","Output Limit Exceeded",
-									"Rejection Function","Out Of Comtest","System Error"};
+									"Restricted Function","Out Of Comtest","System Error"};
 
 #define JUDGE_SYSTEM_ERROR 0
 #define JUDGE_WARNING 1

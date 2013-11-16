@@ -452,6 +452,8 @@ DEFUN(cmd_judge_solution_st, (char*)"judge solution INTEGER<1-65535>", (char*)"j
 	extern int Judge_PushQueue(int solutionId);
 	Judge_PushQueue(solutionId);
 
+	cmd_outstring("Info: Solution judge-request has been sent to Judge-Queue asynchronously.\r\n");
+
 	return 0;
 }
 

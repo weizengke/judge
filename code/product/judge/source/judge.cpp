@@ -881,19 +881,19 @@ DWORD WINAPI WorkThread(LPVOID lpParam)
 				jd=Q.front();
 			  	GL_currentId=jd.solutionId;
 
-				judge_outstring("Info: Start to judge the solution, please wait...");
-				MSG_StartDot();
+				//judge_outstring("Info: Start to judge the solution, please wait...");
+				//MSG_StartDot();
 
 				/* ∆Ù∂Ø∆¿≈– */
 				work(GL_currentId);
 				Q.pop();
 
-				MSG_StopDot();
-				judge_outstring("done.\r\n");
+				//MSG_StopDot();
+				//judge_outstring("done.\r\n");
 
 				string time_string_;
 				API_TimeToString(time_string_,GL_submitDate);
-				judge_outstring(" ----------------------"
+				judge_outstring("\r\n ----------------------"
 							"\r\n     *Judge verdict*"
 						    "\r\n ----------------------"
 							"\r\n SolutionId   : %3d"
