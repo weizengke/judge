@@ -11,6 +11,26 @@
 
 using namespace std;
 
+#if 0
+void MSGQueueMain()
+{
+
+}
+
+
+void pdt_debug_print(const char *format, ...)
+{
+
+}
+
+
+void pdt_debug_print_ex(int level, const char *format, ...)
+{
+
+}
+#endif
+
+#if 1
 #define MAX_MSGBUF_SIZE 255
 
 std::mutex g_mutex_msgQ;
@@ -22,31 +42,6 @@ typedef struct tag_MSGQueue_S {
 }MSGQUEUE_S;
 
 queue <MSGQUEUE_S> g_stMsgQueue;
-
-void RunDelay(int t)
-{
-    std::this_thread::sleep_for(std::chrono::milliseconds(t));
-}
-
-void MSGQueueThread()
-{
-    MSGQUEUE_S stMsgQ;
-    for (;;)
-    {
-        while (!g_stMsgQueue.empty())
-        {
-            g_mutex_msgQ.lock();
-            stMsgQ = g_stMsgQueue.front();
-			printf("<%04d-%02d-%02d %02d:%02d:%02d>",stMsgQ.stTime.tm_year, stMsgQ.stTime.tm_mon,stMsgQ.stTime.tm_mday,
-													stMsgQ.stTime.tm_hour,stMsgQ.stTime.tm_min,stMsgQ.stTime.tm_sec);
-            std::cout<<"TaskID("<< stMsgQ.thread_id << "):" << stMsgQ.szMsgBuf;
-            g_stMsgQueue.pop();
-            g_mutex_msgQ.unlock();
-            RunDelay(1);
-        }
-        RunDelay(1);
-    }
-}
 
 void pdt_debug_print(const char *format, ...)
 {
@@ -117,6 +112,81 @@ void pdt_debug_print_ex(int level, const char *format, ...)
     g_mutex_msgQ.lock();
 	g_stMsgQueue.push(stMsgQ);
 	g_mutex_msgQ.unlock();
+
+}
+
+void RunDelay(int t)
+{
+    std::this_thread::sleep_for(std::chrono::milliseconds(t));
+}
+
+void timer()
+{
+    std::thread::id this_id = std::this_thread::get_id();
+    cout<< "Run timer ok.......[" <<this_id<<"]"<<endl;
+    for (int i=0; ; i++)
+    {
+        pdt_debug_print("Do timer %d",i);
+        RunDelay(1000);
+    }
+}
+
+
+
+void MSG_OutStringWait()
+{
+
+}
+
+int g_dotprint = 0;
+
+void msg_dot_thread()
+{
+	int i;
+
+	g_dotprint = 1;
+
+	for (int i=0; g_dotprint!=0; i++)
+    {
+        printf(".");
+        RunDelay(500);
+    }
+
+}
+void MSG_StartDot()
+{
+	std::thread t_dot(msg_dot_thread);
+	t_dot.detach();
+}
+
+void MSG_StopDot()
+{
+	g_dotprint = 0;
+}
+
+void MSGQueueMain()
+{
+    MSGQUEUE_S stMsgQ;
+    for (;;)
+    {
+        while (!g_stMsgQueue.empty())
+        {
+            g_mutex_msgQ.lock();
+            stMsgQ = g_stMsgQueue.front();
+			printf("<%04d-%02d-%02d %02d:%02d:%02d>",stMsgQ.stTime.tm_year, stMsgQ.stTime.tm_mon,stMsgQ.stTime.tm_mday,
+													stMsgQ.stTime.tm_hour,stMsgQ.stTime.tm_min,stMsgQ.stTime.tm_sec);
+            std::cout<<"TaskID("<< stMsgQ.thread_id << "):" << stMsgQ.szMsgBuf;
+            g_stMsgQueue.pop();
+            g_mutex_msgQ.unlock();
+            RunDelay(1);
+        }
+        RunDelay(1);
+    }
+}
+#endif
+
+void Debug_TaskEntry()
+{
 
 }
 

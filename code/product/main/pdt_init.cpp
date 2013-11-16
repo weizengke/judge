@@ -13,40 +13,38 @@
 
 using namespace std;
 
-void timer()
-{
-    std::thread::id this_id = std::this_thread::get_id();
-    cout<< "Run timer ok.......[" <<this_id<<"]"<<endl;
-    for (int i=0; ; i++)
-    {
-        //pdt_debug_print("Do timer %d",i);
-        RunDelay(1000);
-    }
-}
-
 
 int main()
 {
 
-    std::thread t_msg(MSGQueueThread);
+#if 1
+    extern void MSGQueueMain();
+	std::thread t_debug(MSGQueueMain);
 	RunDelay(10);
+	pdt_debug_print("Debug task init ok...");
 
-	std::thread t_timer(timer);
+	extern void OJ_TaskEntry();
+	std::thread t_oj(OJ_TaskEntry);
 	RunDelay(10);
+	pdt_debug_print("OJ task init ok...");
 
 	extern int cmd_main_entry ();
 	std::thread t_cmd(cmd_main_entry);
 	RunDelay(10);
 
-	extern void OJ_TaskEntry();
-	std::thread t_oj(OJ_TaskEntry);
-	RunDelay(1000);
+
+#if 0
+	extern int test_main();
+	std::thread t_test(test_main);
+#endif
+
+	//pdt_debug_print("JungleOS init has been finished...");
+	t_debug.join();
+	t_oj.join();
 
 	/* 	×èÈû  */
-	t_oj.join();
-	t_msg.join();
 	t_cmd.join();
-	t_timer.join();
-
+	//t_test.join();
+#endif
 	return 0;
 }

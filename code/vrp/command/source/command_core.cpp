@@ -8,134 +8,8 @@ Note:
 
 */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-#include <time.h>
+#include "..\include\command_inc.h"
 
-#include <stdarg.h>
-#include <assert.h>
-
-#ifdef _LINUX_
-#include <curses.h>
-#include <termios.h>
-#include <unistd.h>
-#else
-#include <conio.h>
-#include <io.h>
-#include <windows.h>
-
-#endif
-
-#include "..\..\debug\include\debug_center.h"
-
-
-/* config */
-// log info level
-
-#define LOG_DEBUG    3
-#define LOG_WARNING  4
-#define LOG_ERR      5
-
-#define CMD_LOG_LEVEL	LOG_DEBUG
-
-// maximum number of command to remember
-#define HISTORY_MAX_SIZE	20
-
-// maximum number of commands that can matched
-#define CMD_MAX_MATCH_SIZE	100
-
-// maximum number of command arguments
-#define CMD_MAX_CMD_NUM		10
-
-#define CMD_MAX_CMD_ELEM_SIZE 24
-
-#define CMD_MAX_SYSNAME_SIZE 24
-
-#define CMD_ELEM_SPACE_SIZE  CMD_MAX_CMD_ELEM_SIZE + 1
-
-#define CMD_MAX_PROMPT_SIZE 24
-
-// when interacting, the prompt like "jungle>"
-#define CMD_PROMPT_DEFAULT	"config"
-
-// size of input buffer size
-#define CMD_BUFFER_SIZE		1024
-
-// enter may be '\n' or '\r\n'
-#define CMD_ENTER			"\r\n"
-
-// how much number of command ouput in one line
-#define CMD_LINE_NUM		2
-
-#define FNAME "cmd-sys.c"
-
-#define CMD_ERR 1
-#define CMD_OK  0
-
-#define CMD_YES 1
-#define CMD_NO  0
-
-#define DEBUG_DISABLE 0
-#define DEBUG_ENABLE  1
-
-/* BEGIN: Added by weizengke, 2013/10/27  for debug switch*/
-enum CMD_DEBUG_TYPE_EM
-{
-	CMD_DEBUG_TYPE_NONE,
-
-	CMD_DEBUG_TYPE_ERROR,
-	CMD_DEBUG_TYPE_FUNC,
-	CMD_DEBUG_TYPE_INFO,
-	CMD_DEBUG_TYPE_MSG,
-	CMD_DEBUG_TYPE_FSM,
-
-	CMD_DEBUG_TYPE_MAX,
-};
-
-char *szDebugName[CMD_DEBUG_TYPE_MAX] = {
-	"none",
-	"error",
-	"function",
-	"info",
-	"message",
-	"fsm",
-};
-
-#define CMD_DEBUG_TYPE_ISVALID(x) (x>CMD_DEBUG_TYPE_NONE && x<CMD_DEBUG_TYPE_MAX)
-
-#define CMD_MASKLENTG 32
-unsigned long g_aulDebugMask[CMD_DEBUG_TYPE_MAX/CMD_MASKLENTG + 1] = {0};
-int g_debug_switch = DEBUG_DISABLE;
-
-#define CMD_DEBUGMASK_GET(x) (( g_aulDebugMask[(x)/CMD_MASKLENTG] >> ((x)%CMD_MASKLENTG) ) & 1)
-#define CMD_DEBUGMASK_SET(x) ( g_aulDebugMask[(x)/CMD_MASKLENTG] |= ( 1 << (x)%CMD_MASKLENTG ) )
-#define CMD_DEBUGMASK_CLEAR(x) ( g_aulDebugMask[(x)/CMD_MASKLENTG] ^= ( 1 << (x)%CMD_MASKLENTG ) )
-
-/* END:   Added by weizengke, 2013/10/27 */
-
-
-char g_sysname[CMD_MAX_SYSNAME_SIZE] = "Jungle";
-
-#define _CMDDEF_
-#ifndef  _CMDDEF_
-typedef unsigned int UINT;
-#endif
-#ifndef  _CMDDEF_
-typedef unsigned short USHORT;
-#endif
-#ifndef  _CMDDEF_
-typedef unsigned long ULONG;
-#endif
-#ifndef  _CMDDEF_
-typedef unsigned char UCHAR;
-#endif
-
-/* assert(0) */
-#define CMD_DBGASSERT(x) if (0 == x) printf("Assert!!!!!!!!!!!!!! Is that a bug?");
-
-#define CMD_NOUSED(x) ((x) = (x))
 
 void debug_print_ex(CMD_DEBUG_TYPE_EM type, const char *format, ...)
 {
@@ -144,7 +18,6 @@ void debug_print_ex(CMD_DEBUG_TYPE_EM type, const char *format, ...)
 	{
 		return;
 	}
-
 
 	if (!CMD_DEBUG_TYPE_ISVALID(type))
 	{
@@ -188,7 +61,7 @@ void debug_print(const char *format, ...)
     p->tm_year = p->tm_year + 1900;
     p->tm_mon = p->tm_mon + 1;
 
-	printf("<DEBUG - %04d-%02d-%02d %02d:%02d:%02d>",p->tm_year, p->tm_mon, p->tm_mday,p->tm_hour,p->tm_min,p->tm_sec);
+	printf("<%04d-%02d-%02d %02d:%02d:%02d>",p->tm_year, p->tm_mon, p->tm_mday,p->tm_hour,p->tm_min,p->tm_sec);
 	va_list args;
 	va_start(args, format);
 	vprintf(format, args);
@@ -260,34 +133,6 @@ void cmd_outstring(const char *format, ...);
 void cmd_clear_line(struct cmd_vty *vty);
 
 
-
-
-/**
- * A virtual tty used by CMD
- *
- * @param prompt prompt string, such as cmd, then you see 'cmd>'
- * @param buffer buffer to store user input
- * @param buf_len buffer length
- * @param used_len buffer actually used length
- * @param cur_pos current cursor point in which position in buffer
- * @param c latest input key word
- * @param history to record user input command
- * @param hpos history current position
- * @param hindex history end index
- * */
-struct cmd_vty {
-	char prompt[CMD_MAX_PROMPT_SIZE];
-	char buffer[CMD_BUFFER_SIZE];
-	int buf_len;
-	int used_len;
-	int cur_pos;
-	char c;
-
-	char *history[HISTORY_MAX_SIZE];
-	int hpos;
-	int hindex;
-};
-
 /**
  * Initial cmd_vty
  *
@@ -311,38 +156,6 @@ void cmd_vty_deinit(struct cmd_vty *vty);
  */
 void cmd_vty_add_history(struct cmd_vty *vty);
 
-
-/**
- * struct to store command string
- *
- * @param size total size of vector
- * @param used_size already allocated size
- * @param data point to data
- */
-typedef struct cmd_vector {
-	int size;
-	int used_size;
-	void **data;
-} cmd_vector_t;
-
-#define cmd_vector_slot(v, i)	    ((v)->data[(i)])
-#define cmd_vector_max(v)		    ((v)->used_size)
-
-
-#define CMD_INTEGER 	"INTEGER"
-#define CMD_STRING  	"STRING"
-
-enum CMD_ELEM_TYPE_EM
-{
-	CMD_ELEM_TYPE_VALID,
-	CMD_ELEM_TYPE_KEY,
-	CMD_ELEM_TYPE_INTEGER,
-	CMD_ELEM_TYPE_STRING,
-
-	CMD_ELEM_TYPE_END,  /* <CR> */
-	CMD_ELEM_TYPE_MAX,
-
-};
 
 /*****************************************************************************
  Prototype    : cmd_elem_is_para_type
@@ -373,111 +186,6 @@ int cmd_elem_is_para_type(CMD_ELEM_TYPE_EM type)
 	return CMD_NO;
 }
 
-/**
- * A struct cmd_elem_st relative to One command
- *
- * @param string command string, such as 'show vlan'
- * @param doc command refenrence, each command word has one
- * @param func excute when command called
- * @param para_vec command string in para_vec form
- * @param para_size command parameter number
- */
-struct cmd_elem_st {
-	char *string;
-	char *doc;
-	int (*func)(struct cmd_elem_st *, struct cmd_vty *, int , char **);
-	cmd_vector_t *para_vec;
-	int para_num;
-
-	int cmd_id; /* for comand function callback */
-};
-
-/**
- * A struct para_desc relative to One command parameter
- *
- * @param para command parameter, such as 'show' of 'show vlan'
- * @param desc command parameter reference
- */
-struct para_desc {
-	CMD_ELEM_TYPE_EM  elem_tpye;
-	int  elem_id;
-	char *para;
-	char *desc;
-};
-
-// command match type
-enum CMD_MATCH_STATUS {
-	CMD_NO_MATCH,
-	CMD_FULL_MATCH,
-	CMD_PART_MATCH,
-	CMD_LIST_MATCH,
-	CMD_ERR_AMBIGOUS,
-	CMD_ERR_ARGU,
-};
-
-
-// Global command vector, to store user installed commands
-cmd_vector_t *cmd_vec;
-
-
-/* DEFUN for vty command interafce. Little bit hacky ;-). */
-#define DEFUN(cmdname, cmdstr, helpstr, funcname) \
-	int funcname (struct cmd_elem_st *, struct cmd_vty *, int, char **); \
-	struct cmd_elem_st cmdname = \
-	{ \
-		cmdstr, \
-		helpstr, \
-		funcname \
-	}; \
-	int funcname \
-	(struct cmd_elem_st *self, struct cmd_vty *vty, int argc, char **argv)
-
-
-enum CMD_ELEM_ID_EM {
-	CMD_ELEM_ID_NONE = -1,
-	CMD_ELEM_ID_CR,
-	CMD_ELEM_ID_UNDO,
-	CMD_ELEM_ID_ENABLE,
-	CMD_ELEM_ID_DISABLE,
-	CMD_ELEM_ID_DISPLAY,
-	CMD_ELEM_ID_DEBUG,
-	CMD_ELEM_ID_ON,
-	CMD_ELEM_ID_OFF,
-	CMD_ELEM_ID_DATE,
-	CMD_ELEM_ID_DHCP,
-	CMD_ELEM_ID_VERSION,
-	CMD_ELEM_ID_STP,	 	/* 10 */
-	CMD_ELEM_ID_SYSNAME,
-	CMD_ELEM_ID_CLOCK,
-	CMD_ELEM_ID_COMPUTER,
-
-	CMD_ELEM_ID_STRING1TO24,
-	CMD_ELEM_ID_INTEGER1TO24,
-
-	CMD_ELEM_ID_HISTTORY,
-
-	CMD_ELEM_ID_BRIEF,
-	CMD_ELEM_ID_VERBOSE,
-
-	CMD_ELEM_ID_VJUDGE,
-
-	CMD_ELEM_ID_LOOPBACK,
-	CMD_ELEM_ID_LOOPBACK_DETECT,
-
-	CMD_ELEM_ID_INTERNAL,
-
-
-	CMD_ELEM_ID_DEBUG_ERROR,
-	CMD_ELEM_ID_DEBUG_FUNC,
-	CMD_ELEM_ID_DEBUG_INFO,
-	CMD_ELEM_ID_DEBUG_MSG,
-	CMD_ELEM_ID_DEBUG_FSM,
-	CMD_ELEM_ID_DEBUG_ALL,
-
-	CMD_ELEM_ID_MAX,
-};
-
-struct para_desc g_cmd_elem[CMD_ELEM_ID_MAX];
 
 int cmd_get_elemid_by_name(int *cmd_elem_id, char *cmd_name)
 {
@@ -607,67 +315,8 @@ int cmd_reg_newcmdelement(int cmd_elem_id, CMD_ELEM_TYPE_EM cmd_elem_type, const
 }
 
 
-/* key */
-// definition of ASCII value of keys
-// Arrow key is a sequenece started by 27, 91, XX
-// Backspace value is 8, Ctrl+H equals backspace, so another value is 127
-#ifdef _LINUX_
-#define CMD_KEY_ARROW1	0x1b  		 //0xffffffe0
-#define CMD_KEY_ARROW2	0x5b		 //0x0
-#define CMD_KEY_UP		0x41         //0x48
-#define CMD_KEY_DOWN 	0x42		 //0x50
-#define CMD_KEY_RIGHT 	0x43		 //0x4d
-#define CMD_KEY_LEFT 	0x44		 //0x4b
-#define CMD_KEY_DELETE  0x7e		 //0x08
-#define CMD_KEY_BACKSPACE 0x20		 //0x8
-#define CMD_KEY_CTRL_H	(0x1f | 0x7f)
-#else
-#define CMD_KEY_ARROW1	0xffffffe0   //0x1b
-#define CMD_KEY_ARROW2	0x0			 //0x5b
-#define CMD_KEY_UP		0x48
-#define CMD_KEY_DOWN 	0x50
-#define CMD_KEY_RIGHT 	0x4d
-#define CMD_KEY_LEFT 	0x4b
-#define CMD_KEY_DELETE  0x08
-#define CMD_KEY_BACKSPACE 0x20
-#define CMD_KEY_CTRL_H	(0x1f | 0x7f)
-#endif
-
-enum CMD_KEY_CODE_EM {
-	CMD_KEY_CODE_NONE = -1,
-		CMD_KEY_CODE_TAB = 0,  // CMD_KEY_CODE_TAB
-		CMD_KEY_CODE_ENTER,
-		CMD_KEY_CODE_QUEST,
-		CMD_KEY_CODE_UP,
-		CMD_KEY_CODE_DOWN,
-		CMD_KEY_CODE_LEFT,
-		CMD_KEY_CODE_RIGHT,
-		CMD_KEY_CODE_DELETE,
-		CMD_KEY_CODE_NOTCARE,
-
-		CMD_KEY_CODE_MAX
-};
-
-typedef struct key_handler {
-	int key_value;
-	void (*key_func)(struct cmd_vty *);
-} key_handler_t;
-
-
-const char *key_name[CMD_KEY_CODE_MAX] = {
-	"EM_KEY_TAB",
-		"CMD_KEY_CODE_ENTER",
-		"CMD_KEY_CODE_QUEST",
-		"CMD_KEY_CODE_UP",
-		"CMD_KEY_CODE_DOWN",
-		"CMD_KEY_CODE_LEFT",
-		"CMD_KEY_CODE_RIGHT",
-		"CMD_KEY_CODE_DELETE",
-		"CMD_KEY_CODE_NOTCARE"
-};
 
 int cmd_resolve(char c);
-
 void cmd_resolve_tab(struct cmd_vty *vty);
 void cmd_resolve_enter(struct cmd_vty *vty);
 void cmd_resolve_quest(struct cmd_vty *vty);
@@ -711,8 +360,6 @@ void cmd_debug(int level, const char *fname, const char *fmt, ...)
 
 
 /* vty */
-
-
 struct cmd_vty *cmd_vty_init()
 {
 	struct cmd_vty *vty;
@@ -1675,8 +1322,7 @@ void install_element(struct cmd_elem_st *elem)
 
 /* resolve */
 
-/* ------------------ Auxiliary Function ----------------- */
-#define ANOTHER_LINE(i)	(((i) != 0) && ((i) % CMD_LINE_NUM == 0))
+
 
 // insert a word into the tail of input buffer
 static void cmd_insert_word(struct cmd_vty *vty, const char *str)
@@ -1711,10 +1357,8 @@ static inline void free_matched(char **matched)
 	free(matched);
 }
 
-
 int g_InputMachine_prev = CMD_KEY_CODE_NOTCARE;
 int g_InputMachine_now = CMD_KEY_CODE_NOTCARE;
-
 char g_tabbingString[CMD_MAX_CMD_ELEM_SIZE] = {0};  /* 最初始用来补全查找的字串*/
 char g_tabString[CMD_MAX_CMD_ELEM_SIZE] = {0};      /* 最后一次补全的命令 */
 int g_tabStringLenth = 0;
@@ -2280,539 +1924,9 @@ key_handler_t key_resolver[] = {
 	{ CMD_KEY_CODE_DELETE, 	cmd_resolve_delete },
 	{ CMD_KEY_CODE_NOTCARE, cmd_resolve_insert },
 };
-/* end resolve */
-
-
-
-/* api */
-
-// Define your API function here
-/*
- * Three part: function declaration; define structure; function definition
- * For part one - function declaration:
- *			= Advise make function name as test function name plus t
- *			  e.g. To test function: parse_macaddr(which is a function in your interface), then
- *				   define its name as 'parse_macaddr_t'
- * For part two - define structure:
- *			= Advise make structure name as test function name plus n
- *			  e.g. So parse_macaddr has struct name 'parse_macaddr_n'
- *			  Then define three member: cmdstr, funcname, helpstr
- *				- cmdstr: Advise test function name, so let it be "parse_macaddr"
- *				- funcname: function name in part one, so be parse_macaddr_t, intention, this is not string
- *				- helpstr: words to explain your function, including usage, purpose and parameters
- * For part three - function definition
- *			= Define your function, notice argc and argv starts from parameters, so not including
- *			"parse_macaddr" itself
- *
- * Below is an example, you can copy, paste, modify, and compile
- */
-
-DEFUN(cmd_debugging_enable_st, (char*)"debugging enable", (char*)"Debugging switch on", Debugging_enable)
-{
-	if (g_debug_switch == DEBUG_ENABLE)
-	{
-		printf("Info: debugging switch is already enable.\n");
-		return 0;
-	}
-
-	g_debug_switch = DEBUG_ENABLE;
-	printf("Info: debugging switch is enable.\n");
-
-	return 0;
-}
-
-
-DEFUN(cmd_undo_debugging_enable_st, (char*)"undo debugging enable", (char*)"Debugging switch off", undo_debugging_enable)
-{
-
-	if (g_debug_switch == DEBUG_DISABLE)
-	{
-		printf("Info: debugging switch is already disable.\n");
-		return 0;
-	}
-
-	g_debug_switch = DEBUG_DISABLE;
-	printf("Info: debugging switch is disable.\n");
-
-	return 0;
-}
-
-DEFUN(date_elem_st, (char*)"date", (char*)"Display date-time now", date)
-{
-	if(argc == 0) {
-		time_t	timep = time(NULL);
-		struct tm *p;
-
-		p = localtime(&timep);
-		p->tm_year = p->tm_year + 1900;
-		p->tm_mon = p->tm_mon + 1;
-
-		printf(" Date of device:\r\n %04d-%02d-%02d %02d:%02d:%02d UTC(+8) DTS\n",p->tm_year, p->tm_mon, p->tm_mday,p->tm_hour,p->tm_min,p->tm_sec);
-
-		return 0;
-	}
-
-	printf("Syntax Error\n");
-	return -1;
-}
-
-
-DEFUN(cmd_dhcp_enable_st, (char*)"dhcp enable", (char*)"Dynamic Host Configuration Protocol", dhcp_enable)
-{
-	printf("Info: dhcp enable successful.\n");
-	return 0;
-}
-
-DEFUN(cmd_dhcp_disable_st, (char*)"dhcp enable", (char*)"Dynamic Host Configuration Protocol", dhcp_disable)
-{
-	printf("Info: dhcp disable successful.\n");
-	return 0;
-}
-
-
-DEFUN(cmd_stp_enable_st, (char*)"stp enable", (char*)"Spanning tree protocol", stp_enable)
-{
-	//printf("argc=%d, %s %s", argc, argv[0], argv[1]);
-
-	printf("Info: stp enable successful.\n");
-
-	return 0;
-}
-
-DEFUN(cmd_stp_disable_st, (char*)"stp disable", (char*)"Spanning tree protocol", stp_disable)
-{
-	//printf("argc=%d, %s %s", argc, argv[0], argv[1]);
-
-	printf("Info: stp disable successful.\n");
-
-	return 0;
-}
-
-DEFUN(cmd_display_clock_st, (char*)"display clock", (char*)"Display clock of device", display_clock)
-{
-	time_t	timep = time(NULL);
-	struct tm *p;
-
-	p = localtime(&timep);
-	p->tm_year = p->tm_year + 1900;
-	p->tm_mon = p->tm_mon + 1;
-
-	printf(" Date of device:\r\n %04d-%02d-%02d %02d:%02d:%02d UTC(+8) DTS\n",p->tm_year, p->tm_mon, p->tm_mday,p->tm_hour,p->tm_min,p->tm_sec);
-
-	return 0;
-}
-
-DEFUN(cmd_display_computer_st, (char*)"display computer", (char*)"Display computer information", display_computer)
-{
-	printf("This is Jungle Wei's computer.\n");
-	return 0;
-}
-
-DEFUN(cmd_display_version_st, (char*)"display version", (char*)"Display device version", display_version)
-{
-	printf("Common command-line system Version 0.0.1 Beta.\n");
-	return 0;
-}
-
-DEFUN(cmd_display_stp_st, (char*)"display stp", (char*)"Display stp information", display_stp)
-{
-	printf("Test command 'display stp'.\n");
-	return 0;
-}
-
-
-DEFUN(cmd_display_stp_brief_st, (char*)"display stp brief", (char*)"Display stp brief information", display_stp_brief)
-{
-	printf("Test command 'display stp brief'.\n");
-	return 0;
-}
-
-DEFUN(cmd_display_stp_verbose_st, (char*)"display stp verbose", (char*)"Display device version", display_stp_verbose)
-{
-	printf("Test command 'display stp verbose'.\n");
-
-	return 0;
-}
-
-DEFUN(cmd_virtual_judge_enable_st, (char*)"virtual-judge enable", (char*)"Enable virtual judge", virtual_judge_enable)
-{
-	printf("Info: virtual judge enable successful, support hdoj virtual-judge only.\n");
-
-	return 0;
-}
-
-DEFUN(cmd_undo_virtual_judge_enable_st, (char*)"undo virtual-judge enable", (char*)"Undo enable virtual judge", undo_virtual_judge_enable)
-{
-	printf("Info: virtual judge is disable successful.\n");
-
-	return 0;
-}
-
-
-DEFUN(cmd_disable_st, (char*)"disable", (char*)"disable", disable)
-{
-	printf("Info: disable.\n");
-
-	return 0;
-}
-
-DEFUN(cmd_display_st, (char*)"display", (char*)"display", display)
-{
-	printf("Info: display.\n");
-	return 0;
-}
-
-
-
-DEFUN(cmd_sysname_st, (char*)"sysname STRING<1-24>", (char*)"set system name", sysname)
-{
-	CMD_DBGASSERT(argv[1] != 0);
-
-	strcpy(g_sysname, argv[1]);
-
-	printf("Info: system name change to %s successful.\r\n", argv[1]);
-
-	return 0;
-}
-
-DEFUN(cmd_display_history_st, (char*)"display history", (char*)"Display history command", display_history)
-{
-	int try_idx = 0;
-	int i = 0;
-
-	for (i = 0;  i < HISTORY_MAX_SIZE; i++)
-	{
-		if (vty->history[i] == NULL)
-			break;
-	}
-
-	for (i = i-1; i >= 0; i--)
-	{
-		if (vty->history[i] == NULL)
-			break;
-
-		cmd_outstring("%s\r\n", vty->history[i]);
-	}
-
-	return 0;
-}
-
-
-DEFUN(cmd_display_history_n_st, (char*)"display history INTEGER<1-100>", (char*)"Display history command", display_history_n)
-{
-	int n = 0;
-	int i = 0;
-
-	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "%d %s %s %s\n", argc, argv[0], argv[1], argv[2]);
-
-	CMD_DBGASSERT(argv[2]);
-
-	n = atoi(argv[2]);
-
-	debug_print_ex(CMD_DEBUG_TYPE_FUNC,"n = %d\n", n);
-
-	for (i = 0;  i < HISTORY_MAX_SIZE; i++)
-	{
-		if (vty->history[i] == NULL)
-			break;
-	}
-
-	for (i = i-1; i >= 0 && n > 0; i--,n--)
-	{
-		if (vty->history[i] == NULL)
-			break;
-
-		cmd_outstring("%s\r\n", vty->history[i]);
-	}
-
-	debug_print_ex(CMD_DEBUG_TYPE_FUNC,"+");
-
-	return 0;
-}
-
-DEFUN(cmd_loopback_internal_st, (char*)"loopback internal", (char*)"loopback internal", loopback_internal)
-{
-	printf("Info: loopback internal.\n");
-	return 0;
-}
-
-DEFUN(cmd_loopback_detect_enable_st, (char*)"loopback-detect enable", (char*)"loopback-detect enable", loopback_detect_enable)
-{
-	printf("Info: loopback-detect enable.\n");
-	return 0;
-}
-
-DEFUN(cmd_display_loopback_st, (char*)"display loopback", (char*)"display loopback info", display_loopback)
-{
-	printf("Info: display loopback.\n");
-	return 0;
-}
-DEFUN(cmd_disable_loopback_detect_st, (char*)"disable loopback-detect", (char*)"disable loopback-detect protocol", disable_loopback_detect)
-{
-	printf("Info: disable loopback-detect.\n");
-	return 0;
-}
-
-DEFUN(cmd_display_loopback_brief_st, (char*)"display loopback brief", (char*)"display loopback brief info", display_loopback_brief)
-{
-	printf("Info: display loopback.\n");
-	return 0;
-}
-
-DEFUN(cmd_display_loopback_detect_brief_st, (char*)"display loopback-detect brief", (char*)"display loopback-detect protocol brief Info", display_loopback_detect_brief)
-{
-	printf("Info: display loopback-detect brief.\n");
-	return 0;
-}
-
-
-DEFUN(cmd_debugging_error_st, (char*)"debugging error", (char*)"open debugging error switch", debugging_error)
-{
-	CMD_DEBUGMASK_SET(CMD_DEBUG_TYPE_ERROR);
-	printf("Info: debugging error switch is on.\r\n");
-	return 0;
-}
-
-DEFUN(cmd_undo_debugging_error_st, (char*)"undo debugging error", (char*)"close debugging error switch", undo_debugging_error)
-{
-	CMD_DEBUGMASK_CLEAR(CMD_DEBUG_TYPE_ERROR);
-	printf("Info: debugging error switch is off.\r\n");
-	return 0;
-}
-
-DEFUN(cmd_debugging_function_st, (char*)"debugging function", (char*)"open debugging function switch", debugging_function)
-{
-	CMD_DEBUGMASK_SET(CMD_DEBUG_TYPE_FUNC);
-	printf("Info: debugging function switch is on.\r\n");
-	return 0;
-}
-
-DEFUN(cmd_undo_debugging_function_st, (char*)"undo debugging function", (char*)"Close debugging function switch", undo_debugging_function)
-{
-	CMD_DEBUGMASK_CLEAR(CMD_DEBUG_TYPE_FUNC);
-	printf("Info: debugging function switch is off.\r\n");
-	return 0;
-}
-
-DEFUN(cmd_debugging_info_st, (char*)"debugging info", (char*)"Open debugging info switch", debugging_info)
-{
-	CMD_DEBUGMASK_SET(CMD_DEBUG_TYPE_INFO);
-	printf("Info: debugging info switch is on.\r\n");
-	return 0;
-}
-
-DEFUN(cmd_undo_debugging_info_st, (char*)"undo debugging info", (char*)"close debugging info switch", undo_debugging_info)
-{
-	CMD_DEBUGMASK_CLEAR(CMD_DEBUG_TYPE_INFO);
-	printf("Info: debug info switch is off.\r\n");
-	return 0;
-}
-
-DEFUN(cmd_debugging_message_st, (char*)"debugging message", (char*)"Open debugging message switch", debugging_message)
-{
-	CMD_DEBUGMASK_SET(CMD_DEBUG_TYPE_MSG);
-	printf("Info: debug message switch is on.\r\n");
-	return 0;
-}
-
-DEFUN(cmd_undo_debugging_message_st, (char*)"undo debugging message", (char*)"close debugging message switch", undo_debugging_message)
-{
-	CMD_DEBUGMASK_CLEAR(CMD_DEBUG_TYPE_MSG);
-	printf("Info: debugging message switch is off.\r\n");
-	return 0;
-}
-
-DEFUN(cmd_debugging_fsm_st, (char*)"debugging fsm", (char*)"open debugging fsm switch", debugging_fsm)
-{
-	CMD_DEBUGMASK_SET(CMD_DEBUG_TYPE_FSM);
-	printf("Info: debugging fsm switch is on.\r\n");
-	return 0;
-}
-
-DEFUN(cmd_undo_debugging_fsm_st, (char*)"undo debugging fsm", (char*)"close debugging fsm switch", undo_debugging_fsm)
-{
-	CMD_DEBUGMASK_CLEAR(CMD_DEBUG_TYPE_FSM);
-	printf("Info: debugging message switch is off.\r\n");
-	return 0;
-}
-
-DEFUN(cmd_debugging_all_st, (char*)"debugging all", (char*)"open debugging all switch", debugging_all)
-{
-	int i;
-	for (i = CMD_DEBUG_TYPE_NONE + 1; i < CMD_DEBUG_TYPE_MAX; i++ )
-	{
-		CMD_DEBUGMASK_SET(i);
-	}
-
-	printf("Info: debugging all switch is on.\r\n");
-	return 0;
-}
-
-DEFUN(cmd_undo_debugging_all_st, (char*)"undo debugging all", (char*)"close debugging all switch", undo_debugging_all)
-{
-	int i;
-	for (i = CMD_DEBUG_TYPE_NONE + 1; i < CMD_DEBUG_TYPE_MAX; i++ )
-	{
-		CMD_DEBUGMASK_CLEAR(i);
-	}
-
-	printf("Info: debugging all switch is off.\r\n");
-	return 0;
-
-}
-
-DEFUN(cmd_display_debugging_st, (char*)"display debugging", (char*)"display debugging switch", display_debugging)
-{
-	int i = 0;
-	if (g_debug_switch == DEBUG_ENABLE)
-	{
-		printf("Global debugging is enable.\r\n");
-	}
-	else
-	{
-		printf("Global debugging is disable.\r\n");
-	}
-
-	printf(" DebugMask(0x%x", g_aulDebugMask[0]);
-	for (i = 1; i < CMD_DEBUG_TYPE_MAX/CMD_MASKLENTG + 1 ; i++)
-	{
-		printf("	,0x%x", g_aulDebugMask[i]);
-	}
-	printf(").\r\n");
-
-	for (i = CMD_DEBUG_TYPE_NONE + 1; i < CMD_DEBUG_TYPE_MAX; i++ )
-	{
-		if (CMD_DEBUGMASK_GET(i))
-		{
-			printf(" Debugging %s switch is on.\r\n", szDebugName[i]);
-		}
-	}
-
-	return 0;
-}
-
-
-void cmd_init()
-{
-	// initial cmd vector
-	cmd_vec = cmd_vector_init(1);
-
-	//reg cmd-element
-	cmd_reg_newcmdelement(CMD_ELEM_ID_CR, 			CMD_ELEM_TYPE_END,			"<CR>",			    ""               );
-	cmd_reg_newcmdelement(CMD_ELEM_ID_STRING1TO24,  CMD_ELEM_TYPE_STRING,       "STRING<1-24>",     "String lenth range form 1 to 24");
-	cmd_reg_newcmdelement(CMD_ELEM_ID_INTEGER1TO24, CMD_ELEM_TYPE_INTEGER,      "INTEGER<1-100>",   "Integer range form 1 to 100");
-
-	cmd_reg_newcmdelement(CMD_ELEM_ID_SYSNAME, 		CMD_ELEM_TYPE_KEY,   		"sysname",          "Set system name");
-
-	cmd_reg_newcmdelement(CMD_ELEM_ID_UNDO, 			CMD_ELEM_TYPE_KEY,   		"undo",				"Undo operation");
-	cmd_reg_newcmdelement(CMD_ELEM_ID_ENABLE, 		CMD_ELEM_TYPE_KEY,   		"enable",			"Enable operation");
-	cmd_reg_newcmdelement(CMD_ELEM_ID_DISABLE, 		CMD_ELEM_TYPE_KEY,   		"disable",			"Disable operation");
-	cmd_reg_newcmdelement(CMD_ELEM_ID_DISPLAY, 		CMD_ELEM_TYPE_KEY,   		"display",			"Display");
-	cmd_reg_newcmdelement(CMD_ELEM_ID_DEBUG,        CMD_ELEM_TYPE_KEY,   		"debugging",		"Debugging switch");
-	cmd_reg_newcmdelement(CMD_ELEM_ID_ON, 			CMD_ELEM_TYPE_KEY,   		"on",				"Debug switch open");
-	cmd_reg_newcmdelement(CMD_ELEM_ID_OFF, 			CMD_ELEM_TYPE_KEY,   		"off",				"Debug switch close");
-	cmd_reg_newcmdelement(CMD_ELEM_ID_DATE, 			CMD_ELEM_TYPE_KEY,   		"date",				"Show date-time now");
-	cmd_reg_newcmdelement(CMD_ELEM_ID_DHCP, 			CMD_ELEM_TYPE_KEY,   		"dhcp",				"Dynamic Host Configuration Protocol");
-	cmd_reg_newcmdelement(CMD_ELEM_ID_VERSION, 		CMD_ELEM_TYPE_KEY,   		"version",			"Show version of solfware");
-	cmd_reg_newcmdelement(CMD_ELEM_ID_STP, 			CMD_ELEM_TYPE_KEY,   		"stp",				"Spanning tree protocol");
-
-	cmd_reg_newcmdelement(CMD_ELEM_ID_CLOCK,        CMD_ELEM_TYPE_KEY,   		"clock",			"Show clock now");
-	cmd_reg_newcmdelement(CMD_ELEM_ID_COMPUTER, 		CMD_ELEM_TYPE_KEY,   		"computer",			"Show computer information");
-
-	cmd_reg_newcmdelement(CMD_ELEM_ID_HISTTORY, 		CMD_ELEM_TYPE_KEY,   		"history",			"Histrory command");
-	cmd_reg_newcmdelement(CMD_ELEM_ID_BRIEF,        CMD_ELEM_TYPE_KEY,   		"brief",			"Brief information");
-	cmd_reg_newcmdelement(CMD_ELEM_ID_VERBOSE, 		CMD_ELEM_TYPE_KEY,   		"verbose",			"Verbose information");
-	cmd_reg_newcmdelement(CMD_ELEM_ID_VJUDGE,	    CMD_ELEM_TYPE_KEY,   		"virtual-judge", 	"Virtual judge");
-
-	cmd_reg_newcmdelement(CMD_ELEM_ID_LOOPBACK,		CMD_ELEM_TYPE_KEY,   		"loopback", 		"Loopback");
-	cmd_reg_newcmdelement(CMD_ELEM_ID_LOOPBACK_DETECT,CMD_ELEM_TYPE_KEY,   		"loopback-detect", 	"loopback-detect protocol");
-	cmd_reg_newcmdelement(CMD_ELEM_ID_INTERNAL,		CMD_ELEM_TYPE_KEY,			"internal", 		"Internal");
-
-	cmd_reg_newcmdelement(CMD_ELEM_ID_DEBUG_ERROR,  CMD_ELEM_TYPE_KEY,			"error",			"Error");
-	cmd_reg_newcmdelement(CMD_ELEM_ID_DEBUG_FUNC,   CMD_ELEM_TYPE_KEY,			"function",			"Function");
-	cmd_reg_newcmdelement(CMD_ELEM_ID_DEBUG_INFO,   CMD_ELEM_TYPE_KEY,			"info",				"Information");
-	cmd_reg_newcmdelement(CMD_ELEM_ID_DEBUG_MSG,    CMD_ELEM_TYPE_KEY,			"message",			"Message");
-	cmd_reg_newcmdelement(CMD_ELEM_ID_DEBUG_FSM,    CMD_ELEM_TYPE_KEY,			"fsm",				"Finite State Machine");
-
-	cmd_reg_newcmdelement(CMD_ELEM_ID_DEBUG_ALL,    CMD_ELEM_TYPE_KEY,			"all",				"All");
-
-	// install command
-	// ---------------------------------------------------
-
-
-	install_element(&cmd_sysname_st);
-
-	install_element(&cmd_debugging_enable_st);
- 	install_element(&cmd_undo_debugging_enable_st);
-
-	install_element(&cmd_stp_enable_st);
-	install_element(&cmd_stp_disable_st);
-
- 	install_element(&cmd_display_clock_st);
- 	install_element(&cmd_display_computer_st);
- 	install_element(&cmd_display_version_st);
- 	install_element(&cmd_display_history_st);
-	install_element(&cmd_display_history_n_st);
-
-	install_element(&cmd_display_stp_st);
-	install_element(&cmd_display_stp_brief_st);
-
-
-	install_element(&cmd_display_stp_verbose_st);
-
-	install_element(&cmd_virtual_judge_enable_st);
-	install_element(&cmd_undo_virtual_judge_enable_st);
-
-
-	install_element(&cmd_disable_st);
-
-	install_element(&cmd_display_st);
-
-	install_element(&cmd_loopback_internal_st);
-	install_element(&cmd_loopback_detect_enable_st);
-
-	install_element(&cmd_display_loopback_st);
-	install_element(&cmd_disable_loopback_detect_st);
-
-
-	install_element(&cmd_display_loopback_brief_st);
-	install_element(&cmd_display_loopback_detect_brief_st);
-
-	install_element(&cmd_debugging_error_st);
-	install_element(&cmd_undo_debugging_error_st);
-
-	install_element(&cmd_debugging_function_st);
-	install_element(&cmd_undo_debugging_function_st);
-
-	install_element(&cmd_debugging_info_st);
-	install_element(&cmd_undo_debugging_info_st);
-
-	install_element(&cmd_debugging_message_st);
-	install_element(&cmd_undo_debugging_message_st);
-
-	install_element(&cmd_debugging_fsm_st);
-	install_element(&cmd_undo_debugging_fsm_st);
-
-
-	install_element(&cmd_debugging_all_st);
-	install_element(&cmd_undo_debugging_all_st);
-
-	install_element(&cmd_display_debugging_st);
-
-	// ---------------------------------------------------
-
-/*
-	for (int i=0; i < sizeof(g_cmd_elem)/sizeof(para_desc); i++)
-	{
-		printf("%d  %s  %s\n", g_cmd_elem[i].elem_id, g_cmd_elem[i].para, g_cmd_elem[i].desc);
-	}
-*/
-}
-
 
 
 /* io */
-
 void cmd_back_one()
 {
 	printf("\b");
@@ -2882,8 +1996,6 @@ void cmd_clear_line(struct cmd_vty *vty)
 	memset(vty->buffer, 0, HISTORY_MAX_SIZE);
 }
 
-struct cmd_vty *vty;
-
 
 
 int cmd_main_entry ()
@@ -2896,7 +2008,9 @@ int cmd_main_entry ()
 		exit(1);
 	}
 
-	pdt_debug_print("VRP Command-line init ok...");
+	pdt_debug_print("VRP Command-line task init ok...");
+
+	RunDelay(2000);
 
 	cmd_outprompt(vty->prompt);
 

@@ -1,3 +1,5 @@
+//#define   _WIN32_WINNT     0x0500
+
 #include <windows.h>
 #include <process.h>
 #include <iostream>
@@ -15,7 +17,6 @@
 #include "..\..\include\pdt_common_inc.h"
 /* END:   Added by weizengke, 2013/11/15 */
 
-
 #include "..\include\psapi.h"
 #include "..\include\judge_util.h"
 #include "..\include\define.h"
@@ -25,15 +26,27 @@
 
 using namespace std;
 
-#pragma  comment(lib,"F:\cmd-sys\build\lib\psapi.lib")
+#pragma  comment(lib,"..\..\..\..\..\build\lib\psapi.lib")
 
-//#pragma comment(lib,"ws2_32")
-#pragma comment(lib, "F:\cmd-sys\build\lib\libmysql.lib")
+#pragma comment(lib,"ws2_32")
+#pragma comment(lib, "..\..\..\..\..\build\lib\libmysql.lib")
 
 #define VOS_YES 1
 #define VOS_NO  0
 
-#define JUDGE_VIRTUAL VOS_NO   /* 关闭VJUDGE */
+#define JUDGE_VIRTUAL VOS_YES   /* VJUDGE switch */
+
+#define VJUDGE_CURL VOS_YES   /* VJUDGE switch */
+
+#if(VJUDGE_CURL == VOS_YES)
+#include "curl\curl.h"
+//#pragma comment(lib, "..\..\..\..\..\build\lib\curllib.lib")
+//#pragma comment(lib, "..\..\..\..\..\build\lib\openldap.lib")
+//#pragma comment(lib, "..\..\..\..\..\build\lib\ssleay32.lib")
+
+struct curl_slist *headerlist=NULL;
+
+#endif
 
 #define BUFSIZE 4096
 
@@ -125,7 +138,7 @@ private:
 
 ////////////// VJUDGE
 #include "..\include\pcre.h"
-//#pragma comment(lib, "lib/pcre.lib")
+#pragma comment(lib, "..\..\..\..\..\build\lib\pcre.lib")
 
 #define MAX_SIZE_BUF 10000000
 
@@ -183,21 +196,29 @@ int GL_vpid;
 /* HDU VJUDGE */
 
 char hdu_username[1000]="weizengke";
-char hdu_password[1000]="269574524";
+char hdu_password[1000]="********";
 
 char tfilename[1000]="tmpfile.txt";
 
-#define DEBUG_OFF 0
-#define DEBUG_ON 1
+#define JUDGE_DEBUG_OFF 0
+#define JUDGE_DEBUG_ON 1
 
-ULONG g_oj_debug_switch = DEBUG_OFF;
+ULONG g_oj_debug_switch = JUDGE_DEBUG_OFF;
 
-#define DEBUG (g_oj_debug_switch == DEBUG_ON)?(1):(0)
+#define JUDGE_DEBUG_SWITCH (g_oj_debug_switch == JUDGE_DEBUG_ON)?(1):(0)
 
 
 void set_debug_switch(ULONG ds)
 {
 	g_oj_debug_switch = ds;
+}
+
+void judge_outstring(const char *format, ...)
+{
+	va_list args;
+	va_start(args, format);
+	vprintf(format, args);
+	va_end(args);
 }
 
 void MSG_OUPUT_DBG(const char *fmt, ...)
@@ -208,7 +229,7 @@ void MSG_OUPUT_DBG(const char *fmt, ...)
 	int l;
 	struct tm *p;
 
-	if (DEBUG_OFF == DEBUG)
+	if (JUDGE_DEBUG_OFF == JUDGE_DEBUG_SWITCH)
 	{
 		return;
 	}
@@ -425,7 +446,49 @@ size_t process_data(void *buffer, size_t size, size_t nmemb, void *user_p)
 	return return_size;
 }
 
-#if 0
+#if(VJUDGE_CURL==VOS_YES)
+int loginEx(char *uname, char *pdw)
+{
+    FILE * fp=fopen(tfilename,"w+");
+	CURL *curl;
+	CURLcode res;
+
+    curl = curl_easy_init();
+
+	judge_outstring("Info: it will takes a few seconds, please wait [%s]...",uname);
+	MSG_StartDot();
+	if(curl)
+	{
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &process_data);
+        curl_easy_setopt(curl, CURLOPT_COOKIEJAR, "hdu.cookie");
+        curl_easy_setopt(curl, CURLOPT_URL, "http://acm.hdu.edu.cn/userloginex.php?action=login");
+        string post=(string)"username="+uname+"&userpass="+pdw+"&login=Sign+In";
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post.c_str());
+
+		res = curl_easy_perform(curl);
+
+		curl_easy_cleanup(curl);
+    }
+
+	fclose(fp);
+
+	MSG_StopDot();
+	judge_outstring("done.\r\n");
+
+    if (res) return BOOL_FALSE;
+
+    string ts=getAllFromFile(tfilename);
+    if (ts.find("No such user or wrong password.")!=string::npos)
+	{
+		judge_outstring("Error: No such user or wrong password.\r\n");
+		return BOOL_FALSE;
+	}
+
+	judge_outstring("Info: Login hdu-judge success.\r\n");
+    return BOOL_TRUE;
+}
+
 ULONG login()
 {
     FILE * fp=fopen(tfilename,"w+");
@@ -434,7 +497,7 @@ ULONG login()
 
     curl = curl_easy_init();
 
-	MSG_OUPUT_DBG("Do login...");
+	MSG_OUPUT_DBG("Do login hduoj, it make takes a few seconds, please wait...[%s, %s]",hdu_username,hdu_password);
 
 	if(curl)
 	{
@@ -572,9 +635,9 @@ ULONG submit(string pid, string lang, string source)
 	}
 
     string tss=getAllFromFile(tfilename);
-    if (tss.find("Connect(0) to MySQL Server failed.")!=string::npos||tss.find("<b>One or more following ERROR(s) occurred.")!=string::npos||tss.find("<h2>The requested URL could not be retrieved</h2>")!=string::npos||tss.find("PHP: Maximum execution time of")!=string::npos)
+    if (tss.find("Connect(0) to MySQL Server failed.")!=string::npos||tss.find("<b>One or more following JUDGE_ERROR(s) occurred.")!=string::npos||tss.find("<h2>The requested URL could not be retrieved</h2>")!=string::npos||tss.find("PHP: Maximum execution time of")!=string::npos)
 	{
-		MSG_OUPUT_DBG("One or more ERROR(s) occurred.....");
+		MSG_OUPUT_DBG("One or more JUDGE_ERROR(s) occurred.....");
 		return BOOL_FALSE;
 	}
 
@@ -660,7 +723,8 @@ string getCEinfo_brief(char *filename)
     fclose(fp);
     return res;
 }
-#if 0
+
+#if(VJUDGE_CURL==VOS_YES)
 string getCEinfo(string runid)
 {
 	FILE *fp = fopen(tfilename, "ab+");
@@ -742,7 +806,99 @@ string getLineFromFile(char *filename,int line)
     fclose(fp);
     return res;
 }
-#if 0
+
+#if(VJUDGE_CURL==VOS_YES)
+int getStatusEx(char *hdu_username)
+{
+	string pid = "1000";
+	string lang;
+	string runid;
+	string result;
+	string ce_info;
+	string tu;
+	string mu;
+    ULONG ulRet = BOOL_TRUE;
+
+    tu=mu="0";
+    string ts;
+
+	judge_outstring("Info: it will takes a few seconds, please wait...");
+	MSG_StartDot();
+
+	CURL *curl;
+	CURLcode res;
+
+	curl = curl_easy_init();
+
+    if ( curl )
+	{
+		FILE *fp = fopen(tfilename, "ab+");
+		curl_easy_setopt( curl, CURLOPT_VERBOSE, 0L );
+		curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "hdu.cookie");
+		char url[255] = {0};
+		sprintf(url, "http://acm.hdu.edu.cn/status.php?first=&pid=&user=%s&lang=&status=0", hdu_username);
+
+		//MSG_OUPUT_DBG(url);
+
+		curl_easy_setopt( curl, CURLOPT_URL, url);
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &process_data);
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
+
+		res = curl_easy_perform( curl );
+		curl_easy_cleanup(curl);
+
+		fclose(fp);
+	}
+
+	ts = getLineFromFile(tfilename,77);
+
+	if(BOOL_FALSE == getUsedTime(ts, tu))
+	{
+		++ulRet;
+		MSG_OUPUT_DBG("getUsedTime failed.");
+	}
+
+    if(BOOL_FALSE == getUsedMem(ts, mu))
+	{
+		++ulRet;
+		MSG_OUPUT_DBG("getUsedMem failed.");
+	}
+
+	if(BOOL_FALSE == getRunid(ts, runid))
+	{
+		++ulRet;
+		MSG_OUPUT_DBG("getRunid failed.");
+	}
+
+	if(BOOL_FALSE == getResult(ts, result))
+	{
+		++ulRet;
+		MSG_OUPUT_DBG("getResult failed.");
+	}
+
+	if (BOOL_TRUE != ulRet)
+	{
+		MSG_OUPUT_DBG("get record failed.");
+		return BOOL_FALSE;
+	}
+
+	MSG_StopDot();
+	judge_outstring("done.\r\n");
+	judge_outstring(" problem[%s] language[%s]  verdict[%s] submissionID[%s] time[%s ms] memory[%s kb].\r\n", pid.c_str(), lang.c_str(), result.c_str(), runid.c_str(), tu.c_str(), mu.c_str());
+
+	MSG_OUPUT_DBG("get status success...");
+
+	if (result.find("Compilation Error")!=string::npos)
+	{
+		//获取编译错误信息
+		string CE_Info = getCEinfo(runid);
+		ce_info = CE_Info;
+		//MSG_OUPUT_DBG(CE_Info.c_str());
+	}
+
+    return BOOL_TRUE;
+}
+
 ULONG getStatus(string hdu_username, string pid,string lang, string &runid, string &result,string& ce_info,string &tu,string &mu)
 {
     ULONG ulRet = BOOL_TRUE;
@@ -845,7 +1001,7 @@ ULONG isNeed2HTML(ENUM_PROVLEM em)
 	return BOOL_TRUE;
 }
 
-#if 0
+#if(VJUDGE_CURL==VOS_YES)
 void SQL_updateProblemInfo(string v_ojname, string v_pid)
 {
 	string val_str="";
@@ -900,7 +1056,7 @@ void SQL_updateProblemInfo(string v_ojname, string v_pid)
 
 	if (val_str.length() >= MAX_SIZE_BUF)
 	{
-		MSG_OUPUT_DBG("ERROR, too large size of buffer...");
+		MSG_OUPUT_DBG("JUDGE_ERROR, too large size of buffer...");
 		return;
 	}
 
@@ -911,7 +1067,7 @@ void SQL_updateProblemInfo(string v_ojname, string v_pid)
 	int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));
 	if(ret)
 	{
-		//write_log(ERROR,mysql_error(mysql));
+		//write_log(JUDGE_ERROR,mysql_error(mysql));
 		MSG_OUPUT_DBG(mysql_error(mysql));
 		return ;
 	}
@@ -1121,7 +1277,8 @@ int getProblemInfo_Brief(string pid)
     return 0;
 }
 #endif
-#if 0
+
+#if(VJUDGE_CURL==VOS_YES)
 ULONG getProblemInfo(string pid)
 {
 	CURL *curl;
@@ -1171,7 +1328,7 @@ ULONG DLL_HDU_SpiderInit(int pid)
 	return BOOL_TRUE;
 }
 
-#if 0
+#if(VJUDGE_CURL==VOS_YES)
 ULONG DLL_GetProblemInfoFromHDU(int pid)
 {
 	char tmp[10]={0};
@@ -1275,7 +1432,7 @@ void write_log(int level, const char *fmt, ...) {
 	}
 
 	fprintf(fp, "%s:%04d-%02d-%02d %02d:%02d:%02d ",LEVEL_NAME[level],p->tm_year, p->tm_mon, p->tm_mday,p->tm_hour,p->tm_min,p->tm_sec);
-	if (DEBUG)
+	if (JUDGE_DEBUG_SWITCH)
 	{
 		//printf("%s:%04d-%02d-%02d %02d:%02d:%02d ",LEVEL_NAME[level],p->tm_year, p->tm_mon, p->tm_mday,p->tm_hour,p->tm_min,p->tm_sec);
 	}
@@ -1283,7 +1440,7 @@ void write_log(int level, const char *fmt, ...) {
 	va_start(ap, fmt);
 	l = vsprintf(buffer, fmt, ap);
 	fprintf(fp, "%s\n", buffer);
-	if (DEBUG)
+	if (JUDGE_DEBUG_SWITCH)
 	{
 		/* BEGIN: Added by weizengke, 2013/11/15 for vrp */
 		pdt_debug_print("%s", buffer);
@@ -1317,7 +1474,7 @@ SOCKET sListen;
 
 int initSocket()
 {
-	write_log(INFO,"Start initialization of Socket...");
+	write_log(JUDGE_INFO,"Start initialization of Socket...");
 
 	WSADATA wsaData;
     WORD sockVersion = MAKEWORD(2, 2);
@@ -1328,7 +1485,7 @@ int initSocket()
 	sListen = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if(sListen == INVALID_SOCKET)
 	{
-		write_log(SYSTEM_ERROR,"create socket error");
+		write_log(JUDGE_SYSTEM_ERROR,"create socket error");
 		return 0;
 	}
 	// 在sockaddr_in结构中装入地址信息
@@ -1343,30 +1500,30 @@ int initSocket()
 	int ret=0;
 	while((ret=bind(sListen,(LPSOCKADDR)&sin,sizeof(sin)))==SOCKET_ERROR&&trybind>0)
 	{
-		write_log(SYSTEM_ERROR,"bind failed:%d , it will try later...",WSAGetLastError());
+		write_log(JUDGE_SYSTEM_ERROR,"bind failed:%d , it will try later...",WSAGetLastError());
 		trybind--;
 		Sleep(100);
 	}
 	if(ret<0) {
-		write_log(SYSTEM_ERROR,"Bind failed...");
+		write_log(JUDGE_SYSTEM_ERROR,"Bind failed...");
 		return 0;
 	}
-	write_log(INFO,"Bind success...");
+	write_log(JUDGE_INFO,"Bind success...");
 
 	//进入监听状态
 	int trylisten=50; //重试listen次数
 	while((ret=listen(sListen,20))==SOCKET_ERROR&&trylisten)
 	{
-		write_log(SYSTEM_ERROR,"listen failed:%d , it will try later..",WSAGetLastError());
+		write_log(JUDGE_SYSTEM_ERROR,"listen failed:%d , it will try later..",WSAGetLastError());
 		trylisten--;
 		Sleep(100);
 		return 0;
 	}
 	if(ret<0) {
-		write_log(SYSTEM_ERROR,"Listen failed...");
+		write_log(JUDGE_SYSTEM_ERROR,"Listen failed...");
 		return 0;
 	}
-	write_log(INFO,"Listen success...");
+	write_log(JUDGE_INFO,"Listen success...");
 
 	return 1;
 }
@@ -1376,14 +1533,14 @@ int InitMySQL()   //初始化mysql，并设置字符集
 {
 	mysql=mysql_init((MYSQL*)0);
 	if(mysql!=0 && !mysql_real_connect(mysql,Mysql_url, Mysql_username, Mysql_password, Mysql_table,Mysql_port,NULL,CLIENT_MULTI_STATEMENTS )){
-		write_log(ERROR,mysql_error(mysql));
+		write_log(JUDGE_ERROR,mysql_error(mysql));
 		return 0;
 	}
 	strcpy(query,"SET CHARACTER SET gbk"); //设置编码 gbk
 
 	int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));
 	if(ret){
-		write_log(ERROR,mysql_error(mysql));
+		write_log(JUDGE_ERROR,mysql_error(mysql));
 		return 0;
 	}
 	return 1;
@@ -1412,8 +1569,8 @@ void InitMySqlConfig(){
 	GetPrivateProfileString("HDU","username","",hdu_username,sizeof(hdu_username),INI_filename);
 	GetPrivateProfileString("HDU","password","",hdu_password,sizeof(hdu_password),INI_filename);
 
-	write_log(INFO,"socketPort:%d, DataPath:%s, TempPath:%s",port,dataPath,workPath);
-	write_log(INFO,"MySQL:%s %s %s %s %d",Mysql_url,Mysql_username,Mysql_password,Mysql_table,Mysql_port);
+	write_log(JUDGE_INFO,"Socketport:%d, Data:%s, Workpath:%s",port,dataPath,workPath);
+	write_log(JUDGE_INFO,"MySQL:%s %s %s %s %d",Mysql_url,Mysql_username,Mysql_password,Mysql_table,Mysql_port);
 
 }
 
@@ -1502,12 +1659,12 @@ int SQL_getSolutionSource(){
 	sprintf(query,"select source from solution_source where solution_id=%d",GL_solutionId);
 	int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));
 	if(ret){
-		write_log(ERROR,mysql_error(mysql));
+		write_log(JUDGE_ERROR,mysql_error(mysql));
 		return 0;
 	}
 	MYSQL_RES *recordSet = mysql_store_result(mysql);
 	if (recordSet==NULL){
-		write_log(ERROR,"SQL_getSolutionSource");
+		write_log(JUDGE_ERROR,"SQL_getSolutionSource");
 		return 0;
 	}
 	FILE *fp_source = fopen(sourcePath, "w");
@@ -1517,7 +1674,7 @@ int SQL_getSolutionSource(){
 	{
 		sprintf(code, "%s", row[0]);
 	}else {
-		write_log(ERROR,"SQL_getSolutionSource Error");
+		write_log(JUDGE_ERROR,"SQL_getSolutionSource Error");
 	}
 
 	if(isTranscoding==1){
@@ -1544,13 +1701,13 @@ int SQL_getSolutionInfo(){
 	sprintf(query,"select problem_id,contest_id,language,username,submit_date from solution where solution_id=%d",GL_solutionId);
 	int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));
 	if(ret){
-		write_log(ERROR,mysql_error(mysql));
+		write_log(JUDGE_ERROR,mysql_error(mysql));
 		//printf("Error SQL_getSolutionData...\n");
 		return 0;
 	}
 	MYSQL_RES *recordSet = mysql_store_result(mysql);
 	if (recordSet==NULL){
-		write_log(ERROR,"Error SQL_getSolutionData");
+		write_log(JUDGE_ERROR,"Error SQL_getSolutionData");
 		return 0;
 	}
 
@@ -1565,7 +1722,7 @@ int SQL_getSolutionInfo(){
 		StringToTimeEX(row[4],GL_submitDate);
 
 	}else {
-		write_log(ERROR,"Error SQL_getSolutionData");
+		write_log(JUDGE_ERROR,"Error SQL_getSolutionData");
 	}
 	mysql_free_result(recordSet);//释放结果集
 	return 1;
@@ -1577,7 +1734,7 @@ int SQL_getProblemInfo(){//time_limit,memory_limit,spj
 
 	int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));
 	if(ret){
-		write_log(ERROR,mysql_error(mysql));
+		write_log(JUDGE_ERROR,mysql_error(mysql));
 		return 0;
 	}
 	MYSQL_RES *recordSet = mysql_store_result(mysql);
@@ -1606,12 +1763,12 @@ int SQL_getProblemInfo_contest(int contestId,int problemId,char *num){//num
 
 	int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));
 	if(ret){
-		write_log(ERROR,mysql_error(mysql));
+		write_log(JUDGE_ERROR,mysql_error(mysql));
 		return 0;
 	}
 	MYSQL_RES *recordSet = mysql_store_result(mysql);
 	if (recordSet==NULL){
-		write_log(INFO,"SQL_getProblemInfo_contest ,No record");
+		write_log(JUDGE_INFO,"SQL_getProblemInfo_contest ,No record");
 		return 0;
 	}
 
@@ -1632,7 +1789,7 @@ int SQL_getContestInfo(int contestId,time_t &start_time,time_t &end_time){
 	sprintf(query,"select start_time,end_time from contest where contest_id=%d",contestId);
 	int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));
 	if(ret){
-		write_log(ERROR,mysql_error(mysql));
+		write_log(JUDGE_ERROR,mysql_error(mysql));
 		return 0;
 	}
 	MYSQL_RES *recordSet = mysql_store_result(mysql);
@@ -1659,7 +1816,7 @@ int SQL_getContestAttend(int contestId,char *username,char num,long &ac_time,int
 	//cout<<query<<endl;
 	int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));
 	if(ret){
-		write_log(ERROR,mysql_error(mysql));
+		write_log(JUDGE_ERROR,mysql_error(mysql));
 		return 0;
 	}
 	MYSQL_RES *recordSet = mysql_store_result(mysql);
@@ -1680,7 +1837,7 @@ int SQL_countContestProblems(int contestId){
 	sprintf(query,"select count(problem_id) from contest_problem where contest_id=%d",contestId);
 	int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));
 	if(ret){
-		write_log(ERROR,mysql_error(mysql));
+		write_log(JUDGE_ERROR,mysql_error(mysql));
 		return 0;
 	}
 	MYSQL_RES *recordSet = mysql_store_result(mysql);
@@ -1707,7 +1864,7 @@ int SQL_getFirstACTime_contest(int contestId,int problemId,char *username,time_t
 	sprintf(query,"select submit_date from solution where contest_id=%d and problem_id=%d and username='%s'and verdict=%d and submit_date between '%s' and '%s' order by solution_id ASC limit 1;",contestId,problemId,username,V_AC,s_t.c_str(),e_t.c_str());
 	int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));
 	if(ret){
-		write_log(ERROR,mysql_error(mysql));
+		write_log(JUDGE_ERROR,mysql_error(mysql));
 		return 0;
 	}
 	MYSQL_RES *recordSet = mysql_store_result(mysql);
@@ -1731,7 +1888,7 @@ long SQL_countProblemVerdict(int contestId,int problemId,int verdictId,char *use
 	sprintf(query,"select count(solution_id) from solution where contest_id=%d and problem_id=%d and verdict=%d and username='%s'",contestId,problemId,verdictId,username);
 	int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));
 	if(ret){
-		write_log(ERROR,mysql_error(mysql));
+		write_log(JUDGE_ERROR,mysql_error(mysql));
 		return 0;
 	}
 	MYSQL_RES *recordSet = mysql_store_result(mysql);
@@ -1757,7 +1914,7 @@ void SQL_updateSolution(int solutionId,int verdictId,int testCase,int time,int m
 	sprintf(query,"update solution set verdict=%d,testcase=%d,time=%d,memory=%d where solution_id=%d;",verdictId,testCase,time,memory,solutionId);
 	//	printf("%s\n",query);
 	if(mysql_real_query(mysql,query,(unsigned int)strlen(query))){
-		write_log(ERROR,mysql_error(mysql));
+		write_log(JUDGE_ERROR,mysql_error(mysql));
 	}
 }
 
@@ -1766,19 +1923,19 @@ void SQL_updateProblem(int problemId)
 	sprintf(query,"update problem set accepted=(SELECT count(*) FROM solution WHERE problem_id=%d and verdict=%d) where problem_id=%d;",problemId,V_AC,problemId);
 //cout<<query;
 	if(mysql_real_query(mysql,query,(unsigned int)strlen(query))){
-		write_log(ERROR,mysql_error(mysql));
+		write_log(JUDGE_ERROR,mysql_error(mysql));
 	}
 	sprintf(query,"update problem set submit=(SELECT count(*) FROM solution WHERE problem_id=%d)  where problem_id=%d;",problemId,problemId);
 	if(mysql_real_query(mysql,query,(unsigned int)strlen(query))){
-		write_log(ERROR,mysql_error(mysql));
+		write_log(JUDGE_ERROR,mysql_error(mysql));
 	}
 	sprintf(query,"update problem set solved=(SELECT count(DISTINCT username) FROM solution WHERE problem_id=%d and verdict=%d) where problem_id=%d;",problemId,V_AC,problemId);
 	if(mysql_real_query(mysql,query,(unsigned int)strlen(query))){
-		write_log(ERROR,mysql_error(mysql));
+		write_log(JUDGE_ERROR,mysql_error(mysql));
 	}
 	sprintf(query,"update problem set submit_user=(SELECT count(DISTINCT username) FROM solution WHERE problem_id=%d) where problem_id=%d;",problemId,problemId);
 	if(mysql_real_query(mysql,query,(unsigned int)strlen(query))){
-		write_log(ERROR,mysql_error(mysql));
+		write_log(JUDGE_ERROR,mysql_error(mysql));
 	}
 }
 void SQL_updateProblem_contest(int contestId,int problemId)
@@ -1786,19 +1943,19 @@ void SQL_updateProblem_contest(int contestId,int problemId)
 	sprintf(query,"update contest_problem set accepted=(SELECT count(*) FROM solution WHERE contest_id=%d and problem_id=%d and verdict=%d) where contest_id=%d and problem_id=%d;",contestId,V_AC,contestId,problemId);
 //	cout<<query;
 	if(mysql_real_query(mysql,query,(unsigned int)strlen(query))){
-		write_log(ERROR,mysql_error(mysql));
+		write_log(JUDGE_ERROR,mysql_error(mysql));
 	}
 	sprintf(query,"update contest_problem set submit=(SELECT count(*) FROM solution WHERE contest_id=%d and problem_id=%d)  where contest_id=%d and problem_id=%d;",contestId,problemId,contestId,problemId);
 	if(mysql_real_query(mysql,query,(unsigned int)strlen(query))){
-		write_log(ERROR,mysql_error(mysql));
+		write_log(JUDGE_ERROR,mysql_error(mysql));
 	}
 	sprintf(query,"update contest_problem set solved=(SELECT count(DISTINCT username) FROM solution WHERE contest_id=%d and problem_id=%d and verdict=%d) where contest_id=%d and problem_id=%d;",contestId,problemId,V_AC,contestId,problemId);
 	if(mysql_real_query(mysql,query,(unsigned int)strlen(query))){
-		write_log(ERROR,mysql_error(mysql));
+		write_log(JUDGE_ERROR,mysql_error(mysql));
 	}
 	sprintf(query,"update contest_problem set submit_user=(SELECT count(DISTINCT username) FROM solution WHERE contest_id=%d and problem_id=%d) where contest_id=%d and problem_id=%d;",contestId,problemId,contestId,problemId);
 	if(mysql_real_query(mysql,query,(unsigned int)strlen(query))){
-		write_log(ERROR,mysql_error(mysql));
+		write_log(JUDGE_ERROR,mysql_error(mysql));
 	}
 }
 
@@ -1811,7 +1968,7 @@ int SQL_countACContestProblems(int contestId,char *username,time_t start_time,ti
 	sprintf(query,"select count(distinct(problem_id)) from solution where  verdict=%d and contest_id=%d and username='%s' and submit_date between '%s' and '%s'",V_AC,contestId,username,s_t.c_str(),e_t.c_str());
 
 	if(mysql_real_query(mysql,query,(unsigned int)strlen(query))){
-		write_log(ERROR,mysql_error(mysql));
+		write_log(JUDGE_ERROR,mysql_error(mysql));
 		return 0;
 	}
 	MYSQL_RES *recordSet = mysql_store_result(mysql);
@@ -1842,12 +1999,12 @@ int SQL_getContestScore(int contestId,char *username,time_t start_time,time_t en
 	sprintf(query,"SELECT sum(point) from contest_problem where contest_id=%d and problem_id in (select distinct(problem_id) from solution where  verdict=%d and contest_id=%d and username='%s' and submit_date between '%s' and '%s')",contestId,V_AC,contestId,username,s_t.c_str(),e_t.c_str());
 
 	if(mysql_real_query(mysql,query,(unsigned int)strlen(query))){
-		write_log(ERROR,mysql_error(mysql));
+		write_log(JUDGE_ERROR,mysql_error(mysql));
 		return 0;
 	}
 	MYSQL_RES *recordSet = mysql_store_result(mysql);
 	if (recordSet==NULL){
-		write_log(ERROR,"SQL_getContestScore recordSet ERROR");
+		write_log(JUDGE_ERROR,"SQL_getContestScore recordSet JUDGE_ERROR");
 	}
 	int point=0;
 	MYSQL_ROW row;
@@ -1875,7 +2032,7 @@ void SQL_updateAttend_contest(int contestId,int verdictId,int problemId,char *nu
 	sprintf(query,"update attend set %s_time=%ld where contest_id=%d and username='%s';",num,AC_time,contestId,username);
 	//cout<<query<<endl;
 	if(mysql_real_query(mysql,query,(unsigned int)strlen(query))){
-		write_log(ERROR,mysql_error(mysql));
+		write_log(JUDGE_ERROR,mysql_error(mysql));
 	}
 
 	long ac_nCount=SQL_countProblemVerdict(GL_contestId,problemId,V_AC,username);
@@ -1890,7 +2047,7 @@ void SQL_updateAttend_contest(int contestId,int verdictId,int problemId,char *nu
 
 //	puts(query);
 	if(mysql_real_query(mysql,query,(unsigned int)strlen(query))){
-			write_log(ERROR,mysql_error(mysql));
+			write_log(JUDGE_ERROR,mysql_error(mysql));
 	}
 
 	//penalty
@@ -1908,7 +2065,7 @@ void SQL_updateAttend_contest(int contestId,int verdictId,int problemId,char *nu
 	}
 	sprintf(query,"update attend set penalty=%ld where contest_id=%d and username='%s';",penalty,contestId,username);
 	if(mysql_real_query(mysql,query,(unsigned int)strlen(query))){
-		write_log(ERROR,mysql_error(mysql));
+		write_log(JUDGE_ERROR,mysql_error(mysql));
 	}
 
 
@@ -1918,11 +2075,11 @@ void SQL_updateUser(char *username)
 {
 	sprintf(query,"update users set submit=(SELECT count(*) FROM solution WHERE username='%s') where username='%s';",username,username);
 	if(mysql_real_query(mysql,query,(unsigned int)strlen(query))){
-		write_log(ERROR,mysql_error(mysql));
+		write_log(JUDGE_ERROR,mysql_error(mysql));
 	}
 	sprintf(query,"update users set solved=(SELECT count(DISTINCT problem_id) FROM solution WHERE username='%s' and verdict=%d) where username='%s';",username,V_AC,username);
 	if(mysql_real_query(mysql,query,(unsigned int)strlen(query))){
-		write_log(ERROR,mysql_error(mysql));
+		write_log(JUDGE_ERROR,mysql_error(mysql));
 	}
 }
 
@@ -1932,7 +2089,7 @@ void SQL_updateCompileInfo(int solutionId)
 	FILE *fp;
 	char buffer[4096]={0};
 	if ((fp = fopen (DebugFile, "r")) == NULL){
-		write_log(ERROR,"DebugFile open error");
+		write_log(JUDGE_ERROR,"DebugFile open error");
 		return ;
 	}
 	//先删除
@@ -1943,7 +2100,7 @@ void SQL_updateCompileInfo(int solutionId)
 		sprintf(query,"insert into compile_info values(%d,\"%s\");",solutionId,buffer);
 		int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));
 		if(ret){
-			write_log(ERROR,mysql_error(mysql));
+			write_log(JUDGE_ERROR,mysql_error(mysql));
 			fclose(fp);
 			return ;
 		}
@@ -1953,7 +2110,7 @@ void SQL_updateCompileInfo(int solutionId)
 		sprintf(query,"update compile_info set error=CONCAT(error,\"%s\") where solution_id=%d;",buffer,solutionId);
 		int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));
 		if(ret){
-			write_log(ERROR,mysql_error(mysql));
+			write_log(JUDGE_ERROR,mysql_error(mysql));
 			fclose(fp);
 			return ;
 		}
@@ -1977,13 +2134,13 @@ int compile(){
 	HANDLE hThread_com;
 	hThread_com=CreateThread(NULL,NULL,CompileThread,NULL,0,NULL);
 	if(hThread_com==NULL) {
-		write_log(ERROR,"Create CompileThread Error");
+		write_log(JUDGE_ERROR,"Create CompileThread Error");
 		CloseHandle(hThread_com);
 	}
 
 	DWORD status_ = WaitForSingleObject(hThread_com,30000);   //30S 编译时间,返回值大于零说明超时
 	if(status_>0){
-		write_log(WARNING,"Compile over time_limit");
+		write_log(JUDGE_WARNING,"Compile over time_limit");
 	}
 	//是否正常生成用户的可执行程序
 	if( (_access(exePath, 0 )) != -1 )   {
@@ -2077,17 +2234,17 @@ HANDLE CreateSandBox(){
 			}
 			else
 			{
-				write_log(SYSTEM_ERROR,"SetInformationJobObject  JOBOBJECT_BASIC_UI_RESTRICTIONS   [Error:%d]\n",GetLastError());
+				write_log(JUDGE_SYSTEM_ERROR,"SetInformationJobObject  JOBOBJECT_BASIC_UI_RESTRICTIONS   [Error:%d]\n",GetLastError());
 			}
 		}
 		else
 		{
-			write_log(SYSTEM_ERROR,"SetInformationJobObject  JOBOBJECT_BASIC_LIMIT_INFORMATION   [Error:%d]\n",GetLastError());
+			write_log(JUDGE_SYSTEM_ERROR,"SetInformationJobObject  JOBOBJECT_BASIC_LIMIT_INFORMATION   [Error:%d]\n",GetLastError());
 		}
 	}
 	else
 	{
-		write_log(SYSTEM_ERROR,"CreateJobObject     [Error:%d]\n",GetLastError());
+		write_log(JUDGE_SYSTEM_ERROR,"CreateJobObject     [Error:%d]\n",GetLastError());
 	}
 	return NULL;
 }
@@ -2098,14 +2255,14 @@ bool ProcessToSandbox(HANDLE job,PROCESS_INFORMATION p){
 		//顺便调整本进程优先级为高
 		/*HANDLE   hPS   =   OpenProcess(PROCESS_ALL_ACCESS,   false,  p.dwProcessId);
 		if(!SetPriorityClass(hPS,   HIGH_PRIORITY_CLASS)){
-			write_log(SYSTEM_ERROR,"SetPriorityClass        [Error:%d]\n",GetLastError());
+			write_log(JUDGE_SYSTEM_ERROR,"SetPriorityClass        [Error:%d]\n",GetLastError());
 		}
 		CloseHandle(hPS);*/
 		return true;
 	}
 	else
 	{
-		write_log(SYSTEM_ERROR,"AssignProcessToJobObject Error:%s",GetLastError());
+		write_log(JUDGE_SYSTEM_ERROR,"AssignProcessToJobObject Error:%s",GetLastError());
 	}
 	return false;
 }
@@ -2182,7 +2339,7 @@ DWORD WINAPI RUN_ProgramThread(LPVOID lp) //ac
 
 					limit_output+=BytesWritten;
 					if(limit_output>OutputLimit){
-						write_log(INFO,"OLE");
+						write_log(JUDGE_INFO,"OLE");
 						GL_verdictId = V_OLE;
 						//CloseHandle(pi.hProcess);
 						break;
@@ -2196,16 +2353,16 @@ DWORD WINAPI RUN_ProgramThread(LPVOID lp) //ac
 				//printf("OK\n");
 				return 1;
 			}else{
-				write_log(SYSTEM_ERROR,"ProcessToSandBox Error:%s",GetLastError());
+				write_log(JUDGE_SYSTEM_ERROR,"ProcessToSandBox Error:%s",GetLastError());
 			}
 		}
 		else{
-			write_log(SYSTEM_ERROR,"CreateSandBox Error:%s",GetLastError());
+			write_log(JUDGE_SYSTEM_ERROR,"CreateSandBox Error:%s",GetLastError());
 		}
 	}
 	else
 	{
-		write_log(SYSTEM_ERROR,"CreateProcess       [Error:%d]\n",GetLastError());
+		write_log(JUDGE_SYSTEM_ERROR,"CreateProcess       [Error:%d]\n",GetLastError());
 	}
 	GL_verdictId = V_SE;
 	return 0;
@@ -2249,7 +2406,7 @@ int RUN_solution(int solutionId)
 		sprintf(ansPath, "%s%d\\data%d.out",dataPath,GL_problemId,case_);
 
 		if( (_access(inFileName, 0 )) == -1 )   {
-			write_log(INFO,"Test over..");
+			write_log(JUDGE_INFO,"Test over..");
 			break ;
 		}
 		GL_testcase = case_;
@@ -2259,7 +2416,7 @@ int RUN_solution(int solutionId)
 		HANDLE hThread_run;
 		hThread_run=CreateThread(NULL,NULL,RUN_ProgramThread,NULL,0,NULL);
 		if(hThread_run==NULL) {
-			write_log(ERROR,"Create thread error");
+			write_log(JUDGE_ERROR,"Create thread error");
 			CloseHandle(hThread_run);
 		}
 
@@ -2344,7 +2501,7 @@ int RUN_solution(int solutionId)
 			GL_verdictId = compare(srcPath,ansPath);
 		}
 
-l:		write_log(INFO,"ID:%d Test%d ,%s ,%dms %dkb ,Return code:%u",GL_solutionId,i,VERDICT_NAME[GL_verdictId],caseTime,tmp_memory,g_dwCode);
+l:		write_log(JUDGE_INFO,"ID:%d Test%d ,%s ,%dms %dkb ,Return code:%u",GL_solutionId,i,VERDICT_NAME[GL_verdictId],caseTime,tmp_memory,g_dwCode);
 
 		/* write judge-log */
 
@@ -2443,11 +2600,11 @@ int getHDULangID(int GDOJlangID)
 int Judge_Local()
 {
 	char buf[4096] = {0};
-	write_log(INFO,"Start Compile...");
+	write_log(JUDGE_INFO,"Start Compile...");
 
 	if(0 == compile())
 	{
-		write_log(INFO,"Compile Error...");
+		write_log(JUDGE_INFO,"Compile Error...");
 		GL_verdictId=V_CE;
 		SQL_updateCompileInfo(GL_solutionId);
 
@@ -2457,7 +2614,7 @@ int Judge_Local()
 	}
 	else
 	{
-		write_log(INFO,"Start Run...");
+		write_log(JUDGE_INFO,"Start Run...");
 		RUN_solution(GL_solutionId);
 	}
 
@@ -2500,7 +2657,7 @@ ULONG getHDUStatus(string hdu_username, int pid,int lang, string &runid, string 
 		MSG_OUPUT_DBG("getResult failed.");
 	}
 
-	MSG_OUPUT_DBG("problem:%d, language:%d, verdict:%s, submissionID:%s, time:%s ms, memory:%s kb\r\n", pid, lang, result.c_str(), runid.c_str(), tu.c_str(), mu.c_str());
+	judge_outstring("Info: problem[%d] language[%d]  verdict[%s] submissionID[%s] time[%s ms] memory[%s kb].\r\n", pid, lang, result.c_str(), runid.c_str(), tu.c_str(), mu.c_str());
 
 	if (BOOL_TRUE != ulRet)
 	{
@@ -2508,7 +2665,7 @@ ULONG getHDUStatus(string hdu_username, int pid,int lang, string &runid, string 
 		return BOOL_FALSE;
 	}
 
-	MSG_OUPUT_DBG("get status success...");
+	MSG_OUPUT_DBG("Get status success...");
 
 	return BOOL_TRUE;
 }
@@ -2624,7 +2781,7 @@ int Judge_Remote()
 				FILE *fp;
 				char buffer[4096]={0};
 				if ((fp = fopen (DebugFile, "w")) == NULL){
-					write_log(ERROR,"DebugFile open error");
+					write_log(JUDGE_ERROR,"DebugFile open error");
 					break;
 				}
 				fputs(ce_info.c_str(),fp);
@@ -2680,7 +2837,7 @@ int work(int solutionId){  //开始工作
 	string time_string_;
 	API_TimeToString(time_string_,GL_submitDate);
 	//update MySQL............
-	write_log(INFO,"ID:%d ->Rusult:%s Case:%d %dms %dkb ,Return code:%u at %s by %s",GL_solutionId,VERDICT_NAME[GL_verdictId],GL_testcase,GL_time-GL_time%10,GL_memory,g_dwCode,time_string_.c_str(),GL_username);
+	write_log(JUDGE_INFO,"ID:%d ->Rusult:%s Case:%d %dms %dkb ,Return code:%u at %s by %s",GL_solutionId,VERDICT_NAME[GL_verdictId],GL_testcase,GL_time-GL_time%10,GL_memory,g_dwCode,time_string_.c_str(),GL_username);
 	SQL_updateSolution(GL_solutionId,GL_verdictId,GL_testcase,GL_time-GL_time%10,GL_memory);
 	SQL_updateProblem(GL_problemId);
 	SQL_updateUser(GL_username);
@@ -2733,7 +2890,7 @@ DWORD WINAPI WorkThread(LPVOID lpParam)
 		}
 		Sleep(1);
 	}
-	write_log(ERROR,"WorkThread Crash");
+	write_log(JUDGE_ERROR,"WorkThread Crash");
 	return 0;
 }
 DWORD WINAPI ListenThread(LPVOID lpParam)
@@ -2748,24 +2905,24 @@ DWORD WINAPI ListenThread(LPVOID lpParam)
 	{
 		sClient = accept(sListen, (SOCKADDR*)&remoteAddr, &nAddrLen);
 		if(sClient == INVALID_SOCKET){
-			write_log(ERROR,"Accept() Error");
+			write_log(JUDGE_ERROR,"Accept() Error");
 			continue;
 		}
 		int ret=recv(sClient,(char*)&j,sizeof(j),0);
 		if(ret>0){
-			write_log(INFO,"Push SolutionId:%d into Judge Queue....",j.solutionId);
+			write_log(JUDGE_INFO,"Push SolutionId:%d into Judge Queue....",j.solutionId);
 			Q.push(j);
 		}
 		Sleep(1);
 	}
-	write_log(ERROR,"ListenThread Crash");
+	write_log(JUDGE_ERROR,"ListenThread Crash");
 	closesocket(sClient);
 	return 0;
 }
 
 long WINAPI ExceptionFilter(EXCEPTION_POINTERS * lParam)
 {
-	write_log(ERROR,"System Error! \r\n System may restart after 2 seconds...");
+	write_log(JUDGE_ERROR,"System Error! \r\n System may restart after 2 seconds...");
 	Sleep(2000);
 	ShellExecuteA(NULL,"open",judgePath,NULL,NULL,SW_SHOWNORMAL);
 	return EXCEPTION_EXECUTE_HANDLER;
@@ -2773,25 +2930,25 @@ long WINAPI ExceptionFilter(EXCEPTION_POINTERS * lParam)
 
 int OJ_main()
 {
-	#if 0
-	if (argc > 1)
-	{
-		strcpy(INI_filename,argv[1]);
+	SetUnhandledExceptionFilter(ExceptionFilter);
+ 	SetErrorMode(SEM_NOGPFAULTERRORBOX );
+
+	if( (_access(logPath, 0 )) == -1 )   {
+		CreateDirectory(logPath,NULL);
 	}
-	#endif
 
 	//关闭调试开关
-	DLL_HDUDebugSwitch(1);
+	DLL_HDUDebugSwitch(JUDGE_DEBUG_OFF);
 
-	write_log(INFO,"Running Judge Core...");
+	write_log(JUDGE_INFO,"Running Judge Core...");
 	InitMySqlConfig();
 	if(InitMySQL()==0){//初始化mysql
-		write_log(ERROR,"Init MySQL ERROR...");
+		write_log(JUDGE_ERROR,"Init MySQL JUDGE_ERROR...");
 		return 0;
 	}
-	write_log(INFO,"Init MySQL Success...");
+	write_log(JUDGE_INFO,"Init MySQL Success...");
 	if(initSocket()==0){         // 初始化socket
-		write_log(ERROR,"Init Socket ERROR...");
+		write_log(JUDGE_ERROR,"Init Socket JUDGE_ERROR...");
 		return 0;
 	}
 
@@ -2801,9 +2958,9 @@ int OJ_main()
 	//进入循环，等待客户连接请求
 	HANDLE hThreadR=CreateThread(NULL,NULL,ListenThread,0,0,0);
 
-	write_log(INFO,"Judge Task init ok...");
+	write_log(JUDGE_INFO,"Judge Task init ok...");
 
-	while(TRUE)
+	for(;;)
 	{
 		Sleep(1);
 	}
@@ -2814,14 +2971,17 @@ int OJ_main()
 
 void OJ_TaskEntry()
 {
-	SetUnhandledExceptionFilter(ExceptionFilter);
- 	SetErrorMode(SEM_NOGPFAULTERRORBOX );
-
-	if( (_access(logPath, 0 )) == -1 )   {
-		CreateDirectory(logPath,NULL);
-	}
-
 	(void)OJ_main();
+
+	//t_oj.detach();
+
+	/* 在主线程里面执行t.detach()将子线程从主线程里分离，
+		子线程执行完成后会自己释放掉资源。分离后的线程，主线程将对它没有控制权了。
+	*/
+
+	//pdt_debug_print("OJ Task init ok...");
+
+	//RunDelay(10);
 
 }
 

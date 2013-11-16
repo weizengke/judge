@@ -24,14 +24,12 @@
 
 static const char* VERDICT_NAME[] = {"ALL", "QUEUING", "COMPILING", "CE", "RUNNING","AC","WA","RE","TLE","MLE","PE","OLE","RF","OOC","SE"};
 
-#define SYSTEM_ERROR 0
-#define WARNING 1
-#define ERROR 2
-#define FATAL 3
-#define INFO 4
+#define JUDGE_SYSTEM_ERROR 0
+#define JUDGE_WARNING 1
+#define JUDGE_ERROR 2
+#define JUDGE_FATAL 3
+#define JUDGE_INFO 4
 
-static const char* LEVEL_NAME[] = {"SYSTEM_ERROR", "WARNING", "ERROR", "FATAL", "INFO"};
-
-static int DEBUG = 1;
+static const char* LEVEL_NAME[] = {"JUDGE_SYSTEM_ERROR", "JUDGE_WARNING", "JUDGE_ERROR", "JUDGE_FATAL", "JUDGE_INFO"};
 
 //#define JUDGE_LOG_BUF_SIZE 200

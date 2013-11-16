@@ -5,6 +5,7 @@
 
 using namespace std;
 
+static int g_DEBUG = 1;
 
 int isInFile(const char fname[]) {
 	int l = strlen(fname);
@@ -31,7 +32,7 @@ void find_next_nonspace(int & c1, int & c2, FILE *& f1, FILE *& f2, int & ret) {
 			} else if ((c1 == '\r' && c2 == '\n')) {
 				c1 = fgetc(f1);
 			} else {
-				if (DEBUG)
+				if (g_DEBUG)
 					printf("%d=%c\t%d=%c", c1, c1, c2, c2);
 				;
 				ret = V_PE;
