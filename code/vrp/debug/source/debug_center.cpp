@@ -166,6 +166,8 @@ void MSG_StopDot()
 
 void MSGQueueMain()
 {
+	pdt_debug_print("Debug task init ok...");
+
     MSGQUEUE_S stMsgQ;
     for (;;)
     {

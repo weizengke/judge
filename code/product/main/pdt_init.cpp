@@ -17,21 +17,25 @@ using namespace std;
 int main()
 {
 
+
 #if 1
+	pdt_debug_print("OS Main-task Running...");
+
+
     extern void MSGQueueMain();
 	std::thread t_debug(MSGQueueMain);
 	RunDelay(10);
-	pdt_debug_print("Debug task init ok...");
 
 	extern void OJ_TaskEntry();
 	std::thread t_oj(OJ_TaskEntry);
 	RunDelay(10);
-	pdt_debug_print("OJ task init ok...");
 
 	extern int cmd_main_entry ();
 	std::thread t_cmd(cmd_main_entry);
 	RunDelay(10);
 
+
+	pdt_debug_print("OS Main-task init ok...");
 
 #if 0
 	extern int test_main();

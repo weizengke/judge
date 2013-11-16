@@ -455,7 +455,7 @@ int loginEx(char *uname, char *pdw)
 
     curl = curl_easy_init();
 
-	judge_outstring("Info: it will takes a few seconds, please wait [%s]...",uname);
+	judge_outstring("Info: It will take a few seconds, please wait [%s]...",uname);
 	MSG_StartDot();
 	if(curl)
 	{
@@ -811,7 +811,7 @@ string getLineFromFile(char *filename,int line)
 int getStatusEx(char *hdu_username)
 {
 	string pid = "1000";
-	string lang;
+	string lang = "C++";
 	string runid;
 	string result;
 	string ce_info;
@@ -822,7 +822,7 @@ int getStatusEx(char *hdu_username)
     tu=mu="0";
     string ts;
 
-	judge_outstring("Info: it will takes a few seconds, please wait...");
+	judge_outstring("Info: It will take a few seconds, please wait...");
 	MSG_StartDot();
 
 	CURL *curl;
@@ -884,7 +884,7 @@ int getStatusEx(char *hdu_username)
 
 	MSG_StopDot();
 	judge_outstring("done.\r\n");
-	judge_outstring(" problem[%s] language[%s]  verdict[%s] submissionID[%s] time[%s ms] memory[%s kb].\r\n", pid.c_str(), lang.c_str(), result.c_str(), runid.c_str(), tu.c_str(), mu.c_str());
+	judge_outstring("Problem[%s] language[%s] verdict[%s] submissionID[%s] time[%sms] memory[%skb].\r\n", pid.c_str(), lang.c_str(), result.c_str(), runid.c_str(), tu.c_str(), mu.c_str());
 
 	MSG_OUPUT_DBG("get status success...");
 
@@ -893,6 +893,8 @@ int getStatusEx(char *hdu_username)
 		//获取编译错误信息
 		string CE_Info = getCEinfo(runid);
 		ce_info = CE_Info;
+
+		judge_outstring("Compilation Info: \r\n%s\r\n", ce_info.c_str());
 		//MSG_OUPUT_DBG(CE_Info.c_str());
 	}
 
@@ -2971,6 +2973,8 @@ int OJ_main()
 
 void OJ_TaskEntry()
 {
+	pdt_debug_print("OJ task init ok...");
+
 	(void)OJ_main();
 
 	//t_oj.detach();
