@@ -1,7 +1,8 @@
 #include <iostream>
 #include <stdlib.h>
-#include "..\include\judge_util.h"
-#include "..\include\define.h"
+
+#include "..\include\judge_inc.h"
+
 
 using namespace std;
 

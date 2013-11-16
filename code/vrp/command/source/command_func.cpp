@@ -441,6 +441,20 @@ DEFUN(cmd_display_hdujudge_status_st, (char*)"display hdu-judge status STRING<1-
 }
 
 
+DEFUN(cmd_judge_solution_st, (char*)"judge solution INTEGER<1-65535>", (char*)"judge solution <ID>", judge_solution)
+{
+	int solutionId = 0;
+
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "%d %s %s %s\n", argc, argv[0], argv[1], argv[2]);
+
+	solutionId = atoi(argv[2]);
+
+	extern int Judge_PushQueue(int solutionId);
+	Judge_PushQueue(solutionId);
+
+	return 0;
+}
+
 void cmd_init()
 {
 	// initial cmd vector
@@ -450,6 +464,8 @@ void cmd_init()
 	cmd_reg_newcmdelement(CMD_ELEM_ID_CR, 			CMD_ELEM_TYPE_END,			"<CR>",			    ""               );
 	cmd_reg_newcmdelement(CMD_ELEM_ID_STRING1TO24,  CMD_ELEM_TYPE_STRING,       "STRING<1-24>",     "String lenth range form 1 to 24");
 	cmd_reg_newcmdelement(CMD_ELEM_ID_INTEGER1TO24, CMD_ELEM_TYPE_INTEGER,      "INTEGER<1-100>",   "Integer range form 1 to 100");
+	cmd_reg_newcmdelement(CMD_ELEM_ID_INTEGER1TO65535, CMD_ELEM_TYPE_INTEGER,   "INTEGER<1-65535>",   "Integer range form 1 to 100");
+
 	cmd_reg_newcmdelement(CMD_ELEM_ID_SYSNAME, 		CMD_ELEM_TYPE_KEY,   		"sysname",          "Set system name");
 	cmd_reg_newcmdelement(CMD_ELEM_ID_UNDO, 			CMD_ELEM_TYPE_KEY,   		"undo",				"Undo operation");
 	cmd_reg_newcmdelement(CMD_ELEM_ID_ENABLE, 		CMD_ELEM_TYPE_KEY,   		"enable",			"Enable operation");
@@ -487,6 +503,9 @@ void cmd_init()
 
 	cmd_reg_newcmdelement(CMD_ELEM_ID_HDUJUDGE,		CMD_ELEM_TYPE_KEY,			"hdu-judge",		"HDU-Judge");
 	cmd_reg_newcmdelement(CMD_ELEM_ID_STATUS,		CMD_ELEM_TYPE_KEY,			"status",			"Status");
+
+	cmd_reg_newcmdelement(CMD_ELEM_ID_JUDGE,			CMD_ELEM_TYPE_KEY,			"judge",			"Judge of OJ");
+	cmd_reg_newcmdelement(CMD_ELEM_ID_SOLUTION,		CMD_ELEM_TYPE_KEY,			"solution",			"The Solution");
 	// install command
 	// ---------------------------------------------------
 
@@ -551,6 +570,9 @@ void cmd_init()
 
 	install_element(&cmd_hdujudge_login_st);
 	install_element(&cmd_display_hdujudge_status_st);
+
+
+	install_element(&cmd_judge_solution_st);
 	// ---------------------------------------------------
 
 }

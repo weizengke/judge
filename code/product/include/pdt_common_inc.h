@@ -4,6 +4,15 @@
 
 #include <thread>
 
+
+#define UCHAR unsigned char
+#define ULONG unsigned long
+#define CHAR char
+
+#define BOOL_TRUE 0
+#define BOOL_FALSE 1
+
+
 extern void RunDelay(int t);
 extern void MSGQueueMain();
 extern void pdt_debug_print(const char *format, ...);

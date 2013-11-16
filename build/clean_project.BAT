@@ -3,6 +3,7 @@ del /s /q /f obj\*.o
 del /s /q /f obj\*.obj
 del /s /q /f *.obj
 del /s /q /f *.exe
-del /s /q /f log
-del /s /q /f OJ_TMP
+del /s /q /f log\*.log
+del /s /q /f OJ_TMP\*.txt
+del /s /q /f bin\Jugde-log\*.log
 

@@ -42,7 +42,6 @@ int main()
 	std::thread t_test(test_main);
 #endif
 
-	//pdt_debug_print("JungleOS init has been finished...");
 	t_debug.join();
 	t_oj.join();
 

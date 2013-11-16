@@ -1,5 +1,9 @@
 JUDGE_OBJ=$(OBJ_DIR)judge.o \
-	$(OBJ_DIR)judge_util.o
+	$(OBJ_DIR)judge_util.o \
+	$(OBJ_DIR)judge_io.o \
+	$(OBJ_DIR)judge_hdu.o \
+	$(OBJ_DIR)judge_var.o \
+	$(OBJ_DIR)judge_sql.o
 
 all:$(JUDGE_OBJ)
 
