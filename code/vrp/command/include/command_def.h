@@ -92,6 +92,9 @@
 #define CMD_KEY_DELETE  0x08
 #define CMD_KEY_BACKSPACE 0x20
 #define CMD_KEY_CTRL_H	(0x1f | 0x7f)
+
+#define CMD_KEY_CTRL_W	0x17
+
 #endif
 
 #endif

@@ -1417,13 +1417,19 @@ int cmd_resolve(char c)
 			}
 		break;
 #endif
-	case CMD_KEY_DELETE:
+	case CMD_KEY_DELETE: /* bug */
 		key_type = CMD_KEY_CODE_DELETE;
 		break;
 	case CMD_KEY_BACKSPACE:
 	case CMD_KEY_CTRL_H:
 		/* Linux 下空格后回车无法tab补全与'?'联想 待修复*/
 		break;
+	case CMD_KEY_CTRL_W:
+		/* del the last elem */
+		printf("CMD_KEY_CTRL_W");
+		key_type = CMD_KEY_CODE_DEL_LASTWORD;
+		break;
+
 	case '\t':
 		key_type = CMD_KEY_CODE_TAB;
 		break;
@@ -1504,6 +1510,16 @@ void cmd_resolve_tab(struct cmd_vty *vty)
 	int isNeedMatch = 1;   /* 非TAB场景(无空格)，不需要匹配 */
 	char lcd_str[1024] = {0};	// if part match, then use this
 	char *last_word = NULL;
+
+
+	/*
+	1: 取pos 之前的buf
+	2: 需要覆盖当前光标后的buf
+	*/
+	/* BEGIN: Added by weizengke, 2013/11/17 bug for left and tab*/
+	memset(&(vty->buffer[vty->cur_pos]), 0 ,strlen(vty->buffer) - vty->cur_pos);
+	vty->used_len = strlen(vty->buffer);
+	/* END:   Added by weizengke, 2013/11/17 */
 
 	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "TAB for completing command. (buf=%s)", vty->buffer);
 
@@ -1688,6 +1704,8 @@ void cmd_resolve_enter(struct cmd_vty *vty)
 
 	int i = 0;
 
+	//printf("enter(%d %d %s)\r\n", vty->used_len, vty->buf_len, vty->buffer);
+
 	v = str2vec(vty->buffer);
 	if (v == NULL) {
 		cmd_outstring("%s", CMD_ENTER);
@@ -1762,6 +1780,16 @@ void cmd_resolve_quest(struct cmd_vty *vty)
 	struct para_desc *match[CMD_MAX_MATCH_SIZE];	// matched string
 	int match_size = 0;
 	int i = 0;
+
+	/*
+	1: 取pos 之前的buf
+	2: 需要覆盖当前光标后的buf
+	*/
+	/* BEGIN: Added by weizengke, 2013/11/17 bug for left and tab*/
+	memset(&(vty->buffer[vty->cur_pos]), 0 ,strlen(vty->buffer) - vty->cur_pos);
+	vty->used_len = strlen(vty->buffer);
+	/* END:   Added by weizengke, 2013/11/17 */
+
 
 	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "'?' for associating command. (buf=%s)", vty->buffer);
 
@@ -1852,6 +1880,8 @@ void cmd_resolve_left(struct cmd_vty *vty)
 
 void cmd_resolve_right(struct cmd_vty *vty)
 {
+
+	printf("right");
 	// already at rightmost, cannot move more
 	if (vty->cur_pos >= vty->used_len)
 		return;
@@ -1883,6 +1913,7 @@ void cmd_resolve_delete(struct cmd_vty *vty)
 	cmd_put_one(' ');
 	for (i = 0; i < size + 1; i++)
 		cmd_back_one();
+
 }
 
 void cmd_resolve_insert(struct cmd_vty *vty)
@@ -1895,11 +1926,19 @@ void cmd_resolve_insert(struct cmd_vty *vty)
 	size = vty->used_len - vty->cur_pos;
 	CMD_DBGASSERT(size >= 0);
 
+	//printf("insert(%d %d %s)\r\n", vty->used_len, vty->buf_len, vty->buffer);
+
 	memcpy(&vty->buffer[vty->cur_pos + 1], &vty->buffer[vty->cur_pos], size);
 	vty->buffer[vty->cur_pos] = vty->c;
+
+#if 0
+	/* BEGIN: del by weizengke, 2013/11/17 */
 	/* BEGIN: Added by weizengke, 2013/10/4   PN:bug for continue tab */
 	vty->buffer[vty->cur_pos + 1] = '\0';
 	/* END:   Added by weizengke, 2013/10/4   PN:None */
+	/* END: del by weizengke, 2013/11/17 */
+#endif
+
 	// print left chars, then back size
 	for (i = 0; i < size + 1; i++)
 		cmd_put_one(vty->buffer[vty->cur_pos + i]);
@@ -1910,6 +1949,33 @@ void cmd_resolve_insert(struct cmd_vty *vty)
 	vty->used_len++;
 
 }
+
+void cmd_resolve_del_lastword(struct cmd_vty *vty)
+{
+	int i, size;
+
+	printf("Delet lastword\r\n");
+	// no more to delete
+	if (vty->cur_pos <= 0)
+		return;
+	size = vty->used_len - vty->cur_pos;
+	CMD_DBGASSERT(size >= 0);
+
+	// delete char
+	vty->cur_pos--;
+	vty->used_len--;
+	cmd_back_one();
+
+	// print left chars
+	memcpy(&vty->buffer[vty->cur_pos], &vty->buffer[vty->cur_pos + 1], size);
+	vty->buffer[vty->used_len] = '\0';
+	for (i = 0; i < size; i ++)
+		cmd_put_one(vty->buffer[vty->cur_pos + i]);
+	cmd_put_one(' ');
+	for (i = 0; i < size + 1; i++)
+		cmd_back_one();
+}
+
 
 key_handler_t key_resolver[] = {
 	// resolve a whole line
@@ -1922,7 +1988,10 @@ key_handler_t key_resolver[] = {
 	{ CMD_KEY_CODE_LEFT, 	cmd_resolve_left },
 	{ CMD_KEY_CODE_RIGHT, 	cmd_resolve_right },
 	{ CMD_KEY_CODE_DELETE, 	cmd_resolve_delete },
+
+	{ CMD_KEY_CODE_DEL_LASTWORD, cmd_resolve_del_lastword},
 	{ CMD_KEY_CODE_NOTCARE, cmd_resolve_insert },
+
 };
 
 
@@ -1952,6 +2021,7 @@ void cmd_read(struct cmd_vty *vty)
 
 
 		if (key_type <= CMD_KEY_CODE_NONE || key_type > CMD_KEY_CODE_NOTCARE) {
+			printf("Error\r\n");
 			debug_print_ex(CMD_DEBUG_TYPE_ERROR, "Unidentify Key Type, c = %c, key_type = %d\n", vty->c, key_type);
 			continue;
 		}
