@@ -28,11 +28,13 @@ void debug_print_ex(CMD_DEBUG_TYPE_EM type, const char *format, ...)
     p->tm_year = p->tm_year + 1900;
     p->tm_mon = p->tm_mon + 1;
 
-	printf("\r\n<%04d-%02d-%02d %02d:%02d:%02d>",p->tm_year, p->tm_mon, p->tm_mday,p->tm_hour,p->tm_min,p->tm_sec);
+	printf("<%04d-%02d-%02d %02d:%02d:%02d>",p->tm_year, p->tm_mon, p->tm_mday,p->tm_hour,p->tm_min,p->tm_sec);
 	va_list args;
 	va_start(args, format);
 	vprintf(format, args);
 	va_end(args);
+
+	printf("\r\n");
 
 }
 
@@ -51,11 +53,13 @@ void debug_print(const char *format, ...)
     p->tm_year = p->tm_year + 1900;
     p->tm_mon = p->tm_mon + 1;
 
-	printf("\r\n<%04d-%02d-%02d %02d:%02d:%02d>",p->tm_year, p->tm_mon, p->tm_mday,p->tm_hour,p->tm_min,p->tm_sec);
+	printf("<%04d-%02d-%02d %02d:%02d:%02d>",p->tm_year, p->tm_mon, p->tm_mday,p->tm_hour,p->tm_min,p->tm_sec);
 	va_list args;
 	va_start(args, format);
 	vprintf(format, args);
 	va_end(args);
+
+	printf("\r\n");
 
 }
 

@@ -54,9 +54,6 @@ void judge_outstring(const char *format, ...)
 	va_start(args, format);
 	vprintf(format, args);
 	va_end(args);
-
-	extern void cmd_outcurrent();
-	cmd_outcurrent();
 }
 
 void MSG_OUPUT_DBG(const char *fmt, ...)

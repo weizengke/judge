@@ -82,7 +82,7 @@ void pdt_debug_print_ex(int level, const char *format, ...)
 	vsprintf(buf_t,format, args);
 	sprintf(buf,"%s%s", buf,buf_t);
 	va_end(args);
-	sprintf(buf,"\r\n%s", buf);
+	sprintf(buf,"%s", buf);
 
     strcpy(stMsgQ.szMsgBuf, buf);
     std::thread::id this_id = std::this_thread::get_id();
