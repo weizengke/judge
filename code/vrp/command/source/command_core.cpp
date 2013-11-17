@@ -1346,6 +1346,27 @@ static void cmd_delete_word(struct cmd_vty *vty)
 	vty->used_len = strlen(vty->buffer);
 }
 
+// delete the last word from input buffer
+static void cmd_delete_word_ctrl_W(struct cmd_vty *vty)
+{
+	int pos = strlen(vty->buffer);
+
+	/* ignore suffix-space */
+	while (vty->buffer[pos - 1] == ' ')
+	{
+		pos--;
+	}
+
+	/* del the last word */
+	while (pos > 0 && vty->buffer[pos - 1] != ' ') {
+		pos--;
+	}
+
+	vty->buffer[pos] = '\0';
+	vty->cur_pos = strlen(vty->buffer);
+	vty->used_len = strlen(vty->buffer);
+}
+
 static inline void free_matched(char **matched)
 {
 	int i;
@@ -1426,7 +1447,6 @@ int cmd_resolve(char c)
 		break;
 	case CMD_KEY_CTRL_W:
 		/* del the last elem */
-		printf("CMD_KEY_CTRL_W");
 		key_type = CMD_KEY_CODE_DEL_LASTWORD;
 		break;
 
@@ -1881,7 +1901,7 @@ void cmd_resolve_left(struct cmd_vty *vty)
 void cmd_resolve_right(struct cmd_vty *vty)
 {
 
-	printf("right");
+	//printf("right");
 	// already at rightmost, cannot move more
 	if (vty->cur_pos >= vty->used_len)
 		return;
@@ -1950,30 +1970,21 @@ void cmd_resolve_insert(struct cmd_vty *vty)
 
 }
 
+/* del the last word from vty->buffer */
 void cmd_resolve_del_lastword(struct cmd_vty *vty)
 {
 	int i, size;
 
-	printf("Delet lastword\r\n");
 	// no more to delete
 	if (vty->cur_pos <= 0)
 		return;
-	size = vty->used_len - vty->cur_pos;
-	CMD_DBGASSERT(size >= 0);
 
-	// delete char
-	vty->cur_pos--;
-	vty->used_len--;
-	cmd_back_one();
+	cmd_delete_word_ctrl_W(vty);
 
-	// print left chars
-	memcpy(&vty->buffer[vty->cur_pos], &vty->buffer[vty->cur_pos + 1], size);
-	vty->buffer[vty->used_len] = '\0';
-	for (i = 0; i < size; i ++)
-		cmd_put_one(vty->buffer[vty->cur_pos + i]);
-	cmd_put_one(' ');
-	for (i = 0; i < size + 1; i++)
-		cmd_back_one();
+	cmd_outstring("%s", CMD_ENTER);
+	cmd_outprompt(vty->prompt);
+	cmd_outstring("%s", vty->buffer);
+
 }
 
 
