@@ -52,39 +52,48 @@ int SQL_getSolutionSource(){
 	fclose(fp_source);
 	return 1;
 }
-int SQL_getSolutionInfo(){
-	//problemId,languageId,submitDate,username
+
+int SQL_getSolutionInfo(int *pIsExist)
+{
+	*pIsExist = OS_NO;
 
 	sprintf(query,"select problem_id,contest_id,language,username,submit_date from solution where solution_id=%d",GL_solutionId);
+
 	int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));
-	if(ret){
+	if(ret)
+	{
 		write_log(JUDGE_ERROR,mysql_error(mysql));
-		//printf("Error SQL_getSolutionData...\n");
-		return 0;
+		return OS_ERR;
 	}
+
 	MYSQL_RES *recordSet = mysql_store_result(mysql);
-	if (recordSet==NULL){
+	if (recordSet==NULL)
+	{
 		write_log(JUDGE_ERROR,"Error SQL_getSolutionData");
-		return 0;
+		return OS_ERR;
 	}
 
 	//获取数据
 	MYSQL_ROW row; //一个行数据的类型安全(type-safe)的表示
-	if(row=mysql_fetch_row(recordSet))  //获取下一条记录
+	if (row = mysql_fetch_row(recordSet))  //获取下一条记录
 	{
 		GL_problemId=atoi(row[0]);
 		GL_contestId=atoi(row[1]);
 		GL_languageId=atoi(row[2]);
 		strcpy(GL_username,row[3]);
 		StringToTimeEX(row[4],GL_submitDate);
-
+		*pIsExist = OS_YES;
+		write_log(JUDGE_INFO,"Found record.");
 	}
 	else
 	{
-		write_log(JUDGE_ERROR,"Error SQL_getSolutionData");
+		write_log(JUDGE_ERROR,"No such record.");
 	}
-	mysql_free_result(recordSet);//释放结果集
-	return 1;
+
+	/* 释放结果集 */
+	mysql_free_result(recordSet);
+
+	return OS_OK;
 }
 
 int SQL_getProblemInfo(){//time_limit,memory_limit,spj

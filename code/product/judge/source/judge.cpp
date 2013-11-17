@@ -82,7 +82,7 @@ ULONG Judge_DebugSwitch(ULONG st)
 {
 	set_debug_switch(st);
 
-	return BOOL_TRUE;
+	return OS_TRUE;
 }
 /* END HDU VJUDGE */
 
@@ -788,16 +788,26 @@ int Judge_Local()
 		RUN_solution(GL_solutionId);
 	}
 
-	return BOOL_TRUE;
+	return OS_TRUE;
 }
 
 
-int work(int solutionId){  //开始工作
+int work(int solutionId)
+{
+	int ret = OS_OK;
+	int isExist = OS_NO;
 
 	GL_solutionId = solutionId;
 
 	resetVal();//重置
-	SQL_getSolutionInfo();
+
+	ret = SQL_getSolutionInfo(&isExist);
+	if (OS_ERR == ret || OS_NO == isExist)
+	{
+		pdt_debug_print("No such solution %d.", solutionId);
+		return OS_ERR;
+	}
+
 	InitPath();  //包含sourcePath,所以在SQL_getSolutionSource之前
 	SQL_getSolutionSource();  //取出source，并保存到sourcePath
 	SQL_getProblemInfo();	//problem info
@@ -807,7 +817,8 @@ int work(int solutionId){  //开始工作
 		#if(JUDGE_VIRTUAL == VOS_YES)
 		(void)Judge_Remote();
 		#else
-		judge_outstring("Error: virtua-judge is not support.\r\n");
+		pdt_debug_print("virtua-judge is not support.");
+		return OS_ERR;
 		#endif
 		g_dwCode = 0;
 		GL_testcase = 0;
@@ -851,7 +862,7 @@ int work(int solutionId){  //开始工作
 	DeleteFile(DebugFile);
 	DeleteFile(exePath);
 
-	return 1;
+	return OS_OK;
 }
 
 void Judge_PushQueue(int solutionId)
@@ -864,6 +875,7 @@ void Judge_PushQueue(int solutionId)
 
 DWORD WINAPI WorkThread(LPVOID lpParam)
 {
+	int ret = OS_OK;
 	JUDGE_DATA jd;
 	time_t first_t,second_t;
 	string str_time;
@@ -885,28 +897,32 @@ DWORD WINAPI WorkThread(LPVOID lpParam)
 				//MSG_StartDot();
 
 				/* 启动评判 */
-				work(GL_currentId);
+				ret = work(GL_currentId);
 				Q.pop();
 
 				//MSG_StopDot();
 				//judge_outstring("done.\r\n");
+				if (OS_OK == ret)
+				{
+					string time_string_;
+					API_TimeToString(time_string_,GL_submitDate);
+					judge_outstring("\r\n ----------------------"
+								"\r\n	  *Judge verdict*"
+								"\r\n ----------------------"
+								"\r\n SolutionId   : %3d"
+								"\r\n Pasted cases : %3d"
+								"\r\n Time-used    : %3d ms"
+								"\r\n Memory-used  : %3d kb"
+								"\r\n Return code  : %3u"
+								"\r\n Verdict	   : %3s"
+								"\r\n Submit Date  : %3s"
+								"\r\n Username		: %3s"
+								"\r\n ----------------------\r\n",
+									GL_solutionId,GL_testcase,GL_time-GL_time%10,GL_memory,
+									g_dwCode,VERDICT_NAME[GL_verdictId],time_string_.c_str(),GL_username);
 
-				string time_string_;
-				API_TimeToString(time_string_,GL_submitDate);
-				judge_outstring("\r\n ----------------------"
-							"\r\n     *Judge verdict*"
-						    "\r\n ----------------------"
-							"\r\n SolutionId   : %3d"
-							"\r\n Pasted cases : %3d"
-							"\r\n Time-used    : %3d ms"
-							"\r\n Memory-used  : %3d kb"
-							"\r\n Return code  : %3u"
-							"\r\n Verdict      : %3s"
-							"\r\n Submit Date  : %3s"
-							"\r\n Username      : %3s"
-							"\r\n ----------------------\r\n",
-								GL_solutionId,GL_testcase,GL_time-GL_time%10,GL_memory,
-								g_dwCode,VERDICT_NAME[GL_verdictId],time_string_.c_str(),GL_username);
+				}
+
 		}
 		Sleep(1);
 	}

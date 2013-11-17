@@ -70,11 +70,11 @@ ULONG getLanguageNameByID(ULONG id, UCHAR *ucLanguageName)
 {
 	if (id < 0 || id >= sizeof(gaucLanguageName)/MAX_LANG_SIZE)
 	{
-		return BOOL_FALSE;
+		return OS_FALSE;
 	}
 
 	strcpy((char *)ucLanguageName, (char *)gaucLanguageName[id]);
-	return BOOL_TRUE;
+	return OS_TRUE;
 }
 
 ULONG getLanguageIDByName(UCHAR *ucLanguageName, ULONG *id)
@@ -86,11 +86,11 @@ ULONG getLanguageIDByName(UCHAR *ucLanguageName, ULONG *id)
 		if (strcmp((CHAR*)ucLanguageName, (CHAR*)gaucLanguageName[usLoop]) == 0)
 		{
 			*id = usLoop;
-			return BOOL_TRUE;
+			return OS_TRUE;
 		}
 	}
 
-	return BOOL_FALSE;
+	return OS_FALSE;
 }
 
 bool isSpace(char c)
@@ -185,7 +185,7 @@ ULONG getResult(string s, string &res)
     int pos=s.find("<font color=");
 	if (-1 == pos)
 	{
-		return BOOL_FALSE;
+		return OS_FALSE;
 	}
 
     while (s[pos]!='>') pos++;
@@ -195,14 +195,14 @@ ULONG getResult(string s, string &res)
     while (s[pos]!='<') pos++;
     res = s.substr(st,pos-st);
 
-	return BOOL_TRUE;
+	return OS_TRUE;
 }
 
 ULONG getRunid(string s, string &res) {
     int pos=s.find("<td height=22px>");
 	if (-1 == pos)
 	{
-		return BOOL_FALSE;
+		return OS_FALSE;
 	}
 
     while (s[pos]!='>') pos++;
@@ -213,7 +213,7 @@ ULONG getRunid(string s, string &res) {
 
     res = s.substr(st,pos-st);
 
-	return BOOL_TRUE;
+	return OS_TRUE;
 }
 
 
@@ -265,7 +265,7 @@ ULONG getUsedTime(string s, string &timeuse)
     int pos=s.find("MS</td>");
 	if (-1 == pos)
 	{
-		return BOOL_FALSE;
+		return OS_FALSE;
 	}
 
     int st=pos;
@@ -273,7 +273,7 @@ ULONG getUsedTime(string s, string &timeuse)
     pos++;
 
     timeuse =  s.substr(pos,st-pos);
-	return BOOL_TRUE;
+	return OS_TRUE;
 }
 
 ULONG getUsedMem(string s, string &memuse)
@@ -281,14 +281,14 @@ ULONG getUsedMem(string s, string &memuse)
 	int pos=s.find("K</td>");
 	if (-1 == pos)
 	{
-		return BOOL_FALSE;
+		return OS_FALSE;
 	}
 
 	int st=pos;
 	while (s[pos]!='>') pos--;
 	pos++;
 	memuse = s.substr(pos,st-pos);
-	return BOOL_TRUE;
+	return OS_TRUE;
 }
 
 string getLineFromFile(char *filename,int line)
@@ -366,17 +366,17 @@ int loginEx(char *uname, char *pdw)
 	MSG_StopDot();
 	judge_outstring("done.\r\n");
 
-    if (res) return BOOL_FALSE;
+    if (res) return OS_FALSE;
 
     string ts=getAllFromFile(tfilename);
     if (ts.find("No such user or wrong password.")!=string::npos)
 	{
 		judge_outstring("Error: No such user or wrong password.\r\n");
-		return BOOL_FALSE;
+		return OS_FALSE;
 	}
 
 	judge_outstring("Info: Login hdu-judge success.\r\n");
-    return BOOL_TRUE;
+    return OS_TRUE;
 }
 
 ULONG login()
@@ -405,15 +405,15 @@ ULONG login()
 
 	fclose(fp);
 
-    if (res) return BOOL_FALSE;
+    if (res) return OS_FALSE;
 
     string ts=getAllFromFile(tfilename);
     if (ts.find("No such user or wrong password.")!=string::npos)
 	{
 		MSG_OUPUT_DBG("Login failed.");
-		return BOOL_FALSE;
+		return OS_FALSE;
 	}
-    return BOOL_TRUE;
+    return OS_TRUE;
 }
 
 ULONG getSubmitError(char *filename, string &res)
@@ -442,7 +442,7 @@ ULONG getSubmitError(char *filename, string &res)
 						res = ts.substr(begin_,end_ - begin_);
 						//cout<<res<<endl;
 						fclose(fp);
-						return BOOL_TRUE;
+						return OS_TRUE;
 					}
 
 					while (fgets(tmps,1000000,fp))
@@ -455,7 +455,7 @@ ULONG getSubmitError(char *filename, string &res)
 							res = ts.substr(begin_,end_ - begin_);
 							//cout<<res<<endl;
 							fclose(fp);
-							return BOOL_TRUE;
+							return OS_TRUE;
 						}
 						else
 						{
@@ -469,7 +469,7 @@ ULONG getSubmitError(char *filename, string &res)
         }
     }
     fclose(fp);
-    return BOOL_FALSE;
+    return OS_FALSE;
 }
 
 ULONG submit(string pid, string lang, string source)
@@ -521,19 +521,19 @@ ULONG submit(string pid, string lang, string source)
 	if (res)
 	{
 		MSG_OUPUT_DBG("curl_easy_perform failed...");
-		return BOOL_FALSE;
+		return OS_FALSE;
 	}
 
     string tss=getAllFromFile(tfilename);
     if (tss.find("Connect(0) to MySQL Server failed.")!=string::npos||tss.find("<b>One or more following JUDGE_ERROR(s) occurred.")!=string::npos||tss.find("<h2>The requested URL could not be retrieved</h2>")!=string::npos||tss.find("PHP: Maximum execution time of")!=string::npos)
 	{
 		MSG_OUPUT_DBG("One or more JUDGE_ERROR(s) occurred.....");
-		return BOOL_FALSE;
+		return OS_FALSE;
 	}
 
 	MSG_OUPUT_DBG("Submit success...");
 
-    return BOOL_TRUE;
+    return OS_TRUE;
 }
 #endif
 
@@ -575,7 +575,7 @@ int getStatusEx(char *hdu_username)
 	string ce_info;
 	string tu;
 	string mu;
-    ULONG ulRet = BOOL_TRUE;
+    ULONG ulRet = OS_TRUE;
 
     tu=mu="0";
     string ts;
@@ -610,34 +610,34 @@ int getStatusEx(char *hdu_username)
 
 	ts = getLineFromFile(tfilename,77);
 
-	if(BOOL_FALSE == getUsedTime(ts, tu))
+	if(OS_FALSE == getUsedTime(ts, tu))
 	{
 		++ulRet;
 		MSG_OUPUT_DBG("getUsedTime failed.");
 	}
 
-    if(BOOL_FALSE == getUsedMem(ts, mu))
+    if(OS_FALSE == getUsedMem(ts, mu))
 	{
 		++ulRet;
 		MSG_OUPUT_DBG("getUsedMem failed.");
 	}
 
-	if(BOOL_FALSE == getRunid(ts, runid))
+	if(OS_FALSE == getRunid(ts, runid))
 	{
 		++ulRet;
 		MSG_OUPUT_DBG("getRunid failed.");
 	}
 
-	if(BOOL_FALSE == getResult(ts, result))
+	if(OS_FALSE == getResult(ts, result))
 	{
 		++ulRet;
 		MSG_OUPUT_DBG("getResult failed.");
 	}
 
-	if (BOOL_TRUE != ulRet)
+	if (OS_TRUE != ulRet)
 	{
 		MSG_OUPUT_DBG("get record failed.");
-		return BOOL_FALSE;
+		return OS_FALSE;
 	}
 
 	MSG_StopDot();
@@ -656,12 +656,12 @@ int getStatusEx(char *hdu_username)
 		//MSG_OUPUT_DBG(CE_Info.c_str());
 	}
 
-    return BOOL_TRUE;
+    return OS_TRUE;
 }
 
 ULONG getStatus(string hdu_username, string pid,string lang, string &runid, string &result,string& ce_info,string &tu,string &mu)
 {
-    ULONG ulRet = BOOL_TRUE;
+    ULONG ulRet = OS_TRUE;
     tu=mu="0";
     string ts;
 
@@ -694,34 +694,34 @@ ULONG getStatus(string hdu_username, string pid,string lang, string &runid, stri
 
 	ts = getLineFromFile(tfilename,77);
 
-	if(BOOL_FALSE == getUsedTime(ts, tu))
+	if(OS_FALSE == getUsedTime(ts, tu))
 	{
 		++ulRet;
 		MSG_OUPUT_DBG("getUsedTime failed.");
 	}
 
-    if(BOOL_FALSE == getUsedMem(ts, mu))
+    if(OS_FALSE == getUsedMem(ts, mu))
 	{
 		++ulRet;
 		MSG_OUPUT_DBG("getUsedMem failed.");
 	}
 
-	if(BOOL_FALSE == getRunid(ts, runid))
+	if(OS_FALSE == getRunid(ts, runid))
 	{
 		++ulRet;
 		MSG_OUPUT_DBG("getRunid failed.");
 	}
 
-	if(BOOL_FALSE == getResult(ts, result))
+	if(OS_FALSE == getResult(ts, result))
 	{
 		++ulRet;
 		MSG_OUPUT_DBG("getResult failed.");
 	}
 
-	if (BOOL_TRUE != ulRet)
+	if (OS_TRUE != ulRet)
 	{
 		MSG_OUPUT_DBG("get record failed.");
-		return BOOL_FALSE;
+		return OS_FALSE;
 	}
 
 	MSG_OUPUT_DBG("problem:%s, language:%s, verdict:%s, submissionID:%s, time:%s ms, memory:%s kb\r\n", pid.c_str(), lang.c_str(), result.c_str(), runid.c_str(), tu.c_str(), mu.c_str());
@@ -736,7 +736,7 @@ ULONG getStatus(string hdu_username, string pid,string lang, string &runid, stri
 		//MSG_OUPUT_DBG(CE_Info.c_str());
 	}
 
-    return BOOL_TRUE;
+    return OS_TRUE;
 }
 
 ////////////////////////////////////////
@@ -753,11 +753,11 @@ ULONG isNeed2HTML(ENUM_PROVLEM em)
 		case PROBLEM_MEMORY:
 		case PROBLEM_TITLE:
 		case PROBLEM_AUTHOR:
-			return BOOL_FALSE;
+			return OS_FALSE;
 		default:
-			return BOOL_TRUE;
+			return OS_TRUE;
 	}
-	return BOOL_TRUE;
+	return OS_TRUE;
 }
 
 
@@ -798,7 +798,7 @@ void SQL_updateProblemInfo(string v_ojname, string v_pid)
 			g_problem_string[i] = "HDU." + v_pid + " - " + g_problem_string[i];
 		}
 
-		if (BOOL_TRUE == isNeed2HTML((ENUM_PROVLEM)i))
+		if (OS_TRUE == isNeed2HTML((ENUM_PROVLEM)i))
 		{
 			replace_all_distinct(g_problem_string[i], "\"", "&quot;");
 			replace_all_distinct(g_problem_string[i], "src=/data/images/", "src=http://acm.hdu.edu.cn/data/images/");
@@ -856,7 +856,7 @@ ULONG checkStringExsit(char *filename, char *pattern)
 	re = pcre_compile(pattern, 0, &error, &erroffset, NULL);
     if (re == NULL) {                 //如果编译失败，返回错误信息
         MSG_OUPUT_DBG("PCRE compilation failed at offset %d: %s\n", erroffset, error);
-        return BOOL_FALSE;
+        return OS_FALSE;
     }
 
     rc = pcre_exec(re,NULL, ts.c_str(), strlen(ts.c_str()), 0, 0, ovector, OVECCOUNT);
@@ -865,12 +865,12 @@ ULONG checkStringExsit(char *filename, char *pattern)
         if (rc == PCRE_ERROR_NOMATCH) printf("Sorry, no match ...\n");
         else MSG_OUPUT_DBG("Matching error %d\n", rc);
         pcre_free(re);
-        return BOOL_FALSE;
+        return OS_FALSE;
     }
 
 	pcre_free(re);
 
-	return BOOL_TRUE;
+	return OS_TRUE;
 }
 
 ULONG getInfoByTag(char *src, char *pattern, ENUM_PROVLEM enProblem, char *res)
@@ -887,7 +887,7 @@ ULONG getInfoByTag(char *src, char *pattern, ENUM_PROVLEM enProblem, char *res)
 	re = pcre_compile(pattern, 0, &error, &erroffset, NULL);
     if (re == NULL) {                 //如果编译失败，返回错误信息
         MSG_OUPUT_DBG("PCRE compilation failed at offset %d: %s\n", erroffset, error);
-        return BOOL_FALSE;
+        return OS_FALSE;
     }
 
     rc = pcre_exec(re,NULL, src, strlen(src), 0, 0, ovector, OVECCOUNT);
@@ -899,7 +899,7 @@ ULONG getInfoByTag(char *src, char *pattern, ENUM_PROVLEM enProblem, char *res)
 			g_problem_string[enProblem] = "Not Found";
 		}
 		pcre_free(re);
-		return BOOL_FALSE;
+		return OS_FALSE;
 	}
 
 	MSG_OUPUT_DBG("In getInfoByTag...");
@@ -938,7 +938,7 @@ ULONG getInfoByTag(char *src, char *pattern, ENUM_PROVLEM enProblem, char *res)
 
 	pcre_free(re);
 
-	return BOOL_TRUE;
+	return OS_TRUE;
 }
 
 int getProblemInfo_Brief(string pid)
@@ -1020,7 +1020,7 @@ int getProblemInfo_Brief(string pid)
 
 	if (ulRet != 0)
 	{
-		if (BOOL_TRUE == checkStringExsit(tfilename, "No such problem"))
+		if (OS_TRUE == checkStringExsit(tfilename, "No such problem"))
 		{
 			MSG_OUPUT_DBG("No such problem %s", pid.c_str());
 
@@ -1065,7 +1065,7 @@ ULONG getProblemInfo(string pid)
 
 	getProblemInfo_Brief(pid);
 
-	return BOOL_TRUE;
+	return OS_TRUE;
 }
 
 ULONG DLL_GetProblemInfoFromHDU(int pid)
@@ -1074,23 +1074,23 @@ ULONG DLL_GetProblemInfoFromHDU(int pid)
 	itoa(pid,tmp,10);
 	string pid_s = tmp;
 
-	if (BOOL_TRUE != getProblemInfo(pid_s))
+	if (OS_TRUE != getProblemInfo(pid_s))
 	{
-		return BOOL_FALSE;
+		return OS_FALSE;
 	}
 
-	return BOOL_TRUE;
+	return OS_TRUE;
 }
 
 
 ULONG DLL_HDULogin()
 {
-	if (BOOL_TRUE != login())
+	if (OS_TRUE != login())
 	{
-		return BOOL_FALSE;
+		return OS_FALSE;
 	}
 
-	return BOOL_TRUE;
+	return OS_TRUE;
 }
 
 ULONG DLL_HDUSubmit(int pid, int langid, string source)
@@ -1103,11 +1103,11 @@ ULONG DLL_HDUSubmit(int pid, int langid, string source)
 	itoa(langid,tmplang,10);
 	string lang_string = tmplang;
 
-	if (BOOL_TRUE != submit(pid_s, lang_string, source))
+	if (OS_TRUE != submit(pid_s, lang_string, source))
 	{
-		return BOOL_FALSE;
+		return OS_FALSE;
 	}
-	return BOOL_TRUE;
+	return OS_TRUE;
 }
 
 ULONG DLL_HDUGetStatus(string hdu_username, int pid, int langid, string &runid, string &result,string& ce_info,string &tu,string &mu)
@@ -1121,24 +1121,24 @@ ULONG DLL_HDUGetStatus(string hdu_username, int pid, int langid, string &runid, 
 	itoa(langid,tmplang,10);
 	string lang_string = tmplang;
 
-	if (BOOL_TRUE != getStatus(hdu_username, pid_s, lang_string, runid, result, ce_info, tu, mu))
+	if (OS_TRUE != getStatus(hdu_username, pid_s, lang_string, runid, result, ce_info, tu, mu))
 	{
 		MSG_OUPUT_DBG("DLL_HDUGetStatus getStatus error...");
-		return BOOL_FALSE;
+		return OS_FALSE;
 	}
 	else
 	{
 		MSG_OUPUT_DBG("DLL_HDUGetStatus getStatus success...");
 	}
 
-	return BOOL_TRUE;
+	return OS_TRUE;
 }
 
 #endif
 
 ULONG getHDUStatus(string hdu_username, int pid,int lang, string &runid, string &result,string& ce_info,string &tu,string &mu)
 {
-	ULONG ulRet = BOOL_TRUE;
+	ULONG ulRet = OS_TRUE;
 	tu=mu="0";
 	string ts;
 
@@ -1146,25 +1146,25 @@ ULONG getHDUStatus(string hdu_username, int pid,int lang, string &runid, string 
 
 	ts = getLineFromFile(tfilename,77);
 
-	if(BOOL_FALSE == getUsedTime(ts, tu))
+	if(OS_FALSE == getUsedTime(ts, tu))
 	{
 		++ulRet;
 		MSG_OUPUT_DBG("getUsedTime failed.");
 	}
 
-	if(BOOL_FALSE == getUsedMem(ts, mu))
+	if(OS_FALSE == getUsedMem(ts, mu))
 	{
 		++ulRet;
 		MSG_OUPUT_DBG("getUsedMem failed.");
 	}
 
-	if(BOOL_FALSE == getRunid(ts, runid))
+	if(OS_FALSE == getRunid(ts, runid))
 	{
 		++ulRet;
 		MSG_OUPUT_DBG("getRunid failed.");
 	}
 
-	if(BOOL_FALSE == getResult(ts, result))
+	if(OS_FALSE == getResult(ts, result))
 	{
 		++ulRet;
 		MSG_OUPUT_DBG("getResult failed.");
@@ -1172,15 +1172,15 @@ ULONG getHDUStatus(string hdu_username, int pid,int lang, string &runid, string 
 
 	judge_outstring("Info: problem[%d] language[%d]  verdict[%s] submissionID[%s] time[%s ms] memory[%s kb].\r\n", pid, lang, result.c_str(), runid.c_str(), tu.c_str(), mu.c_str());
 
-	if (BOOL_TRUE != ulRet)
+	if (OS_TRUE != ulRet)
 	{
 		MSG_OUPUT_DBG("get record failed.");
-		return BOOL_FALSE;
+		return OS_FALSE;
 	}
 
 	MSG_OUPUT_DBG("Get status success...");
 
-	return BOOL_TRUE;
+	return OS_TRUE;
 }
 
 int Judge_Remote()
@@ -1205,13 +1205,13 @@ int Judge_Remote()
 		system(cmd_string) ;
 
 		int tryTime = 6;
-		int ret = BOOL_FALSE;
+		int ret = OS_FALSE;
 		string runid, result,ce_info,tu,mu;
 
 		//hdu 的status多1
 		lang_id += 1;
 
-		while (ret != BOOL_TRUE)
+		while (ret != OS_TRUE)
 		{
 			result = "";
 			puts("Get Status...");
@@ -1230,7 +1230,7 @@ int Judge_Remote()
 				|| result.find("Running")!=string::npos)
 			{
 				puts("Get Status, Queuing or Compiling or Running , try again...");
-				ret = BOOL_FALSE;
+				ret = OS_FALSE;
 			}
 
 			if (result.find("Compilation Error")!=string::npos)
@@ -1252,7 +1252,7 @@ int Judge_Remote()
 			}
 		}
 
-		if (BOOL_FALSE == ret)
+		if (OS_FALSE == ret)
 		{
 			puts("Get Status Error...");
 			GL_verdictId = V_SE;
@@ -1314,7 +1314,7 @@ int Judge_Remote()
 
 	DeleteFile(tmp_return_path);
 
-	return BOOL_TRUE;
+	return OS_TRUE;
 }
 
 

@@ -11,26 +11,6 @@
 
 using namespace std;
 
-#if 0
-void MSGQueueMain()
-{
-
-}
-
-
-void pdt_debug_print(const char *format, ...)
-{
-
-}
-
-
-void pdt_debug_print_ex(int level, const char *format, ...)
-{
-
-}
-#endif
-
-#if 1
 #define MAX_MSGBUF_SIZE 255
 
 std::mutex g_mutex_msgQ;
@@ -175,9 +155,9 @@ void MSGQueueMain()
         {
             g_mutex_msgQ.lock();
             stMsgQ = g_stMsgQueue.front();
-			printf("<%04d-%02d-%02d %02d:%02d:%02d>",stMsgQ.stTime.tm_year, stMsgQ.stTime.tm_mon,stMsgQ.stTime.tm_mday,
+			printf("%04d-%02d-%02d %02d:%02d:%02d",stMsgQ.stTime.tm_year, stMsgQ.stTime.tm_mon,stMsgQ.stTime.tm_mday,
 													stMsgQ.stTime.tm_hour,stMsgQ.stTime.tm_min,stMsgQ.stTime.tm_sec);
-            std::cout<<"TaskID("<< stMsgQ.thread_id << "):" << stMsgQ.szMsgBuf;
+            std::cout<<"/TASKID/"<< stMsgQ.thread_id << "/DEBUG: " << stMsgQ.szMsgBuf;
             g_stMsgQueue.pop();
             g_mutex_msgQ.unlock();
             RunDelay(1);
@@ -185,7 +165,6 @@ void MSGQueueMain()
         RunDelay(1);
     }
 }
-#endif
 
 void Debug_TaskEntry()
 {

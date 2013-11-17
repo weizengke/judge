@@ -1,20 +1,21 @@
 #x86_64-w64-mingw32-g++
 
+MY_ROOT=..
+PRODUCT_ROOT=$(MY_ROOT)/code/product
+VRP_ROOT=$(MY_ROOT)/code/vrp
+OBJ_DIR=./obj
+
 CC=g++
 LD=ld
 CCFLAGS = -w -c -std=c++11
 CFLAGS=-o
-LDFLAGS = 
-MY_ROOT=../
-PRODUCT_ROOT=$(MY_ROOT)code/product/
-VRP_ROOT=$(MY_ROOT)code/vrp/
+LDFLAGS =
 
-OBJ_DIR=./obj/
 BIN=cmd-sys
 
 #################
-include $(VRP_ROOT)vrp.mk
-include $(PRODUCT_ROOT)product.mk
+include $(VRP_ROOT)/vrp.mk
+include $(PRODUCT_ROOT)/product.mk
 
 ##########
 
@@ -22,6 +23,6 @@ OBJ=$(PRODUCT_OBJ) \
 	$(VRP_OBJ)
 
 
-	
+
 
 

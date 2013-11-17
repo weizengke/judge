@@ -9,8 +9,14 @@
 #define ULONG unsigned long
 #define CHAR char
 
-#define BOOL_TRUE 0
-#define BOOL_FALSE 1
+#define OS_OK   0
+#define OS_ERR  1
+
+#define OS_TRUE 0
+#define OS_FALSE 1
+
+#define OS_YES 1
+#define OS_NO  0
 
 
 extern void RunDelay(int t);

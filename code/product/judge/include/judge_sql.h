@@ -2,7 +2,7 @@
 #define _JUDGE_SQL_H_
 
 extern int SQL_getSolutionSource();
-extern int SQL_getSolutionInfo();
+extern int SQL_getSolutionInfo(int *pIsExist);
 extern int SQL_getProblemInfo();
 extern int SQL_getProblemInfo_contest(int contestId,int problemId,char *num);
 extern int SQL_getContestInfo(int contestId,time_t &start_time,time_t &end_time);
