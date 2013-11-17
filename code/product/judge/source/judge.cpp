@@ -906,18 +906,18 @@ DWORD WINAPI WorkThread(LPVOID lpParam)
 				{
 					string time_string_;
 					API_TimeToString(time_string_,GL_submitDate);
-					judge_outstring("\r\n ----------------------"
-								"\r\n	  *Judge verdict*"
-								"\r\n ----------------------"
+					judge_outstring("\r\n -----------------------"
+								"\r\n     *Judge verdict*"
+								"\r\n -----------------------"
 								"\r\n SolutionId   : %3d"
 								"\r\n Pasted cases : %3d"
 								"\r\n Time-used    : %3d ms"
 								"\r\n Memory-used  : %3d kb"
 								"\r\n Return code  : %3u"
-								"\r\n Verdict	   : %3s"
+								"\r\n Verdict      : %3s"
 								"\r\n Submit Date  : %3s"
-								"\r\n Username		: %3s"
-								"\r\n ----------------------\r\n",
+								"\r\n Username     : %3s"
+								"\r\n -----------------------\r\n",
 									GL_solutionId,GL_testcase,GL_time-GL_time%10,GL_memory,
 									g_dwCode,VERDICT_NAME[GL_verdictId],time_string_.c_str(),GL_username);
 

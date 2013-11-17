@@ -36,13 +36,12 @@ void write_log(int level, const char *fmt, ...) {
 
 	va_start(ap, fmt);
 	l = vsprintf(buffer, fmt, ap);
-	fprintf(fp, "%s\n", buffer);
+	fprintf(fp, "%s\r\n", buffer);
 	if (g_oj_debug_switch == JUDGE_DEBUG_ON)
 	{
 		/* BEGIN: Added by weizengke, 2013/11/15 for vrp */
 		pdt_debug_print("%s", buffer);
 		/* END:   Added by weizengke, 2013/11/15 */
-		//printf("%s\n", buffer);
 	}
 	va_end(ap);
 	fclose(fp);
@@ -55,6 +54,9 @@ void judge_outstring(const char *format, ...)
 	va_start(args, format);
 	vprintf(format, args);
 	va_end(args);
+
+	extern void cmd_outcurrent();
+	cmd_outcurrent();
 }
 
 void MSG_OUPUT_DBG(const char *fmt, ...)
@@ -74,12 +76,12 @@ void MSG_OUPUT_DBG(const char *fmt, ...)
     p->tm_year = p->tm_year + 1900;
     p->tm_mon = p->tm_mon + 1;
 
-	printf("%04d-%02d-%02d %02d:%02d:%02d ",p->tm_year, p->tm_mon, p->tm_mday,p->tm_hour,p->tm_min,p->tm_sec);
+	printf("\r\n%04d-%02d-%02d %02d:%02d:%02d ",p->tm_year, p->tm_mon, p->tm_mday,p->tm_hour,p->tm_min,p->tm_sec);
 
 	va_start(ap, fmt);
 	l = vsprintf(buffer, fmt, ap);
 
-	printf("%s\n", buffer);
+	printf("\r\n%s", buffer);
 	va_end(ap);
 
 }

@@ -41,4 +41,13 @@ cmd_vector_t *cmd_vec;
 struct para_desc g_cmd_elem[CMD_ELEM_ID_MAX];
 
 
+int g_InputMachine_prev = CMD_KEY_CODE_NOTCARE;
+int g_InputMachine_now = CMD_KEY_CODE_NOTCARE;
+char g_tabbingString[CMD_MAX_CMD_ELEM_SIZE] = {0};  /* 最初始用来补全查找的字串*/
+char g_tabString[CMD_MAX_CMD_ELEM_SIZE] = {0};      /* 最后一次补全的命令 */
+int g_tabStringLenth = 0;
+
+
+
+
 

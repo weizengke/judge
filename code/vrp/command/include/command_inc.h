@@ -1,3 +1,6 @@
+#ifndef _COMMAND_INC_H_
+#define _COMMAND_INC_H_
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,11 +22,19 @@
 #endif
 
 
+
+#include "..\..\debug\include\debug_center.h"
+
+
 #include "..\include\command_def.h"
 #include "..\include\command_type.h"
 #include "..\include\command_var.h"
 #include "..\include\command_func.h"
+#include "..\include\command_io.h"
+#include "..\include\command_adp.h"
+#include "..\include\command_core.h"
 
 
-#include "..\..\debug\include\debug_center.h"
 
+
+#endif
