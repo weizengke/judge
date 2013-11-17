@@ -1,10 +1,7 @@
 Project site:   http://weizengke.com/archives/143
 
-±àÒë»·¾³£ºWindows 8.1  64Î»£¬MinGW64 ¡£
+Environmentï¼šWindows 8.1  64bitï¼Œ MinGW64 
 
-Á´½ÓËùÐèµÄ.aÎÄ¼þÐèÒªÓÐÏàÓ¦DLLÉú³É£¬Èç£º
-pexports pcre3.dll > pcre3.def
-dlltool ¨Cinput-def pcre3.def ¨Cdllname pcre3.dll ¨Coutput-lib pcre3.a -k
 
 
 usefull site:
