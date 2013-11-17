@@ -1,30 +1,6 @@
 
-
 #include "..\include\command_inc.h"
 
-
-/* api */
-
-// Define your API function here
-/*
- * Three part: function declaration; define structure; function definition
- * For part one - function declaration:
- *			= Advise make function name as test function name plus t
- *			  e.g. To test function: parse_macaddr(which is a function in your interface), then
- *				   define its name as 'parse_macaddr_t'
- * For part two - define structure:
- *			= Advise make structure name as test function name plus n
- *			  e.g. So parse_macaddr has struct name 'parse_macaddr_n'
- *			  Then define three member: cmdstr, funcname, helpstr
- *				- cmdstr: Advise test function name, so let it be "parse_macaddr"
- *				- funcname: function name in part one, so be parse_macaddr_t, intention, this is not string
- *				- helpstr: words to explain your function, including usage, purpose and parameters
- * For part three - function definition
- *			= Define your function, notice argc and argv starts from parameters, so not including
- *			"parse_macaddr" itself
- *
- * Below is an example, you can copy, paste, modify, and compile
- */
 
 DEFUN(cmd_debugging_enable_st, (char*)"debugging enable", (char*)"Debugging switch on", Debugging_enable)
 {
