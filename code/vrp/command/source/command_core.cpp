@@ -324,7 +324,7 @@ void cmd_resolve_up(struct cmd_vty *vty);
 void cmd_resolve_down(struct cmd_vty *vty);
 void cmd_resolve_left(struct cmd_vty *vty);
 void cmd_resolve_right(struct cmd_vty *vty);
-void cmd_resolve_delete(struct cmd_vty *vty);
+void cmd_resolve_backspace(struct cmd_vty *vty);
 void cmd_resolve_insert(struct cmd_vty *vty);
 
 
@@ -1389,9 +1389,12 @@ int cmd_resolve(char c)
 {
 	int key_type = CMD_KEY_CODE_NOTCARE;	// default is not special key
 
+	//printf("c=%d,",c);
 	switch (c) {
 	case CMD_KEY_ARROW1:
 		c = cmd_getch();
+
+		//printf("cc=%d,",c);
 		#ifdef _LINUX_
 		if (c == CMD_KEY_ARROW2)
 		{
@@ -1409,6 +1412,9 @@ int cmd_resolve(char c)
 				break;
 			case CMD_KEY_LEFT:
 				key_type = CMD_KEY_CODE_LEFT;
+				break;
+			case CMD_KEY_DELETE:
+				key_type = CMD_KEY_CODE_DELETE;
 				break;
 			default:
 				break;
@@ -1438,10 +1444,10 @@ int cmd_resolve(char c)
 			}
 		break;
 #endif
-	case CMD_KEY_DELETE: /* bug */
-		key_type = CMD_KEY_CODE_DELETE;
+	case CMD_KEY_BACKSPACE:  /*  */
+		key_type = CMD_KEY_CODE_BACKSPACE;
 		break;
-	case CMD_KEY_BACKSPACE:
+	case CMD_KEY_SPACE:
 	case CMD_KEY_CTRL_H:
 		/* Linux 下空格后回车无法tab补全与'?'联想 待修复*/
 		break;
@@ -1497,9 +1503,9 @@ int cmd_resolve(char c)
 				}
 			}
 			break;
-		case CMD_KEY_BACKSPACE:
+		case CMD_KEY_SPACE:
 		case CMD_KEY_CTRL_H:
-			key_type = CMD_KEY_CODE_DELETE;
+			key_type = CMD_KEY_CODE_BACKSPACE;
 			break;
 		case '\t':
 			key_type = CMD_KEY_CODE_TAB;
@@ -1900,8 +1906,6 @@ void cmd_resolve_left(struct cmd_vty *vty)
 
 void cmd_resolve_right(struct cmd_vty *vty)
 {
-
-	//printf("right");
 	// already at rightmost, cannot move more
 	if (vty->cur_pos >= vty->used_len)
 		return;
@@ -1910,7 +1914,52 @@ void cmd_resolve_right(struct cmd_vty *vty)
 	vty->cur_pos++;
 }
 
+/*****************************************************************************
+ 函 数 名  : cmd_resolve_delete
+ 功能描述  : 适配Delete键，向前删除字符
+ 输入参数  : struct cmd_vty *vty
+ 输出参数  : 无
+ 返 回 值  : void
+ 调用函数  :
+ 被调函数  :
+
+ 修改历史      :
+  1.日    期   : 2013年11月17日
+    作    者   : weizengke
+    修改内容   : 新生成函数
+
+*****************************************************************************/
 void cmd_resolve_delete(struct cmd_vty *vty)
+{
+	int i, size;
+
+	// no more to delete
+	if (vty->cur_pos >= vty->used_len)
+		return;
+
+	/* del the  current char*/
+	printf(" \b");
+
+	size = vty->used_len - vty->cur_pos;
+	CMD_DBGASSERT(size >= 0);
+
+	memcpy(&vty->buffer[vty->cur_pos], &vty->buffer[vty->cur_pos + 1], size);
+	vty->buffer[vty->used_len - 1] = '\0';
+
+	/* output the right chars */
+	for (i = 0; i < size; i ++)
+		cmd_put_one(vty->buffer[vty->cur_pos + i]);
+
+	vty->used_len--;
+
+	/* back the cur_pos */
+	for (i = 0; i < size; i++)
+		cmd_back_one();
+
+
+}
+
+void cmd_resolve_backspace(struct cmd_vty *vty)
 {
 	int i, size;
 
@@ -1945,8 +1994,6 @@ void cmd_resolve_insert(struct cmd_vty *vty)
 		return;
 	size = vty->used_len - vty->cur_pos;
 	CMD_DBGASSERT(size >= 0);
-
-	//printf("insert(%d %d %s)\r\n", vty->used_len, vty->buf_len, vty->buffer);
 
 	memcpy(&vty->buffer[vty->cur_pos + 1], &vty->buffer[vty->cur_pos], size);
 	vty->buffer[vty->cur_pos] = vty->c;
@@ -1998,9 +2045,10 @@ key_handler_t key_resolver[] = {
 	// resolve in read buffer
 	{ CMD_KEY_CODE_LEFT, 	cmd_resolve_left },
 	{ CMD_KEY_CODE_RIGHT, 	cmd_resolve_right },
-	{ CMD_KEY_CODE_DELETE, 	cmd_resolve_delete },
-
+	{ CMD_KEY_CODE_DELETE,   cmd_resolve_delete },
+	{ CMD_KEY_CODE_BACKSPACE, 	cmd_resolve_backspace },
 	{ CMD_KEY_CODE_DEL_LASTWORD, cmd_resolve_del_lastword},
+
 	{ CMD_KEY_CODE_NOTCARE, cmd_resolve_insert },
 
 };
@@ -2025,6 +2073,9 @@ void cmd_read(struct cmd_vty *vty)
 	g_InputMachine_now = CMD_KEY_CODE_NOTCARE;
 
 	while ((vty->c = cmd_getch()) != EOF) {
+
+		//printf("c=%d\r\n",vty->c);
+
 		// step 1: get input key type
 		key_type = cmd_resolve(vty->c);
 
