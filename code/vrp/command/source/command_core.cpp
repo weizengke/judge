@@ -413,6 +413,101 @@ static int match_unique_string(struct para_desc **match, char *str, int size)
 }
 
 
+int cmd_get_nth_elem_pos(char *string, int n, int *pos)
+{
+	int str_len;
+	int m = 0;
+	char *cur, *start;
+
+	*pos = 0;
+
+	// empty string
+	if (string == NULL)
+		return CMD_ERR;
+
+	cur = string;
+	// skip white spaces
+	while (isspace((int) *cur) && *cur != '\0')
+		cur++;
+	// only white spaces
+	if (*cur == '\0')
+		return CMD_ERR;
+	// not care ! and #
+	if (*cur == '!' || *cur == '#')
+		return CMD_ERR;
+
+	while (1)
+	{
+		start = cur;
+		while (!(isspace((int) *cur) || *cur == '\r' || *cur == '\n') &&
+			*cur != '\0')
+			cur++;
+
+		str_len = cur - start;
+
+		if (n == m)
+		{
+			*pos = (int)(start - string);
+			return CMD_OK;
+		}
+		else
+		{
+			m++;
+		}
+
+		while((isspace ((int) *cur) || *cur == '\n' || *cur == '\r') &&
+			*cur != '\0')
+			cur++;
+
+		if (*cur == '\0')
+			return CMD_ERR;
+
+	}
+}
+
+/*****************************************************************************
+*   Prototype    : cmd_output_missmatch
+*   Description  : Output miss match command position
+*   Input        : cmd_vty *vty
+*                  int nomath_pos
+*   Output       : None
+*   Return Value : void
+*   Calls        :
+*   Called By    :
+*
+*   History:
+*
+*       1.  Date         : 2013/11/19
+*           Author       : weizengke
+*           Modification : Created function
+*
+*****************************************************************************/
+void cmd_output_missmatch(cmd_vty *vty, int nomath_pos)
+{
+	int i = 0;
+	int n = 0;
+	char buf[CMD_BUFFER_SIZE] = {0};
+
+	/* 输出箭头位置 */
+	int pos_arrow = 3 + strlen(g_sysname) + strlen(vty->prompt);
+
+	strcpy(buf, vty->buffer);
+
+	(void)cmd_get_nth_elem_pos(vty->buffer, nomath_pos, &n);
+	pos_arrow += n;
+
+	for (i=0;i<pos_arrow;i++)
+	{
+		cmd_outstring(" ");
+	}
+
+	cmd_outstring("^\r\n");
+
+	cmd_outstring("Unknow command at position the arrow point to.\r\n", nomath_pos);
+
+}
+
+
 // turn a command into vector
 cmd_vector_t *cmd2vec(char *string, char *doc)
 {
@@ -702,6 +797,7 @@ int match_lcd(struct para_desc **match, int size)
 static int cmd_filter_command(char *cmd, cmd_vector_t *v, int index)
 {
 	int i;
+	int match_cmd = CMD_ERR;
 	struct cmd_elem_st *elem;
 	struct para_desc *desc;
 
@@ -713,14 +809,14 @@ static int cmd_filter_command(char *cmd, cmd_vector_t *v, int index)
 	if (cmd == NULL || 0 == strlen(cmd))
 	{
 		debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd_filter_command, the param cmd is null.");
-		return 0;
+		return CMD_ERR;
 	}
 
 	/* <CR> 不参与过滤，防止命令行子串也属于命令行时误过滤 */
 	if (0 == strcmp(cmd, "<CR>"))
 	{
 		debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd_filter_command, the param cmd is <CR>.");
-		return 0;
+		return CMD_OK;
 	}
 
 	/* END:   Added by weizengke, 2013/10/4   PN:None */
@@ -750,13 +846,17 @@ static int cmd_filter_command(char *cmd, cmd_vector_t *v, int index)
 				{
 					debug_print_ex(CMD_DEBUG_TYPE_INFO, "In cmd_filter_command. for loop -> %d filter. (cmd=%s,desc->para=%s)", i, cmd, desc->para);
 					cmd_vector_slot(v, i) = NULL;
+					continue;
 				}
 			}
 
+			/* BEGIN: Added by weizengke, 2013/11/19 for support unkown cmd pos*/
+			match_cmd = CMD_OK;
+			/* END:   Added by weizengke, 2013/11/19 */
 		}
 	}
 
-	return 0;
+	return match_cmd;
 }
 
 
@@ -890,8 +990,11 @@ int cmd_match_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty,
     Modification : Created function
 
 *****************************************************************************/
-int cmd_complete_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct para_desc **match, int *match_size)
+int cmd_complete_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty,
+									 struct para_desc **match, int *match_size, int *match_pos)
 {
+
+
 	int i;
 	cmd_vector_t *cmd_vec_copy = cmd_vector_copy(cmd_vec);
 	int match_num = 0;
@@ -910,11 +1013,18 @@ int cmd_complete_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct par
 	// 1. for input command vector 'icmd_vec', check if it is matching cmd_vec
 	// 2. check last matching command parameter in cmd_vec match cmd_vec
 
+	*match_pos = -1;
+
 	// Step 1
 	/* BEGIN: Modified by weizengke, 2013/10/4   PN:循环过滤每一个向量 */
 	for (i = 0; i < cmd_vector_max(icmd_vec); i++)
 	{
-		cmd_filter_command((char*)cmd_vector_slot(icmd_vec, i), cmd_vec_copy, i);
+		if (CMD_OK != cmd_filter_command((char*)cmd_vector_slot(icmd_vec, i), cmd_vec_copy, i))
+		{
+			/* BEGIN: Added by weizengke, 2013/11/19 这里可以优化，不命中可以不需要再匹配了 */
+			/* 保存在第几个命令字无法匹配 */
+			*match_pos = (*match_pos == -1)?(i):(*match_pos);
+		}
 	}
 	/* END:   Modified by weizengke, 2013/10/4   PN:None */
 
@@ -928,6 +1038,7 @@ int cmd_complete_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct par
 		debug_print_ex(CMD_DEBUG_TYPE_FUNC, "In cmd_complete_command, for loop->i = %d. (icmd_vec_size=%d, cmd_vec_size=%d)", i, cmd_vector_max(icmd_vec), cmd_vector_max(cmd_vec_copy));
 
 		elem = (struct cmd_elem_st *)cmd_vector_slot(cmd_vec_copy, i);
+
 		if(elem  != NULL)
 		{
 			if (cmd_vector_max(icmd_vec) - 1 >= cmd_vector_max(elem->para_vec))
@@ -946,9 +1057,22 @@ int cmd_complete_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct par
 
 			debug_print_ex(CMD_DEBUG_TYPE_FUNC, "In cmd_complete_command, for loop->i = %d, (str=%s, id=%d, para=%s)", i, str, para_desc_->elem_id, para_desc_->para);
 
-			if ( str != NULL &&
-			     (strncmp(str, "<CR>", strlen(str)) == 0
-			     ||(strncmp(str, para_desc_->para, strlen(str)) == 0)))
+
+
+			/* BEGIN: Added by weizengke, 2013/11/19 */
+			/* match STRING , INTEGER */
+			if (CMD_OK == cmd_match_special_string(str, para_desc_->para))
+			{
+				debug_print_ex(CMD_DEBUG_TYPE_INFO, "In cmd_complete_command, match(%s).", para_desc_->para);
+				match[match_num++] = para_desc_;
+
+				continue;
+			}
+			/* END:   Added by weizengke, 2013/11/19 */
+
+			/* match key */
+			if (strncmp(str, "<CR>", strlen(str)) == 0
+			    ||(strncmp(str, para_desc_->para, strlen(str)) == 0))
 			{
 
 				if (match_unique_string(match, para_desc_->para, match_num))
@@ -987,7 +1111,7 @@ int cmd_complete_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct par
 	return 0;
 }
 
-int cmd_execute_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct para_desc **match, int *match_size)
+int cmd_execute_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct para_desc **match, int *match_size, int *match_pos)
 {
 	int i;
 	cmd_vector_t *cmd_vec_copy = cmd_vector_copy(cmd_vec);
@@ -1002,10 +1126,17 @@ int cmd_execute_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct para
 	 2. check last matching command parameter in cmd_vec match cmd_vec
 	*/
 
+	*match_pos = -1;
+
 	/* Step 1 */
 	for (i = 0; i < cmd_vector_max(icmd_vec); i++)
 	{
-		cmd_filter_command((char*)cmd_vector_slot(icmd_vec, i), cmd_vec_copy, i);
+		if (CMD_OK != cmd_filter_command((char*)cmd_vector_slot(icmd_vec, i), cmd_vec_copy, i))
+		{
+			/* BEGIN: Added by weizengke, 2013/11/19 这里可以优化，不命中可以不需要再匹配了 */
+			/* 保存在第几个命令字无法匹配 */
+			*match_pos = (*match_pos == -1)?(i):(*match_pos);
+		}
 	}
 
 	/* Step 2 */

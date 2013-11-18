@@ -369,6 +369,7 @@ void cmd_resolve_enter(struct cmd_vty *vty)
 	cmd_vector_t *v;
 
 	int i = 0;
+	int nomath_pos = -1;
 
 	//printf("enter(%d %d %s)\r\n", vty->used_len, vty->buf_len, vty->buffer);
 
@@ -386,14 +387,13 @@ void cmd_resolve_enter(struct cmd_vty *vty)
 	cmd_outstring("%s", CMD_ENTER);
 
 	// do command
-	match_type = cmd_execute_command(v, vty, match, &match_size);
+	match_type = cmd_execute_command(v, vty, match, &match_size, &nomath_pos);
 	// add executed command into history
 	cmd_vty_add_history(vty);
 
 	if (match_type == CMD_NO_MATCH)
 	{
-		cmd_outstring("Unknown Command");
-		cmd_outstring("%s", CMD_ENTER);
+		cmd_output_missmatch(vty, nomath_pos);
 	}
 	else if (match_type == CMD_ERR_ARGU)
 	{
@@ -460,6 +460,7 @@ void cmd_resolve_quest(struct cmd_vty *vty)
 	struct para_desc *match[CMD_MAX_MATCH_SIZE];	// matched string
 	int match_size = 0;
 	int i = 0;
+	int nomath_pos = -1;
 
 	/*
 	1: 取pos 之前的buf
@@ -494,11 +495,14 @@ void cmd_resolve_quest(struct cmd_vty *vty)
 		debug_print_ex(CMD_DEBUG_TYPE_INFO, "In cmd_resolve_quest, str=%s.", (char*)cmd_vector_slot(v, i));
 	}
 
-	cmd_complete_command(v, vty, match, &match_size);
+	cmd_complete_command(v, vty, match, &match_size, &nomath_pos);
 
-	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "In cmd_resolve_quest, after cmd_complete_command, get %d matched.", match_size);
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC,
+		"In cmd_resolve_quest, after cmd_complete_command, get %d matched. (nomath_pos=%u)",
+		match_size, nomath_pos);
 
 	cmd_outstring("%s", CMD_ENTER);
+
 	if (match_size) {
 		for (i = 0; i < match_size; i++) {
 			cmd_outstring(" %-25s%s\r\n", match[i]->para,match[i]->desc);
@@ -506,13 +510,16 @@ void cmd_resolve_quest(struct cmd_vty *vty)
 		cmd_outprompt(vty->prompt);
 		cmd_outstring("%s", vty->buffer);
 	} else {
-		cmd_outstring("Unknow Command%s", CMD_ENTER);
+
+		cmd_output_missmatch(vty, nomath_pos);
+
 		cmd_outprompt(vty->prompt);
 		cmd_outstring("%s", vty->buffer);
 	}
 
 	cmd_vector_deinit(v, 0);
 }
+
 
 /* bug of up twice with last key is not up, the hpos not restart */
 void cmd_resolve_up(struct cmd_vty *vty)
