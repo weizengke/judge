@@ -27,6 +27,7 @@ extern void cmd_output_missmatch(cmd_vty *vty, int nomath_pos);
 extern void cmd_insert_word(struct cmd_vty *vty, const char *str);
 extern void cmd_delete_word(struct cmd_vty *vty);
 extern void cmd_delete_word_ctrl_W(struct cmd_vty *vty);
+extern void cmd_delete_word_ctrl_W_ex(struct cmd_vty *vty);
 
 
 extern void cmd_clear_line(struct cmd_vty *vty);

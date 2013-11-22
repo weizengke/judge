@@ -503,7 +503,7 @@ void cmd_output_missmatch(cmd_vty *vty, int nomath_pos)
 
 	cmd_outstring("^\r\n");
 
-	cmd_outstring("Unknow command at position the arrow point to.\r\n", nomath_pos);
+	cmd_outstring("Error: Unrecognized command at '^' position.\r\n");
 
 }
 
@@ -1288,7 +1288,14 @@ void cmd_delete_word(struct cmd_vty *vty)
 // delete the last word from input buffer
 void cmd_delete_word_ctrl_W(struct cmd_vty *vty)
 {
+	/* 删除最后一个elem */
+
 	int pos = strlen(vty->buffer);
+
+	if (pos == 0)
+	{
+		return;
+	}
 
 	/* ignore suffix-space */
 	while (vty->buffer[pos - 1] == ' ')
@@ -1304,6 +1311,92 @@ void cmd_delete_word_ctrl_W(struct cmd_vty *vty)
 	vty->buffer[pos] = '\0';
 	vty->cur_pos = strlen(vty->buffer);
 	vty->used_len = strlen(vty->buffer);
+}
+
+// delete the last word from input buffer
+void cmd_delete_word_ctrl_W_ex(struct cmd_vty *vty)
+{
+	/* 删除光标所在当前或之前elem */
+	int start_pos = 0;
+	int end_pos  = 0;
+	int len = strlen(vty->buffer);
+	int pos = vty->cur_pos;
+
+	if (pos == 0)
+	{
+		return;
+	}
+
+	/* ignore suffix-space */
+	if (vty->buffer[pos] == ' ')
+	{
+		end_pos = pos;
+
+		pos--;
+		/* 往回找第一个非空字符 */
+		while (pos  >= 0 && vty->buffer[pos] == ' ')
+		{
+			pos--;
+		}
+
+		if (pos == 0)
+		{
+			return;
+		}
+
+		/* 继续往回找第一个空格或命令头 */
+		while (pos  >= 0 && vty->buffer[pos] != ' ')
+		{
+			pos--;
+		}
+
+		start_pos = pos + 1;
+
+	}
+	else
+	{
+		/* 分别往左右找空格 */
+		pos++;
+		while (vty->buffer[pos] != ' ')
+		{
+			pos++;
+		}
+
+		end_pos = pos - 1;
+
+		pos = vty->cur_pos;
+		while (vty->buffer[pos] != ' ')
+		{
+			pos--;
+		}
+
+		start_pos = pos + 1;
+	}
+
+	//printf ("\r\ns_p = %d, e_p = %d\r\n", start_pos, end_pos);
+
+	/* back the cur_pos */
+	int i = 0;
+	int size = 0;
+
+	size = vty->cur_pos - start_pos;
+	for (i = 0; i < size; i++)
+		cmd_back_one();
+
+	/* output the right chars */
+	for (i = 0; i < len - start_pos; i ++)
+		cmd_put_one(vty->buffer[end_pos + i]);
+
+	size = len - start_pos;
+
+	for (i = 0; i < size; i++)
+		cmd_back_one();
+
+	memcpy(&vty->buffer[start_pos], &vty->buffer[end_pos], strlen(&vty->buffer[end_pos]));
+	vty->buffer[len - (vty->cur_pos - start_pos)]= '\0';
+	vty->cur_pos -= (vty->cur_pos - start_pos);
+	vty->used_len -= (vty->cur_pos - start_pos);
+
 }
 
 static inline void free_matched(char **matched)
