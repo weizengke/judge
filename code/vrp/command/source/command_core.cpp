@@ -333,15 +333,15 @@ void cmd_vector_insert(cmd_vector_t *v, void *val)
 void cmd_vector_insert_cr(cmd_vector_t *v)
 {
 	char *string_cr = NULL;
-	string_cr = (char*)malloc(sizeof("<CR>"));
+	string_cr = (char*)malloc(sizeof(CMD_END));
 	if (NULL == string_cr)
 	{
 		CMD_DBGASSERT(0);
 		return;
 	}
 
-	memcpy(string_cr, "<CR>", sizeof("<CR>"));
-	cmd_vector_insert(v, string_cr); /* cmd_vector_insert(v, "<CR>"); // bug of memory free("<CR>"), it's static memory*/
+	memcpy(string_cr, CMD_END, sizeof(CMD_END));
+	cmd_vector_insert(v, string_cr); /* cmd_vector_insert(v, CMD_END); // bug of memory free(<CR>), it's static memory*/
 }
 
 cmd_vector_t *str2vec(char *string)
@@ -607,7 +607,7 @@ cmd_vector_t *cmd2vec(char *string, char *doc)
 	}
 
 	/* BEGIN: Added by weizengke, 2013/10/4   PN:for regCmdElem  */
-	if (0 != cmd_get_elem_by_name((char*)"<CR>", desc_cr))
+	if (0 != cmd_get_elem_by_name((char*)CMD_END, desc_cr))
 	{
 		debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd2Vec, cmd_get_elem_by_name fail. (token=%s)", token);
 		free(desc_cr);
@@ -813,7 +813,7 @@ static int cmd_filter_command(char *cmd, cmd_vector_t *v, int index)
 	}
 
 	/* <CR> 不参与过滤，防止命令行子串也属于命令行时误过滤 */
-	if (0 == strcmp(cmd, "<CR>"))
+	if (0 == strcmp(cmd, CMD_END))
 	{
 		debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd_filter_command, the param cmd is <CR>.");
 		return CMD_OK;
@@ -1071,7 +1071,7 @@ int cmd_complete_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty,
 			/* END:   Added by weizengke, 2013/11/19 */
 
 			/* match key */
-			if (strncmp(str, "<CR>", strlen(str)) == 0
+			if (strncmp(str, CMD_END, strlen(str)) == 0
 			    ||(strncmp(str, para_desc_->para, strlen(str)) == 0))
 			{
 
@@ -1095,7 +1095,10 @@ int cmd_complete_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty,
 			for (j = i; j < match_num; j++)
 			{
 				struct para_desc *para_desc__ = NULL;
-				if (1 == strcmp(match[i]->para, match[j]->para))
+				if (0 == strncmp(match[i]->para, CMD_END, strlen(match[i]->para))
+					|| ( 1 == strcmp(match[i]->para, match[j]->para)
+					&& 0 != strncmp(match[j]->para, CMD_END, strlen(match[j]->para)))
+					)
 				{
 					para_desc__ = match[i];
 					match[i] =  match[j];

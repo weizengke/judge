@@ -60,7 +60,7 @@
 #define CMD_NOUSED(x) ((x) = (x))
 
 
-
+#define CMD_END         "<cr>"
 #define CMD_INTEGER 	"INTEGER"
 #define CMD_STRING  	"STRING"
 
