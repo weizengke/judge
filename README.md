@@ -7,7 +7,7 @@ Function:
 
 ① Common Command-Line System
 
-② Online Judge Platform System
+② Online Judge Platform System , work with  GDOJ Project(https://github.com/weizengke/gdoj)
 
 Project site:   http://weizengke.com/archives/143
 
