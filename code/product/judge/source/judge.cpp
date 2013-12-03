@@ -21,12 +21,6 @@ using namespace std;
 
 
 char INI_filename[]="GDOJ\\data.ini";
-char Mysql_url[255];
-char Mysql_username[255];
-char Mysql_password[255];
-char Mysql_table[255];
-int  Mysql_port;
-char Mysql_Character[255];  //编码
 
 int  nLanguageCount=0;
 int isDeleteTemp=0;
@@ -112,7 +106,7 @@ SOCKET sListen;
 
 //#pragma comment(linker, "/subsystem:windows /ENTRY:mainCRTStartup") // 设置连接器选项
 
-int initSocket()
+int InitSocket()
 {
 	write_log(JUDGE_INFO,"Start initialization of Socket...");
 
@@ -144,10 +138,13 @@ int initSocket()
 		trybind--;
 		Sleep(100);
 	}
-	if(ret<0) {
+
+	if(ret<0)
+	{
 		write_log(JUDGE_SYSTEM_ERROR,"Bind failed...");
 		return 0;
 	}
+
 	write_log(JUDGE_INFO,"Bind success...");
 
 	//进入监听状态
@@ -159,35 +156,22 @@ int initSocket()
 		Sleep(100);
 		return 0;
 	}
-	if(ret<0) {
+
+	if(ret<0)
+	{
 		write_log(JUDGE_SYSTEM_ERROR,"Listen failed...");
 		return 0;
 	}
+
 	write_log(JUDGE_INFO,"Listen success...");
 
 	return 1;
 }
 //////////////////////////////////////////////////////////////end socket
 
-int InitMySQL()   //初始化mysql，并设置字符集
+
+void InitConfig()
 {
-	mysql=mysql_init((MYSQL*)0);
-	if(mysql!=0 && !mysql_real_connect(mysql,Mysql_url, Mysql_username, Mysql_password, Mysql_table,Mysql_port,NULL,CLIENT_MULTI_STATEMENTS )){
-		write_log(JUDGE_ERROR,mysql_error(mysql));
-		return 0;
-	}
-	strcpy(query,"SET CHARACTER SET gbk"); //设置编码 gbk
-
-	int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));
-	if(ret){
-		write_log(JUDGE_ERROR,mysql_error(mysql));
-		return 0;
-	}
-	return 1;
-}
-
-
-void InitMySqlConfig(){
 	port=GetPrivateProfileInt("Tool","Port",PORT,INI_filename);
 	isDeleteTemp=GetPrivateProfileInt("Tool","DeleteTemp",0,INI_filename);
 	limitJudge=GetPrivateProfileInt("Tool","LimitJudge",20,INI_filename);
@@ -217,7 +201,8 @@ void InitMySqlConfig(){
 
 void InitPath()
 {
-	if( (_access(workPath, 0 )) == -1 )   {
+	if( (_access(workPath, 0 )) == -1 )
+	{
 		CreateDirectory(workPath,NULL);
 	}
 
@@ -286,7 +271,8 @@ void InitPath()
 	sprintf(DebugFile,"%s%s.txt",workPath,name.c_str()); //debug文件路径
 	sprintf(ErrorFile,"%s%s_re.txt",workPath,name.c_str()); //re文件路径
 
-	if( (_access(judgeLogPath, 0 )) == -1 )   {
+	if( (_access(judgeLogPath, 0 )) == -1 )
+	{
 		CreateDirectory(judgeLogPath,NULL);
 	}
 
@@ -307,26 +293,30 @@ DWORD WINAPI CompileThread(LPVOID lp) //ac
 	return 0;
 }
 //编译,是否应该防止编译器假死造成的卡死
-int compile(){
+int compile()
+{
 
 	if(strcmp(compileCmd_str,"NULL")==0) return 1;
 
 	HANDLE hThread_com;
 
 	hThread_com=CreateThread(NULL,NULL,CompileThread,NULL,0,NULL);
-	if(hThread_com==NULL) {
+	if(hThread_com==NULL)
+	{
 		write_log(JUDGE_ERROR,"Create CompileThread Error");
 		CloseHandle(hThread_com);
 	}
 
 	DWORD status_ = WaitForSingleObject(hThread_com,30000);   //30S 编译时间,返回值大于零说明超时
-	if(status_>0){
+	if(status_>0)
+	{
 		write_log(JUDGE_WARNING,"Compile over time_limit");
 		TerminateProcess(G_pi_com.hProcess, 0);
 	}
 
 	//是否正常生成用户的可执行程序
-	if( (_access(exePath, 0 )) != -1 )   {
+	if( (_access(exePath, 0 )) != -1 )
+	{
 		/* ok */
 		return 1;
 	}
@@ -337,8 +327,10 @@ int compile(){
 }
 
 //是否存在异常
-BOOL RUN_existException(DWORD dw){
-	switch(dw){
+BOOL RUN_existException(DWORD dw)
+{
+	switch(dw)
+	{
 	case EXCEPTION_ACCESS_VIOLATION:
 		return TRUE;
 	case EXCEPTION_DATATYPE_MISALIGNMENT:
@@ -393,7 +385,8 @@ HANDLE InputFile ;  //父进程输入文件句柄
 HANDLE OutputFile;  //子进程标准输出句柄
 DWORD g_dwCode;	//定义进程状态
 
-HANDLE CreateSandBox(){
+HANDLE CreateSandBox()
+{
 	HANDLE hjob =CreateJobObject(NULL,NULL);
 	if(hjob!=NULL)
 	{
@@ -436,7 +429,8 @@ HANDLE CreateSandBox(){
 	return NULL;
 }
 
-bool ProcessToSandbox(HANDLE job,PROCESS_INFORMATION p){
+bool ProcessToSandbox(HANDLE job,PROCESS_INFORMATION p)
+{
 	if(AssignProcessToJobObject(job,p.hProcess))
 	{
 		//顺便调整本进程优先级为高
@@ -451,6 +445,7 @@ bool ProcessToSandbox(HANDLE job,PROCESS_INFORMATION p){
 	{
 		write_log(JUDGE_SYSTEM_ERROR,"AssignProcessToJobObject Error:%s",GetLastError());
 	}
+
 	return false;
 }
 
@@ -556,23 +551,29 @@ DWORD WINAPI RUN_ProgramThread(LPVOID lp) //ac
 	return 0;
 }
 
-int special_judge(const char *inFile,const char *uOutFile){ //return 0 ====Error,return 1 ====Accepted
+int RUN_SpecialJudge(const char *inFile,const char *uOutFile)
+{
+	//return 0 ====Error,return 1 ====Accepted
 	int judge ;
 	char spj_path[MAX_PATH];
 	sprintf(spj_path,"%s%d\\spj_%d.exe %s %s",dataPath,GL_problemId,GL_problemId,inFile,uOutFile);
 	judge = system(spj_path) ;
 
-	if (judge == -1){
+	if (judge == -1)
+	{
 		//printf("system error!") ;
 		return 0;
 	}
-	if(judge == 1){  //spj返回1,表示程序正确
+
+	if(judge == 1)
+	{  //spj返回1,表示程序正确
 		return 1;
 	}
+
 	return 0;
 }
 
-int RUN_solution(int solutionId)
+int RUN_Solution(int solutionId)
 {
 	long caseTime=0;
 	int i,case_;
@@ -682,7 +683,7 @@ int RUN_solution(int solutionId)
 		//judge file，spj or not
 
 		if(GL_spj==1){
-			int verdict_ = special_judge(inFileName,outFileName);
+			int verdict_ = RUN_SpecialJudge(inFileName,outFileName);
 			if(verdict_) GL_verdictId=V_AC;
 			else GL_verdictId=V_WA;
 		}else{
@@ -785,7 +786,7 @@ int Judge_Local()
 	else
 	{
 		write_log(JUDGE_INFO,"Start Run...");
-		RUN_solution(GL_solutionId);
+		RUN_Solution(GL_solutionId);
 	}
 
 	return OS_TRUE;
@@ -988,7 +989,8 @@ int OJ_main()
 	SetUnhandledExceptionFilter(ExceptionFilter);
  	SetErrorMode(SEM_NOGPFAULTERRORBOX );
 
-	if( (_access(logPath, 0 )) == -1 )   {
+	if( (_access(logPath, 0 )) == -1 )
+	{
 		CreateDirectory(logPath,NULL);
 	}
 
@@ -996,13 +998,19 @@ int OJ_main()
 	Judge_DebugSwitch(JUDGE_DEBUG_OFF);
 
 	write_log(JUDGE_INFO,"Running Judge Core...");
-	InitMySqlConfig();
-	if(InitMySQL()==0){//初始化mysql
+
+	InitConfig();
+
+	if(InitMySQL()==0)
+	{
 		write_log(JUDGE_ERROR,"Init MySQL JUDGE_ERROR...");
 		return 0;
 	}
+
 	write_log(JUDGE_INFO,"Init MySQL Success...");
-	if(initSocket()==0){         // 初始化socket
+
+	if(InitSocket()==0)
+	{
 		write_log(JUDGE_ERROR,"Init Socket JUDGE_ERROR...");
 		return 0;
 	}

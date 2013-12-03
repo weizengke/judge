@@ -4,10 +4,6 @@
 #include "..\..\thirdpart\mysql\include\mysql.h"
 
 
-extern MYSQL *mysql;     //mysql¡¨Ω”
-extern char query[1024]; //≤È—Ø”Ôæ‰
-
-
 extern char GL_username[MAX_NAME];
 extern int GL_solutionId;
 extern int GL_problemId;

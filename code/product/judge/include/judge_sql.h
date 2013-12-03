@@ -1,6 +1,18 @@
 #ifndef _JUDGE_SQL_H_
 #define _JUDGE_SQL_H_
 
+
+extern MYSQL *mysql;               //mysql¡¨Ω”
+extern char query[1024];           //≤È—Ø”Ôæ‰
+extern char Mysql_url[255];
+extern char Mysql_username[255];
+extern char Mysql_password[255];
+extern char Mysql_table[255];
+extern int  Mysql_port;
+extern char Mysql_Character[255];  //±‡¬Î
+
+
+extern int InitMySQL();
 extern int SQL_getSolutionSource();
 extern int SQL_getSolutionInfo(int *pIsExist);
 extern int SQL_getProblemInfo();

@@ -16,6 +16,33 @@
 #include "..\include\judge_inc.h"
 
 
+MYSQL *mysql;     //mysql连接
+char query[1024]; //查询语句
+char Mysql_url[255];
+char Mysql_username[255];
+char Mysql_password[255];
+char Mysql_table[255];
+int  Mysql_port;
+char Mysql_Character[255];  //编码
+
+
+int InitMySQL()   //初始化mysql，并设置字符集
+{
+	mysql=mysql_init((MYSQL*)0);
+	if(mysql!=0 && !mysql_real_connect(mysql,Mysql_url, Mysql_username, Mysql_password, Mysql_table,Mysql_port,NULL,CLIENT_MULTI_STATEMENTS )){
+		write_log(JUDGE_ERROR,mysql_error(mysql));
+		return 0;
+	}
+	strcpy(query,"SET CHARACTER SET gbk"); //设置编码 gbk
+
+	int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));
+	if(ret){
+		write_log(JUDGE_ERROR,mysql_error(mysql));
+		return 0;
+	}
+	return 1;
+}
+
 int SQL_getSolutionSource()
 {
 	sprintf(query,"select source from solution_source where solution_id=%d",GL_solutionId);
@@ -26,15 +53,18 @@ int SQL_getSolutionSource()
 		write_log(JUDGE_ERROR,mysql_error(mysql));
 		return OS_ERR;
 	}
+
 	MYSQL_RES *recordSet = mysql_store_result(mysql);
 	if (recordSet==NULL)
 	{
 		write_log(JUDGE_ERROR,"SQL_getSolutionSource");
 		return OS_ERR;
 	}
+
 	FILE *fp_source = fopen(sourcePath, "w");
 	char code[MAX_CODE]={0};
 	MYSQL_ROW row;
+
 	if(row=mysql_fetch_row(recordSet))
 	{
 		sprintf(code, "%s", row[0]);

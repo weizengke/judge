@@ -1,7 +1,5 @@
 #include "..\include\judge_inc.h"
 
-MYSQL *mysql;     //mysql¡¨Ω”
-char query[1024]; //≤È—Ø”Ôæ‰
 
 
 char GL_username[MAX_NAME];
