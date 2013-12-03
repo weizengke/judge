@@ -808,9 +808,25 @@ int work(int solutionId)
 		return OS_ERR;
 	}
 
-	InitPath();  //包含sourcePath,所以在SQL_getSolutionSource之前
-	SQL_getSolutionSource();  //取出source，并保存到sourcePath
-	SQL_getProblemInfo();	//problem info
+	//包含sourcePath,所以在SQL_getSolutionSource之前
+	InitPath();
+
+	//取出source，并保存到sourcePath
+	ret = SQL_getSolutionSource();
+	if (OS_OK != ret)
+	{
+		pdt_debug_print("SQL_getSolutionSource failed.(solutionId=%d)", solutionId);
+		write_log(JUDGE_INFO,"SQL_getSolutionSource failed.(solutionId=%d)", solutionId);
+		return OS_ERR;
+	}
+
+	ret = SQL_getProblemInfo();
+	if (OS_OK != ret)
+	{
+		pdt_debug_print("SQL_getProblemInfo failed.(solutionId=%d)", solutionId);
+		write_log(JUDGE_INFO,"SQL_getProblemInfo failed.(solutionId=%d)", solutionId);
+		return OS_ERR;
+	}
 
 	if (1 == GL_vjudge)
 	{
