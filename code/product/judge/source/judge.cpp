@@ -25,7 +25,7 @@ char INI_filename[]="GDOJ\\data.ini";
 int  nLanguageCount=0;
 int isDeleteTemp=0;
 int isRestrictedFunction=0;
-int  limitJudge=20;  //裁判队列最大等待数量
+int  limitJudge=50;  //裁判队列最大等待数量
 DWORD OutputLimit=10000; //最大输出
 char workPath[MAX_PATH];  //临时工作目录
 char judgeLogPath[MAX_PATH];
@@ -36,59 +36,6 @@ char judgePath[MAX_PATH]; //judge.exe
 
 char judge_log_filename[MAX_PATH] = {0};
 
-
-
-
-char compileCmd_str[1024]={0};
-char runCmd_str[1024]={0};
-
-
-clock_t startt,endt ; //每次run的时间点
-
-STARTUPINFO si;
-PROCESS_INFORMATION G_pi = {0};
-PROCESS_INFORMATION G_pi_com = {0};
-
-class CSolution
-{
-public:
-	char username[MAX_NAME];
-	int solutionId;
-	int problemId;
-	int languageId;
-	int verdictId;
-	int contestId;
-	int time;
-	int memory;
-	int reJudge;
-	time_t submitDate;
-protected:
-private:
-};
-
-
-void set_debug_switch(ULONG ds)
-{
-	g_oj_debug_switch = ds;
-}
-
-ULONG Judge_DebugSwitch(ULONG st)
-{
-	set_debug_switch(st);
-
-	return OS_TRUE;
-}
-/* END HDU VJUDGE */
-
-
-/////////////////////////LOG
-//#define LOG(level) Log(__FILE__, __LINE__, level).GetStream()
-extern void pdt_debug_print(const char *format, ...);
-
-///////////END LOG
-
-
-////////////////////////////////////////////////////socket
 #define PORT 5000
 #define BUFFER 1024
 
@@ -103,6 +50,32 @@ int GL_currentId;//当前裁判id
 queue <JUDGE_DATA> Q;//全局队列
 
 SOCKET sListen;
+
+char compileCmd_str[BUFFER]={0};
+char runCmd_str[BUFFER]={0};
+
+
+clock_t startt,endt ; //每次run的时间点
+
+STARTUPINFO si;
+PROCESS_INFORMATION G_pi = {0};
+PROCESS_INFORMATION G_pi_com = {0};
+
+HANDLE G_job=NULL;
+HANDLE InputFile ;  //父进程输入文件句柄
+HANDLE OutputFile;  //子进程标准输出句柄
+DWORD g_dwCode;	//定义进程状态
+
+ULONG Judge_DebugSwitch(ULONG st)
+{
+	g_oj_debug_switch = st;
+
+	return OS_TRUE;
+}
+/* END HDU VJUDGE */
+
+extern void pdt_debug_print(const char *format, ...);
+
 
 //#pragma comment(linker, "/subsystem:windows /ENTRY:mainCRTStartup") // 设置连接器选项
 
@@ -198,6 +171,19 @@ void InitConfig()
 
 }
 
+void resetVal(){
+	GL_verdictId=V_AC;
+	GL_contestId=0;
+	GL_time=0;
+	GL_memory=0;
+	GL_time_limit=1000;
+	GL_memory_limit=65535;
+	GL_reJudge=0;
+	GL_testcase=0;
+}
+
+
+
 
 void InitPath()
 {
@@ -281,110 +267,6 @@ void InitPath()
 	//	cout<<DebugFile<<endl;
 }
 
-DWORD WINAPI CompileThread(LPVOID lp) //ac
-{
-	STARTUPINFO StartupInfo = {0};
-
-	SQL_updateSolution(GL_solutionId,V_C,0,0,0); //V_C Compiling
-
-	system(compileCmd_str);
-
-
-	return 0;
-}
-//编译,是否应该防止编译器假死造成的卡死
-int compile()
-{
-
-	if(strcmp(compileCmd_str,"NULL")==0) return 1;
-
-	HANDLE hThread_com;
-
-	hThread_com=CreateThread(NULL,NULL,CompileThread,NULL,0,NULL);
-	if(hThread_com==NULL)
-	{
-		write_log(JUDGE_ERROR,"Create CompileThread Error");
-		CloseHandle(hThread_com);
-	}
-
-	DWORD status_ = WaitForSingleObject(hThread_com,30000);   //30S 编译时间,返回值大于零说明超时
-	if(status_>0)
-	{
-		write_log(JUDGE_WARNING,"Compile over time_limit");
-		TerminateProcess(G_pi_com.hProcess, 0);
-	}
-
-	//是否正常生成用户的可执行程序
-	if( (_access(exePath, 0 )) != -1 )
-	{
-		/* ok */
-		return 1;
-	}
-	else
-	{
-		return 0;
-	}
-}
-
-//是否存在异常
-BOOL RUN_existException(DWORD dw)
-{
-	switch(dw)
-	{
-	case EXCEPTION_ACCESS_VIOLATION:
-		return TRUE;
-	case EXCEPTION_DATATYPE_MISALIGNMENT:
-		return TRUE;
-	case EXCEPTION_BREAKPOINT:
-		return TRUE;
-	case EXCEPTION_SINGLE_STEP:
-		return TRUE;
-	case EXCEPTION_ARRAY_BOUNDS_EXCEEDED:
-		return TRUE;
-	case EXCEPTION_FLT_DENORMAL_OPERAND:
-		return TRUE;
-	case EXCEPTION_FLT_DIVIDE_BY_ZERO:
-		return TRUE;
-	case EXCEPTION_FLT_INEXACT_RESULT:
-		return TRUE;
-	case EXCEPTION_FLT_INVALID_OPERATION:
-		return TRUE;
-	case EXCEPTION_FLT_OVERFLOW:
-		return TRUE;
-	case EXCEPTION_FLT_STACK_CHECK:
-		return TRUE;
-	case EXCEPTION_FLT_UNDERFLOW:
-		return TRUE;
-	case EXCEPTION_INT_DIVIDE_BY_ZERO:
-		return TRUE;
-	case EXCEPTION_INT_OVERFLOW:
-		return TRUE;
-	case EXCEPTION_PRIV_INSTRUCTION:
-		return TRUE;
-	case EXCEPTION_IN_PAGE_ERROR:
-		return TRUE;
-	case EXCEPTION_ILLEGAL_INSTRUCTION:
-		return TRUE;
-	case EXCEPTION_NONCONTINUABLE_EXCEPTION:
-		return TRUE;
-	case EXCEPTION_STACK_OVERFLOW:
-		return TRUE;
-	case EXCEPTION_INVALID_DISPOSITION:
-		return TRUE;
-	case EXCEPTION_GUARD_PAGE:
-		return TRUE;
-	case EXCEPTION_INVALID_HANDLE:
-		return TRUE;
-	default:
-		return FALSE;
-	}
-}
-
-HANDLE G_job=NULL;
-HANDLE InputFile ;  //父进程输入文件句柄
-HANDLE OutputFile;  //子进程标准输出句柄
-DWORD g_dwCode;	//定义进程状态
-
 HANDLE CreateSandBox()
 {
 	HANDLE hjob =CreateJobObject(NULL,NULL);
@@ -449,7 +331,106 @@ bool ProcessToSandbox(HANDLE job,PROCESS_INFORMATION p)
 	return false;
 }
 
-DWORD WINAPI RUN_ProgramThread(LPVOID lp) //ac
+DWORD WINAPI Judge_CompileThread(LPVOID lp) //ac
+{
+	STARTUPINFO StartupInfo = {0};
+
+	SQL_updateSolution(GL_solutionId,V_C,0,0,0); //V_C Compiling
+
+	system(compileCmd_str);
+
+
+	return 0;
+}
+//编译,是否应该防止编译器假死造成的卡死
+int Judge_CompileProc()
+{
+
+	if(strcmp(compileCmd_str,"NULL")==0) return 1;
+
+	HANDLE hThread_com;
+
+	hThread_com=CreateThread(NULL,NULL,Judge_CompileThread,NULL,0,NULL);
+	if(hThread_com==NULL)
+	{
+		write_log(JUDGE_ERROR,"Create CompileThread Error");
+		CloseHandle(hThread_com);
+	}
+
+	DWORD status_ = WaitForSingleObject(hThread_com,30000);   //30S 编译时间,返回值大于零说明超时
+	if(status_>0)
+	{
+		write_log(JUDGE_WARNING,"Compile over time_limit");
+		TerminateProcess(G_pi_com.hProcess, 0);
+	}
+
+	//是否正常生成用户的可执行程序
+	if( (_access(exePath, 0 )) != -1 )
+	{
+		/* ok */
+		return 1;
+	}
+	else
+	{
+		return 0;
+	}
+}
+
+//是否存在异常
+BOOL Judge_ExistException(DWORD dw)
+{
+	switch(dw)
+	{
+	case EXCEPTION_ACCESS_VIOLATION:
+		return TRUE;
+	case EXCEPTION_DATATYPE_MISALIGNMENT:
+		return TRUE;
+	case EXCEPTION_BREAKPOINT:
+		return TRUE;
+	case EXCEPTION_SINGLE_STEP:
+		return TRUE;
+	case EXCEPTION_ARRAY_BOUNDS_EXCEEDED:
+		return TRUE;
+	case EXCEPTION_FLT_DENORMAL_OPERAND:
+		return TRUE;
+	case EXCEPTION_FLT_DIVIDE_BY_ZERO:
+		return TRUE;
+	case EXCEPTION_FLT_INEXACT_RESULT:
+		return TRUE;
+	case EXCEPTION_FLT_INVALID_OPERATION:
+		return TRUE;
+	case EXCEPTION_FLT_OVERFLOW:
+		return TRUE;
+	case EXCEPTION_FLT_STACK_CHECK:
+		return TRUE;
+	case EXCEPTION_FLT_UNDERFLOW:
+		return TRUE;
+	case EXCEPTION_INT_DIVIDE_BY_ZERO:
+		return TRUE;
+	case EXCEPTION_INT_OVERFLOW:
+		return TRUE;
+	case EXCEPTION_PRIV_INSTRUCTION:
+		return TRUE;
+	case EXCEPTION_IN_PAGE_ERROR:
+		return TRUE;
+	case EXCEPTION_ILLEGAL_INSTRUCTION:
+		return TRUE;
+	case EXCEPTION_NONCONTINUABLE_EXCEPTION:
+		return TRUE;
+	case EXCEPTION_STACK_OVERFLOW:
+		return TRUE;
+	case EXCEPTION_INVALID_DISPOSITION:
+		return TRUE;
+	case EXCEPTION_GUARD_PAGE:
+		return TRUE;
+	case EXCEPTION_INVALID_HANDLE:
+		return TRUE;
+	default:
+		return FALSE;
+	}
+}
+
+DWORD WINAPI Judge_RunProgramThread(LPVOID lp) //ac
 {
 	/// cmd/c solution.exe <data.in >data.out 2>error.txt
 	//ChildIn_Write是子进程的输入句柄，ChildIn_Read是父进程用于写入子进程输入的句柄
@@ -551,7 +532,7 @@ DWORD WINAPI RUN_ProgramThread(LPVOID lp) //ac
 	return 0;
 }
 
-int RUN_SpecialJudge(const char *inFile,const char *uOutFile)
+int Judge_SpecialJudge(const char *inFile,const char *uOutFile)
 {
 	//return 0 ====Error,return 1 ====Accepted
 	int judge ;
@@ -573,7 +554,7 @@ int RUN_SpecialJudge(const char *inFile,const char *uOutFile)
 	return 0;
 }
 
-int RUN_Solution(int solutionId)
+int Judge_RunLocalSolution(int solutionId)
 {
 	long caseTime=0;
 	int i,case_;
@@ -603,7 +584,7 @@ int RUN_Solution(int solutionId)
 		SQL_updateSolution(solutionId,V_RUN,case_,GL_time-GL_time%10,GL_memory);
 
 		HANDLE hThread_run;
-		hThread_run=CreateThread(NULL,NULL,RUN_ProgramThread,NULL,0,NULL);
+		hThread_run=CreateThread(NULL,NULL,Judge_RunProgramThread,NULL,0,NULL);
 		if(hThread_run==NULL) {
 			write_log(JUDGE_ERROR,"Create thread error");
 			CloseHandle(hThread_run);
@@ -636,7 +617,7 @@ int RUN_Solution(int solutionId)
 
 		//get process state
 		GetExitCodeProcess(G_pi.hProcess, &g_dwCode);
-		if(RUN_existException(g_dwCode))
+		if(Judge_ExistException(g_dwCode))
 		{
 			GL_verdictId=V_RE;
 			goto l;
@@ -683,7 +664,7 @@ int RUN_Solution(int solutionId)
 		//judge file，spj or not
 
 		if(GL_spj==1){
-			int verdict_ = RUN_SpecialJudge(inFileName,outFileName);
+			int verdict_ = Judge_SpecialJudge(inFileName,outFileName);
 			if(verdict_) GL_verdictId=V_AC;
 			else GL_verdictId=V_WA;
 		}else{
@@ -757,24 +738,11 @@ l:		write_log(JUDGE_INFO,"ID:%d Test%d ,%s ,%dms %dkb ,Return code:%u",GL_soluti
 
 }
 
-void resetVal(){
-	GL_verdictId=V_AC;
-	GL_contestId=0;
-	GL_time=0;
-	GL_memory=0;
-	GL_time_limit=1000;
-	GL_memory_limit=65535;
-	GL_reJudge=0;
-	GL_testcase=0;
-}
-
-
-
 int Judge_Local()
 {
 	char buf[4096] = {0};
 
-	if(0 == compile())
+	if(0 == Judge_CompileProc())
 	{
 		GL_verdictId=V_CE;
 		SQL_updateCompileInfo(GL_solutionId);
@@ -786,14 +754,14 @@ int Judge_Local()
 	else
 	{
 		write_log(JUDGE_INFO,"Start Run...");
-		RUN_Solution(GL_solutionId);
+		Judge_RunLocalSolution(GL_solutionId);
 	}
 
 	return OS_TRUE;
 }
 
 
-int work(int solutionId)
+int Judge_Proc(int solutionId)
 {
 	int ret = OS_OK;
 	int isExist = OS_NO;
@@ -890,7 +858,7 @@ void Judge_PushQueue(int solutionId)
 	Q.push(jd);
 }
 
-DWORD WINAPI WorkThread(LPVOID lpParam)
+DWORD WINAPI Judge_DispatchThread(LPVOID lpParam)
 {
 	int ret = OS_OK;
 	JUDGE_DATA jd;
@@ -914,7 +882,7 @@ DWORD WINAPI WorkThread(LPVOID lpParam)
 				//MSG_StartDot();
 
 				/* 启动评判 */
-				ret = work(GL_currentId);
+				ret = Judge_Proc(GL_currentId);
 				Q.pop();
 
 				//MSG_StopDot();
@@ -949,7 +917,7 @@ DWORD WINAPI WorkThread(LPVOID lpParam)
 	return 0;
 }
 
-DWORD WINAPI ListenThread(LPVOID lpParam)
+DWORD WINAPI Judge_ListenThread(LPVOID lpParam)
 {
 	// 循环接受客户的连接请求
 	sockaddr_in remoteAddr;
@@ -984,7 +952,7 @@ long WINAPI ExceptionFilter(EXCEPTION_POINTERS * lParam)
 	return EXCEPTION_EXECUTE_HANDLER;
 }
 
-int OJ_main()
+int OJ_Main()
 {
 	SetUnhandledExceptionFilter(ExceptionFilter);
  	SetErrorMode(SEM_NOGPFAULTERRORBOX );
@@ -1015,11 +983,8 @@ int OJ_main()
 		return 0;
 	}
 
-	//创建工作线程
-	HANDLE hThreadW;
-	hThreadW=CreateThread(NULL,NULL,WorkThread,0,0,0);
-	//进入循环，等待客户连接请求
-	HANDLE hThreadR=CreateThread(NULL,NULL,ListenThread,0,0,0);
+	HANDLE hThreadD=CreateThread(NULL,NULL,Judge_DispatchThread,0,0,0);
+	HANDLE hThreadR=CreateThread(NULL,NULL,Judge_ListenThread,0,0,0);
 
 	write_log(JUDGE_INFO,"Judge Task init ok...");
 
@@ -1036,7 +1001,7 @@ void OJ_TaskEntry()
 {
 	pdt_debug_print("OJ task init ok...");
 
-	(void)OJ_main();
+	(void)OJ_Main();
 
 	//t_oj.detach();
 
