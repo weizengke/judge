@@ -25,16 +25,16 @@ char Mysql_table[255];
 int  Mysql_port;
 char Mysql_Character[255];  //编码
 
-
-int InitMySQL()   //初始化mysql，并设置字符集
+/* 初始化mysql，并设置字符集 */
+int InitMySQL()
 {
 	mysql=mysql_init((MYSQL*)0);
 	if(mysql!=0 && !mysql_real_connect(mysql,Mysql_url, Mysql_username, Mysql_password, Mysql_table,Mysql_port,NULL,CLIENT_MULTI_STATEMENTS )){
 		write_log(JUDGE_ERROR,mysql_error(mysql));
 		return 0;
 	}
-	strcpy(query,"SET CHARACTER SET gbk"); //设置编码 gbk
 
+	strcpy(query,"SET CHARACTER SET gbk"); //设置编码 gbk
 	int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));
 	if(ret){
 		write_log(JUDGE_ERROR,mysql_error(mysql));

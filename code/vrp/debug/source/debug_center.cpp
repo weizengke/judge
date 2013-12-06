@@ -1,9 +1,9 @@
 #include <iostream>
 #include <windows.h>
 #include <stdlib.h>
-#include <thread>
+//#include <thread>
 #include <string>
-#include <mutex>
+//#include <mutex>
 #include <ctype.h>
 #include <time.h>
 #include <stdio.h>
@@ -13,12 +13,11 @@ using namespace std;
 
 #define MAX_MSGBUF_SIZE 255
 
-std::mutex g_mutex_msgQ;
-
 typedef struct tag_MSGQueue_S {
     char szMsgBuf[MAX_MSGBUF_SIZE];
+	int thread_id;
 	struct tm stTime;
-    std::thread::id thread_id;
+
 }MSGQUEUE_S;
 
 queue <MSGQUEUE_S> g_stMsgQueue;
@@ -48,13 +47,11 @@ void pdt_debug_print(const char *format, ...)
 	sprintf(buf,"%s", buf);
 
     strcpy(stMsgQ.szMsgBuf, buf);
-    std::thread::id this_id = std::this_thread::get_id();
-    stMsgQ.thread_id = this_id;
+
+    stMsgQ.thread_id = 0xff;
 	stMsgQ.stTime = *p;
 
-    g_mutex_msgQ.lock();
 	g_stMsgQueue.push(stMsgQ);
-	g_mutex_msgQ.unlock();
 
 }
 
@@ -85,32 +82,20 @@ void pdt_debug_print_ex(int level, const char *format, ...)
 	sprintf(buf,"%s", buf);
 
     strcpy(stMsgQ.szMsgBuf, buf);
-    std::thread::id this_id = std::this_thread::get_id();
-    stMsgQ.thread_id = this_id;
+
+    stMsgQ.thread_id = 0xff;
 	stMsgQ.stTime = *p;
 
-    g_mutex_msgQ.lock();
 	g_stMsgQueue.push(stMsgQ);
-	g_mutex_msgQ.unlock();
+
 
 }
 
 void RunDelay(int t)
 {
-    std::this_thread::sleep_for(std::chrono::milliseconds(t));
+    //std::this_thread::sleep_for(std::chrono::milliseconds(t));
+    Sleep(t);
 }
-
-void timer()
-{
-    std::thread::id this_id = std::this_thread::get_id();
-    cout<< "Run timer ok.......[" <<this_id<<"]"<<endl;
-    for (int i=0; ; i++)
-    {
-        pdt_debug_print("Do timer %d",i);
-        RunDelay(1000);
-    }
-}
-
 
 
 void MSG_OutStringWait()
@@ -135,8 +120,8 @@ void msg_dot_thread()
 }
 void MSG_StartDot()
 {
-	std::thread t_dot(msg_dot_thread);
-	t_dot.detach();
+	//std::thread t_dot(msg_dot_thread);
+	//t_dot.detach();
 }
 
 void MSG_StopDot()
@@ -144,7 +129,7 @@ void MSG_StopDot()
 	g_dotprint = 0;
 }
 
-void MSGQueueMain()
+void MSGQueueMain(void *pEntry)
 {
 	pdt_debug_print("Debug task init ok...");
 
@@ -153,11 +138,10 @@ void MSGQueueMain()
     {
         while (!g_stMsgQueue.empty())
         {
-            g_mutex_msgQ.lock();
             stMsgQ = g_stMsgQueue.front();
 			printf("\r\n%04d-%02d-%02d %02d:%02d:%02d",stMsgQ.stTime.tm_year, stMsgQ.stTime.tm_mon,stMsgQ.stTime.tm_mday,
 													stMsgQ.stTime.tm_hour,stMsgQ.stTime.tm_min,stMsgQ.stTime.tm_sec);
-            std::cout<<"/TASKID/"<< stMsgQ.thread_id << "/DEBUG: " << stMsgQ.szMsgBuf;
+            std::cout<<"/TASKID/0xFF/DEBUG: " << stMsgQ.szMsgBuf;
 
 
 			/* BEGIN: Added by weizengke, 2013/11/17 */
@@ -167,7 +151,7 @@ void MSGQueueMain()
 
 
             g_stMsgQueue.pop();
-            g_mutex_msgQ.unlock();
+
             RunDelay(1);
         }
         RunDelay(1);

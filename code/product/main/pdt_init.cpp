@@ -1,9 +1,10 @@
 #include <iostream>
 #include <windows.h>
+#include <process.h>
 #include <stdlib.h>
-#include <thread>
+//#include <thread>
 #include <string>
-#include <mutex>
+//#include <mutex>
 #include <ctype.h>
 #include <time.h>
 #include <stdio.h>
@@ -17,37 +18,42 @@ using namespace std;
 int main()
 {
 
-
-#if 1
 	pdt_debug_print("OS Main-task Running...");
 
-
-    extern void MSGQueueMain();
-	std::thread t_debug(MSGQueueMain);
+    extern void MSGQueueMain(void *);
+//	std::thread t_debug(MSGQueueMain);
+	_beginthread(MSGQueueMain,0,NULL);
 	RunDelay(10);
 
-	extern void OJ_TaskEntry();
-	std::thread t_oj(OJ_TaskEntry);
+	extern void OJ_TaskEntry(void *);
+//	std::thread t_oj(OJ_TaskEntry);
+	_beginthread(OJ_TaskEntry,0,NULL);
+
 	RunDelay(10);
 
-	extern int cmd_main_entry ();
-	std::thread t_cmd(cmd_main_entry);
+	extern void cmd_main_entry (void *);
+//	std::thread t_cmd(cmd_main_entry);
+
+	_beginthread(cmd_main_entry,0,NULL);
+
 	RunDelay(10);
 
 
 	pdt_debug_print("OS Main-task init ok...");
 
-#if 0
-	extern int test_main();
-	std::thread t_test(test_main);
-#endif
 
-	t_debug.join();
-	t_oj.join();
+//	t_debug.join();
+//	t_oj.join();
 
 	/* 	×èÈû  */
-	t_cmd.join();
+//	t_cmd.join();
 	//t_test.join();
-#endif
+
+	while(1)
+	{
+		RunDelay(1);
+	}
+
+
 	return 0;
 }

@@ -1482,7 +1482,7 @@ void cmd_outcurrent()
 	cmd_outstring("%s", vty->buffer);
 }
 
-int cmd_main_entry ()
+int cmd_main_entry (void *pEntry)
 {
 	cmd_init();
 

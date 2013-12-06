@@ -25,18 +25,24 @@
 #include "..\include\judge_hdu.h"
 
 
-
+#ifdef _WIN32_
+#include "..\..\thirdpart32\common\psapi.h"
+#include "..\..\thirdpart32\curl\curl.h"
+#include "..\..\thirdpart32\pcre\pcre.h"
+#include "..\..\thirdpart32\mysql\include\mysql.h"
+#else
 #include "..\..\thirdpart\common\psapi.h"
 #include "..\..\thirdpart\curl\curl.h"
 #include "..\..\thirdpart\pcre\pcre.h"
-
 #include "..\..\thirdpart\mysql\include\mysql.h"
 
-#pragma comment(lib,"ws2_32")
-#pragma comment(lib,"WSOCK32.lib")
-#pragma comment(lib, "..\..\..\..\..\build\lib\pcre.lib")
-#pragma comment(lib,"..\..\..\..\..\build\lib\psapi.lib")
-#pragma comment(lib, "..\..\..\..\..\build\lib\libmysql.lib")
+#endif
+
+//#pragma comment(lib,"ws2_32")
+//#pragma comment(lib,"WSOCK32.lib")
+//#pragma comment(lib, "..\..\..\..\..\build\lib\pcre.lib")
+//#pragma comment(lib,"..\..\..\..\..\build\lib\psapi.lib")
+//#pragma comment(lib, "..\..\..\..\..\build\lib\libmysql.lib")
 
 
 #endif

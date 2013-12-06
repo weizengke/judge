@@ -22,7 +22,6 @@ using namespace std;
 
 char INI_filename[]="GDOJ\\data.ini";
 
-int  nLanguageCount=0;
 int isDeleteTemp=0;
 int isRestrictedFunction=0;
 int  limitJudge=50;  //裁判队列最大等待数量
@@ -46,7 +45,6 @@ typedef struct
 	int solutionId;
 }JUDGE_DATA;
 
-int GL_currentId;//当前裁判id
 queue <JUDGE_DATA> Q;//全局队列
 
 SOCKET sListen;
@@ -335,10 +333,13 @@ DWORD WINAPI Judge_CompileThread(LPVOID lp) //ac
 {
 	STARTUPINFO StartupInfo = {0};
 
+	write_log(JUDGE_INFO,"Enter Judge_CompileThread...");
+
 	SQL_updateSolution(GL_solutionId,V_C,0,0,0); //V_C Compiling
 
 	system(compileCmd_str);
 
+	write_log(JUDGE_INFO,"End Judge_CompileThread...");
 
 	return 0;
 }
@@ -353,9 +354,11 @@ int Judge_CompileProc()
 	hThread_com=CreateThread(NULL,NULL,Judge_CompileThread,NULL,0,NULL);
 	if(hThread_com==NULL)
 	{
-		write_log(JUDGE_ERROR,"Create CompileThread Error");
+		write_log(JUDGE_ERROR,"Create Judge_CompileThread Error");
 		CloseHandle(hThread_com);
 	}
+
+	write_log(JUDGE_INFO,"Create Judge_CompileThread ok...");
 
 	DWORD status_ = WaitForSingleObject(hThread_com,30000);   //30S 编译时间,返回值大于零说明超时
 	if(status_>0)
@@ -363,6 +366,9 @@ int Judge_CompileProc()
 		write_log(JUDGE_WARNING,"Compile over time_limit");
 		TerminateProcess(G_pi_com.hProcess, 0);
 	}
+
+	write_log(JUDGE_INFO,"WaitForSingleObject wait time ok...");
+
 
 	//是否正常生成用户的可执行程序
 	if( (_access(exePath, 0 )) != -1 )
@@ -607,7 +613,7 @@ int Judge_RunLocalSolution(int solutionId)
 		PROCESS_MEMORY_COUNTERS   pmc;
 		unsigned long tmp_memory=0;
 
-		#if 0
+		#ifdef _WIN32_
 		 //del for mingw
 		if(GetProcessMemoryInfo(G_pi.hProcess,&pmc,sizeof(pmc))) {
 			tmp_memory=pmc.PeakWorkingSetSize/1024;
@@ -740,7 +746,7 @@ l:		write_log(JUDGE_INFO,"ID:%d Test%d ,%s ,%dms %dkb ,Return code:%u",GL_soluti
 
 int Judge_Local()
 {
-	char buf[4096] = {0};
+	write_log(JUDGE_INFO,"Enter Judge_Local...");
 
 	if(0 == Judge_CompileProc())
 	{
@@ -757,6 +763,8 @@ int Judge_Local()
 		Judge_RunLocalSolution(GL_solutionId);
 	}
 
+	write_log(JUDGE_INFO,"End Judge_Local...");
+
 	return OS_TRUE;
 }
 
@@ -768,6 +776,8 @@ int Judge_Proc(int solutionId)
 
 	GL_solutionId = solutionId;
 
+	write_log(JUDGE_INFO,"Enter Judge_Proc. (solutionId=%d)", solutionId);
+
 	resetVal();//重置
 
 	ret = SQL_getSolutionInfo(&isExist);
@@ -777,8 +787,12 @@ int Judge_Proc(int solutionId)
 		return OS_ERR;
 	}
 
+	write_log(JUDGE_INFO,"Do SQL_getSolutionInfo ok. (solutionId=%d)", solutionId);
+
 	//包含sourcePath,所以在SQL_getSolutionSource之前
 	InitPath();
+
+	write_log(JUDGE_INFO,"Do InitPath ok. (solutionId=%d)", solutionId);
 
 	//取出source，并保存到sourcePath
 	ret = SQL_getSolutionSource();
@@ -789,6 +803,8 @@ int Judge_Proc(int solutionId)
 		return OS_ERR;
 	}
 
+	write_log(JUDGE_INFO,"Do SQL_getSolutionSource ok. (solutionId=%d)", solutionId);
+
 	ret = SQL_getProblemInfo();
 	if (OS_OK != ret)
 	{
@@ -796,6 +812,9 @@ int Judge_Proc(int solutionId)
 		write_log(JUDGE_INFO,"SQL_getProblemInfo failed.(solutionId=%d)", solutionId);
 		return OS_ERR;
 	}
+
+	write_log(JUDGE_INFO,"Do SQL_getProblemInfo ok. (solutionId=%d)", solutionId);
+
 
 	if (1 == GL_vjudge)
 	{
@@ -814,6 +833,8 @@ int Judge_Proc(int solutionId)
 		GL_memory_limit*=limitIndex;
 		(void)Judge_Local();
 	}
+
+	write_log(JUDGE_INFO,"Do Judge finish. (solutionId=%d)", solutionId);
 
 
 	//update MySQL............
@@ -876,13 +897,12 @@ DWORD WINAPI Judge_DispatchThread(LPVOID lpParam)
 		if(!Q.empty())
 		{
 				jd=Q.front();
-			  	GL_currentId=jd.solutionId;
 
 				//judge_outstring("Info: Start to judge the solution, please wait...");
 				//MSG_StartDot();
 
 				/* 启动评判 */
-				ret = Judge_Proc(GL_currentId);
+				ret = Judge_Proc(jd.solutionId);
 				Q.pop();
 
 				//MSG_StopDot();
@@ -946,9 +966,9 @@ DWORD WINAPI Judge_ListenThread(LPVOID lpParam)
 
 long WINAPI ExceptionFilter(EXCEPTION_POINTERS * lParam)
 {
-	write_log(JUDGE_ERROR,"System Error! \r\n System may restart after 2 seconds...");
-	Sleep(2000);
-	ShellExecuteA(NULL,"open",judgePath,NULL,NULL,SW_SHOWNORMAL);
+	write_log(JUDGE_ERROR,"Judge Thread Exit after 10 second...(GetLastError=%u)",GetLastError());
+	Sleep(10000);
+	//ShellExecuteA(NULL,"open",judgePath,NULL,NULL,SW_SHOWNORMAL);
 	return EXCEPTION_EXECUTE_HANDLER;
 }
 
@@ -963,7 +983,7 @@ int OJ_Main()
 	}
 
 	//关闭调试开关
-	Judge_DebugSwitch(JUDGE_DEBUG_OFF);
+	Judge_DebugSwitch(JUDGE_DEBUG_ON);
 
 	write_log(JUDGE_INFO,"Running Judge Core...");
 
@@ -997,7 +1017,7 @@ int OJ_Main()
 	WSACleanup();
 }
 
-void OJ_TaskEntry()
+void OJ_TaskEntry(void *pEntry)
 {
 	pdt_debug_print("OJ task init ok...");
 

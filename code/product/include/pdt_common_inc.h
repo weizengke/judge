@@ -1,10 +1,6 @@
 #ifndef _PDT_COMMON_INC_
 #define _PDT_COMMON_INC_
 
-
-#include <thread>
-
-
 #define UCHAR unsigned char
 #define ULONG unsigned long
 #define CHAR char

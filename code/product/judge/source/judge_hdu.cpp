@@ -1,3 +1,9 @@
+/*
+
+  ≈‰HDOJ virtual-judge
+
+*/
+
 #if(JUDGE_VIRTUAL == VOS_YES)
 #include <windows.h>
 #include <process.h>
