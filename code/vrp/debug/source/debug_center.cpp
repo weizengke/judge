@@ -15,7 +15,7 @@ using namespace std;
 
 typedef struct tag_MSGQueue_S {
     char szMsgBuf[MAX_MSGBUF_SIZE];
-	int thread_id;
+	unsigned long thread_id;
 	struct tm stTime;
 
 }MSGQUEUE_S;
@@ -48,7 +48,7 @@ void pdt_debug_print(const char *format, ...)
 
     strcpy(stMsgQ.szMsgBuf, buf);
 
-    stMsgQ.thread_id = 0xff;
+    stMsgQ.thread_id = GetCurrentThreadId();
 	stMsgQ.stTime = *p;
 
 	g_stMsgQueue.push(stMsgQ);
@@ -83,7 +83,7 @@ void pdt_debug_print_ex(int level, const char *format, ...)
 
     strcpy(stMsgQ.szMsgBuf, buf);
 
-    stMsgQ.thread_id = 0xff;
+    stMsgQ.thread_id = GetCurrentThreadId();
 	stMsgQ.stTime = *p;
 
 	g_stMsgQueue.push(stMsgQ);
@@ -133,7 +133,7 @@ void MSGQueueMain(void *pEntry)
 {
 	pdt_debug_print("Debug task init ok...");
 
-    MSGQUEUE_S stMsgQ;
+    MSGQUEUE_S stMsgQ = {0};
     for (;;)
     {
         while (!g_stMsgQueue.empty())
@@ -141,7 +141,7 @@ void MSGQueueMain(void *pEntry)
             stMsgQ = g_stMsgQueue.front();
 			printf("\r\n%04d-%02d-%02d %02d:%02d:%02d",stMsgQ.stTime.tm_year, stMsgQ.stTime.tm_mon,stMsgQ.stTime.tm_mday,
 													stMsgQ.stTime.tm_hour,stMsgQ.stTime.tm_min,stMsgQ.stTime.tm_sec);
-            std::cout<<"/TASKID/0xFF/DEBUG: " << stMsgQ.szMsgBuf;
+            std::cout<<"/TASKID/" << stMsgQ.thread_id << "/DEBUG: " << stMsgQ.szMsgBuf;
 
 
 			/* BEGIN: Added by weizengke, 2013/11/17 */
