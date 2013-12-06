@@ -1,4 +1,4 @@
-del /s /q /f bin\*.exe
+del /s /q /f bin64\*.exe
 del /s /q /f bin32\*.exe
 del /s /q /f obj\*.o
 del /s /q /f obj\*.obj
