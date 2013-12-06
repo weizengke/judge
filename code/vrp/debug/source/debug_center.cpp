@@ -105,7 +105,7 @@ void MSG_OutStringWait()
 
 int g_dotprint = 0;
 
-void msg_dot_thread()
+void msg_dot_thread(void *pEntry)
 {
 	int i;
 
@@ -120,8 +120,7 @@ void msg_dot_thread()
 }
 void MSG_StartDot()
 {
-	//std::thread t_dot(msg_dot_thread);
-	//t_dot.detach();
+	_beginthread(msg_dot_thread,0,NULL);
 }
 
 void MSG_StopDot()

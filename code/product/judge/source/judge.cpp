@@ -898,15 +898,15 @@ DWORD WINAPI Judge_DispatchThread(LPVOID lpParam)
 		{
 				jd=Q.front();
 
-				//judge_outstring("Info: Start to judge the solution, please wait...");
-				//MSG_StartDot();
+				judge_outstring("Info: Start to judge the solution, please wait...");
+				MSG_StartDot();
 
 				/* 启动评判 */
 				ret = Judge_Proc(jd.solutionId);
 				Q.pop();
 
-				//MSG_StopDot();
-				//judge_outstring("done.\r\n");
+				MSG_StopDot();
+				judge_outstring("done.\r\n");
 				if (OS_OK == ret)
 				{
 					string time_string_;
@@ -983,7 +983,7 @@ int OJ_Main()
 	}
 
 	//关闭调试开关
-	Judge_DebugSwitch(JUDGE_DEBUG_ON);
+	Judge_DebugSwitch(JUDGE_DEBUG_OFF);
 
 	write_log(JUDGE_INFO,"Running Judge Core...");
 

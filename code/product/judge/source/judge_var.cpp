@@ -37,4 +37,4 @@ char DebugFile[MAX_PATH];
 char ErrorFile[MAX_PATH];
 
 
-int g_oj_debug_switch = JUDGE_DEBUG_ON;
+int g_oj_debug_switch = JUDGE_DEBUG_OFF;

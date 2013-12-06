@@ -11,6 +11,10 @@ DEFUN(cmd_debugging_enable_st, (char*)"debugging enable", (char*)"Debugging swit
 	}
 
 	g_debug_switch = DEBUG_ENABLE;
+
+	extern ULONG Judge_DebugSwitch(ULONG st);
+	Judge_DebugSwitch(DEBUG_ENABLE);
+
 	printf("Info: debugging switch is enable.\n");
 
 	return 0;
@@ -27,6 +31,10 @@ DEFUN(cmd_undo_debugging_enable_st, (char*)"undo debugging enable", (char*)"Debu
 	}
 
 	g_debug_switch = DEBUG_DISABLE;
+
+	extern ULONG Judge_DebugSwitch(ULONG st);
+	Judge_DebugSwitch(DEBUG_DISABLE);
+
 	printf("Info: debugging switch is disable.\n");
 
 	return 0;
