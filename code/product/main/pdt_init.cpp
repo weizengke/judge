@@ -14,43 +14,63 @@
 
 using namespace std;
 
+vector <APP_INFO_S*> g_vector_appInfo;
+
+int RegistAppInfo(APP_INFO_S *pstAppInfo)
+{
+	int ret = OS_OK;
+
+	g_vector_appInfo.push_back(pstAppInfo);
+
+	if (NULL != pstAppInfo->pfInitFunction)
+	{
+		ret = pstAppInfo->pfInitFunction();
+		if (OS_OK != ret)
+		{
+			pdt_debug_print("%s Task init failed...", pstAppInfo->taskName);
+			pdt_debug_print("%s Task RegistAppInfo failed...", pstAppInfo->taskName);
+			return OS_ERR;
+		}
+
+		pdt_debug_print("%s Task init ok...", pstAppInfo->taskName);
+	}
+
+	pdt_debug_print("%s Task RegistAppInfo ok...", pstAppInfo->taskName);
+
+	return OS_OK;
+
+}
 
 int main()
 {
-
 	pdt_debug_print("OS Main-task Running...");
 
-    extern void MSGQueueMain(void *);
-//	std::thread t_debug(MSGQueueMain);
-	_beginthread(MSGQueueMain,0,NULL);
-	RunDelay(10);
+	extern void Cmd_RegAppInfo();
+	Cmd_RegAppInfo();
 
-	extern void OJ_TaskEntry(void *);
-//	std::thread t_oj(OJ_TaskEntry);
-	_beginthread(OJ_TaskEntry,0,NULL);
+	extern void Debug_RegAppInfo();
+	Debug_RegAppInfo();
 
-	RunDelay(10);
+	extern void Judge_RegAppInfo();
+	Judge_RegAppInfo();
 
-	extern void cmd_main_entry (void *);
-//	std::thread t_cmd(cmd_main_entry);
 
-	_beginthread(cmd_main_entry,0,NULL);
+	for (vector<int>::size_type ix = 0; ix < g_vector_appInfo.size(); ++ix)
+	{
+		if (NULL != g_vector_appInfo[ix]->pfTaskMain)
+		{
+			_beginthread(g_vector_appInfo[ix]->pfTaskMain,0,NULL);
 
-	RunDelay(10);
-
+			pdt_debug_print("%s Task running ok...", g_vector_appInfo[ix]->taskName);
+		}
+	}
 
 	pdt_debug_print("OS Main-task init ok...");
 
-
-//	t_debug.join();
-//	t_oj.join();
-
-	/* 	阻塞  */
-//	t_cmd.join();
-	//t_test.join();
-
-	while(1)
+	/* 循环读取消息队列 */
+	for ( ; ; )
 	{
+
 		RunDelay(1);
 	}
 

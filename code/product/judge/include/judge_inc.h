@@ -16,6 +16,8 @@
 #include "..\..\include\pdt_common_inc.h"
 /* END:   Added by weizengke, 2013/11/15 */
 
+#include "..\..\..\vrp\common\include\vrp_common_def.h"
+
 
 #include "..\include\judge_def.h"
 #include "..\include\judge_util.h"

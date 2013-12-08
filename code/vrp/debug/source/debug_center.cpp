@@ -9,6 +9,8 @@
 #include <stdio.h>
 #include <queue>
 
+#include "..\include\debug_center_inc.h"
+
 using namespace std;
 
 #define MAX_MSGBUF_SIZE 255
@@ -130,8 +132,6 @@ void MSG_StopDot()
 
 void MSGQueueMain(void *pEntry)
 {
-	pdt_debug_print("Debug task init ok...");
-
     MSGQUEUE_S stMsgQ = {0};
     for (;;)
     {
@@ -157,8 +157,16 @@ void MSGQueueMain(void *pEntry)
     }
 }
 
-void Debug_TaskEntry()
+APP_INFO_S g_DebugAppInfo =
 {
+	NULL,
+	"Debug-Center",
+	NULL,
+	MSGQueueMain
+};
 
+void Debug_RegAppInfo()
+{
+	RegistAppInfo(&g_DebugAppInfo);
 }
 

@@ -22,7 +22,7 @@
 #endif
 
 
-
+#include "..\..\common\include\vrp_common_def.h"
 #include "..\..\debug\include\debug_center.h"
 
 

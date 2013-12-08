@@ -972,7 +972,42 @@ long WINAPI ExceptionFilter(EXCEPTION_POINTERS * lParam)
 	return EXCEPTION_EXECUTE_HANDLER;
 }
 
-int OJ_Main()
+int GetProcessThreadList()
+{
+	HANDLE hThreadSnap;
+	THREADENTRY32 th32;
+	DWORD th32ProcessID = GetCurrentProcessId();
+
+	printf("ProcessID: %ld\n", th32ProcessID);
+
+	hThreadSnap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, th32ProcessID);
+
+	if (hThreadSnap == INVALID_HANDLE_VALUE)
+	{
+		return 1;
+	}
+
+	th32.dwSize = sizeof(THREADENTRY32);
+	if (!Thread32First(hThreadSnap, &th32))
+	{
+		CloseHandle(hThreadSnap);
+		return 1;
+	}
+
+	do
+	{
+		if (th32.th32OwnerProcessID == th32ProcessID)
+		{
+			printf("ThreadID: %ld\n", th32.th32ThreadID); //显示找到的线程的ID
+
+		}
+	}while(Thread32Next(hThreadSnap, &th32));
+
+	CloseHandle(hThreadSnap);
+	return 0;
+}
+
+int OJ_Init()
 {
 	SetUnhandledExceptionFilter(ExceptionFilter);
  	SetErrorMode(SEM_NOGPFAULTERRORBOX );
@@ -992,15 +1027,21 @@ int OJ_Main()
 	if(InitMySQL()==0)
 	{
 		write_log(JUDGE_ERROR,"Init MySQL JUDGE_ERROR...");
-		return 0;
+		return OS_ERR;
 	}
 
 	write_log(JUDGE_INFO,"Init MySQL Success...");
 
+	return OS_OK;
+}
+
+void OJ_TaskEntry(void *pEntry)
+{
+
 	if(InitSocket()==0)
 	{
 		write_log(JUDGE_ERROR,"Init Socket JUDGE_ERROR...");
-		return 0;
+		return ;
 	}
 
 	HANDLE hThreadD=CreateThread(NULL,NULL,Judge_DispatchThread,0,0,0);
@@ -1008,27 +1049,30 @@ int OJ_Main()
 
 	write_log(JUDGE_INFO,"Judge Task init ok...");
 
+	/* 循环读取消息队列 */
 	for(;;)
 	{
-		Sleep(1);
+		/* 放权 */
+		Sleep(10);
 	}
 
 	closesocket(sListen);
 	WSACleanup();
+
+	return ;
 }
 
-void OJ_TaskEntry(void *pEntry)
+APP_INFO_S g_judgeAppInfo =
 {
-	pdt_debug_print("OJ task init ok...");
+	NULL,
+	"Judge",
+	OJ_Init,
+	OJ_TaskEntry
+};
 
-	(void)OJ_Main();
-
-	//t_oj.detach();
-
-	/* 在主线程里面执行t.detach()将子线程从主线程里分离，
-		子线程执行完成后会自己释放掉资源。分离后的线程，主线程将对它没有控制权了。
-	*/
-
+void Judge_RegAppInfo()
+{
+	RegistAppInfo(&g_judgeAppInfo);
 }
 
 #if 0

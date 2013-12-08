@@ -14,6 +14,18 @@
 #define OS_YES 1
 #define OS_NO  0
 
+#define APP_NAME_SIZE 20
+
+typedef struct tagAPP_INFO_S
+{
+	unsigned long taskMID;
+	char taskName[APP_NAME_SIZE];
+	int (*pfInitFunction)();
+	void (*pfTaskMain)(void *);
+
+}APP_INFO_S;
+
+extern int RegistAppInfo(APP_INFO_S *pstAppInfo);
 
 extern void RunDelay(int t);
 extern void MSGQueueMain();

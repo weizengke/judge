@@ -1482,24 +1482,28 @@ void cmd_outcurrent()
 	cmd_outstring("%s", vty->buffer);
 }
 
-int cmd_main_entry (void *pEntry)
+int cmd_init()
 {
-	cmd_init();
+	/* initial cmd vector */
+	cmd_vec = cmd_vector_init(1);
+
+	cmd_install();
 
 	vty = cmd_vty_init();
 	if (vty == NULL)
 	{
-		exit(1);
+		return OS_ERR;
 	}
 
-	pdt_debug_print("VRP Command-line task init ok...");
+	return OS_OK;
+}
 
-	RunDelay(2000);
 
+void cmd_main_entry(void *pEntry)
+{
 	/*
 		cmd_outprompt(vty->prompt);
 	*/
-
 	for (;;)
 	{
 		cmd_read(vty);
@@ -1507,5 +1511,20 @@ int cmd_main_entry (void *pEntry)
 
 	cmd_vty_deinit(vty);
 
-	return 0;
+	return ;
 }
+
+
+APP_INFO_S g_CMDAppInfo =
+{
+	NULL,
+	"Command",
+	cmd_init,
+	cmd_main_entry
+};
+
+void Cmd_RegAppInfo()
+{
+	RegistAppInfo(&g_CMDAppInfo);
+}
+

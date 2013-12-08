@@ -161,7 +161,11 @@ DEFUN(cmd_disable_st, (char*)"disable", (char*)"disable", disable)
 
 DEFUN(cmd_display_st, (char*)"display", (char*)"display", display)
 {
-	printf("Info: display.\n");
+	printf("Info: display thread info.\n");
+
+	extern int GetProcessThreadList();
+	GetProcessThreadList();
+
 	return 0;
 }
 
@@ -441,11 +445,8 @@ DEFUN(cmd_judge_solution_st, (char*)"judge solution INTEGER<1-65535>", (char*)"j
 	return 0;
 }
 
-void cmd_init()
+void cmd_install()
 {
-	// initial cmd vector
-	cmd_vec = cmd_vector_init(1);
-
 	/* reg cmd-element */
 	cmd_reg_newcmdelement(CMD_ELEM_ID_CR, 			CMD_ELEM_TYPE_END,			CMD_END,			    ""               );
 	cmd_reg_newcmdelement(CMD_ELEM_ID_STRING1TO24,  CMD_ELEM_TYPE_STRING,       "STRING<1-24>",     "String lenth range form 1 to 24");

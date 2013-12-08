@@ -1,8 +1,8 @@
+#ifndef _VRP_COMMON_DEF_
+#define _VRP_COMMON_DEF_
 
-#include "..\..\command\include\command_type.h"
-#include "..\..\debug\include\debug_center.h"
+#include "..\..\..\product\include\pdt_common_inc.h"
 
-#define DEFUN(cmdname, cmdstr, helpstr, funcname)  DEFUN_CMD(cmdname, cmdstr, helpstr, funcname)
 
 
 extern void RunDelay(int t);
@@ -11,4 +11,6 @@ extern void pdt_debug_print_ex(int level, const char *format, ...);
 
 extern void MSG_StartDot();
 extern void MSG_StopDot();
+
+#endif
 
