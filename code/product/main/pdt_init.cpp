@@ -1,3 +1,16 @@
+/*
+  风继续吹
+
+
+夜色如此放肆，
+从不知：
+风继续吹。
+瑟缩街中落泪，
+只有你，
+可细说，
+可倾诉。
+
+*/
 #include <iostream>
 #include <windows.h>
 #include <process.h>

@@ -898,15 +898,16 @@ DWORD WINAPI Judge_DispatchThread(LPVOID lpParam)
 		{
 				jd=Q.front();
 
-				judge_outstring("Info: Start to judge the solution, please wait...");
-				MSG_StartDot();
+				//judge_outstring("Info: Start to judge the solution, please wait...");
+				//MSG_StartDot();
 
 				/* 启动评判 */
 				ret = Judge_Proc(jd.solutionId);
 				Q.pop();
 
-				MSG_StopDot();
-				judge_outstring("done.\r\n");
+				//MSG_StopDot();
+				//judge_outstring("done.\r\n");
+
 				if (OS_OK == ret)
 				{
 					string time_string_;
@@ -978,7 +979,7 @@ int GetProcessThreadList()
 	THREADENTRY32 th32;
 	DWORD th32ProcessID = GetCurrentProcessId();
 
-	printf("ProcessID: %ld\n", th32ProcessID);
+	printf(" ProcessID: %ld\n", th32ProcessID);
 
 	hThreadSnap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, th32ProcessID);
 
@@ -998,7 +999,7 @@ int GetProcessThreadList()
 	{
 		if (th32.th32OwnerProcessID == th32ProcessID)
 		{
-			printf("ThreadID: %ld\n", th32.th32ThreadID); //显示找到的线程的ID
+			printf(" ThreadID: %ld\n", th32.th32ThreadID); //显示找到的线程的ID
 
 		}
 	}while(Thread32Next(hThreadSnap, &th32));

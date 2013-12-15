@@ -488,8 +488,9 @@ void cmd_output_missmatch(cmd_vty *vty, int nomath_pos)
 	int n = 0;
 	char buf[CMD_BUFFER_SIZE] = {0};
 
-	/* 输出箭头位置 */
-	int pos_arrow = 3 + strlen(g_sysname) + strlen(vty->prompt);
+	/* 输出箭头位置 3 is < - >*/
+	//int pos_arrow = 3 + strlen(g_sysname) + strlen(vty->prompt);
+	int pos_arrow = 2 + strlen(g_sysname);
 
 	strcpy(buf, vty->buffer);
 

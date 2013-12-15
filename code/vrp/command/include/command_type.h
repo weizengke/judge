@@ -199,7 +199,7 @@ typedef struct key_handler {
 } key_handler_t;
 
 
-/* DEFUN for vty command interafce. Little bit hacky ;-). */
+/* DEFUN for vty command interafce. */
 #define DEFUN(cmdname, cmdstr, helpstr, funcname) \
 	int funcname (struct cmd_elem_st *, struct cmd_vty *, int, char **); \
 	struct cmd_elem_st cmdname = \

@@ -90,7 +90,8 @@ int cmd_getch()
 
 void cmd_outprompt(char *prompt)
 {
-	cmd_outstring("<%s-%s>", g_sysname, prompt);
+	//cmd_outstring("<%s-%s>", g_sysname, prompt);
+	cmd_outstring("<%s>", g_sysname);
 }
 
 
