@@ -13,30 +13,30 @@
 
 
 /* BEGIN: Added by weizengke, 2013/11/15 for debug center*/
-#include "..\..\include\pdt_common_inc.h"
+#include "product\include\pdt_common_inc.h"
 /* END:   Added by weizengke, 2013/11/15 */
 
-#include "..\..\..\vrp\common\include\vrp_common_def.h"
+#include "vrp\common\include\vrp_common_def.h"
 
 
-#include "..\include\judge_def.h"
-#include "..\include\judge_util.h"
-#include "..\include\judge_var.h"
-#include "..\include\judge_io.h"
-#include "..\include\judge_sql.h"
-#include "..\include\judge_hdu.h"
+#include "product\judge\include\judge_def.h"
+#include "product\judge\include\judge_util.h"
+#include "product\judge\include\judge_var.h"
+#include "product\judge\include\judge_io.h"
+#include "product\judge\include\judge_sql.h"
+#include "product\judge\include\judge_hdu.h"
 
 
 #ifdef _WIN32_
-#include "..\..\thirdpart32\common\psapi.h"
-#include "..\..\thirdpart32\curl\curl.h"
-#include "..\..\thirdpart32\pcre\pcre.h"
-#include "..\..\thirdpart32\mysql\include\mysql.h"
+#include "product\thirdpart32\common\psapi.h"
+#include "product\thirdpart32\curl\curl.h"
+#include "product\thirdpart32\pcre\pcre.h"
+#include "product\thirdpart32\mysql\include\mysql.h"
 #else
-#include "..\..\thirdpart\common\psapi.h"
-#include "..\..\thirdpart\curl\curl.h"
-#include "..\..\thirdpart\pcre\pcre.h"
-#include "..\..\thirdpart\mysql\include\mysql.h"
+#include "product\thirdpart\common\psapi.h"
+#include "product\thirdpart\curl\curl.h"
+#include "product\thirdpart\pcre\pcre.h"
+#include "product\thirdpart\mysql\include\mysql.h"
 
 #endif
 

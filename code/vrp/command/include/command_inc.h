@@ -22,17 +22,17 @@
 #endif
 
 
-#include "..\..\common\include\vrp_common_def.h"
-#include "..\..\debug\include\debug_center.h"
+#include "vrp\common\include\vrp_common_def.h"
+#include "vrp\debug\include\debug_center.h"
 
 
-#include "..\include\command_def.h"
-#include "..\include\command_type.h"
-#include "..\include\command_var.h"
-#include "..\include\command_func.h"
-#include "..\include\command_io.h"
-#include "..\include\command_adp.h"
-#include "..\include\command_core.h"
+#include "vrp\command\include\command_def.h"
+#include "vrp\command\include\command_type.h"
+#include "vrp\command\include\command_var.h"
+#include "vrp\command\include\command_func.h"
+#include "vrp\command\include\command_io.h"
+#include "vrp\command\include\command_adp.h"
+#include "vrp\command\include\command_core.h"
 
 
 
