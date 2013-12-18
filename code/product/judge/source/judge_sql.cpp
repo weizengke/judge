@@ -13,7 +13,7 @@
 #include <sstream>
 
 
-#include "..\include\judge_inc.h"
+#include "product\judge\include\judge_inc.h"
 
 
 MYSQL *mysql;     //mysql¡¨Ω”

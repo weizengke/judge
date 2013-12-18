@@ -1,5 +1,5 @@
 
-#include "..\include\command_inc.h"
+#include "vrp\command\include\command_inc.h"
 
 
 DEFUN(cmd_debugging_enable_st, (char*)"debugging enable", (char*)"Debugging switch on", Debugging_enable)

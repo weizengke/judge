@@ -8,7 +8,7 @@
 #include <string>
 #include <sstream>
 
-#include "..\include\judge_inc.h"
+#include "product\judge\include\judge_inc.h"
 
 
 void write_log(int level, const char *fmt, ...) {

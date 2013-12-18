@@ -1,14 +1,15 @@
 /*
-  风继续吹
+  	  风继续吹
 
+	夜色如此放肆，
+	从不知：
+	风继续吹。
+	瑟缩街中落泪，
+	只有你，
+	可细说，
+	可倾诉。
 
-夜色如此放肆，
-从不知：
-风继续吹。
-瑟缩街中落泪，
-只有你，
-可细说，
-可倾诉。
+            By Jungle Wei.
 
 */
 #include <iostream>
@@ -23,7 +24,7 @@
 #include <stdio.h>
 #include <queue>
 
-#include "..\include\pdt_common_inc.h"
+#include "product\include\pdt_common_inc.h"
 
 using namespace std;
 
@@ -88,8 +89,6 @@ void init_telnet()
 		Sleep(100);
 		return ;
 	}
-
-	printf("Bind success...");
 
 	//进入监听状态
 	if (listen(sListen_tel,20) == SOCKET_ERROR)

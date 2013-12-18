@@ -1,5 +1,5 @@
-#include "..\include\judge_inc.h"
 
+#include "product\judge\include\judge_inc.h"
 
 
 char GL_username[MAX_NAME];

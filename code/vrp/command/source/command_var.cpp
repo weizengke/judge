@@ -1,5 +1,5 @@
 
-#include "..\include\command_inc.h"
+#include "vrp\command\include\command_inc.h"
 
 
 char *szDebugName[CMD_DEBUG_TYPE_MAX] = {

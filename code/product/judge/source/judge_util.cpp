@@ -1,7 +1,7 @@
 #include <iostream>
 #include <stdlib.h>
 
-#include "..\include\judge_inc.h"
+#include "product\judge\include\judge_inc.h"
 
 
 using namespace std;
