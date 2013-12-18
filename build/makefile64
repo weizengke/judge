@@ -8,7 +8,7 @@ OBJ_DIR=./obj
 
 CC=g++
 LD=ld
-CCFLAGS = -w -c -m64 -DNDEBUG
+CCFLAGS = -w -c -m64 -static -O3 -DNDEBUG
 CFLAGS=-o
 LDFLAGS =
 
