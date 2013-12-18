@@ -8,7 +8,7 @@ OBJ_DIR=./obj
 
 CC=g++
 LD=ld
-CCFLAGS = -w -c -m32 -static -O3 -DNDEBUG -D_WIN32_
+CCFLAGS = -w -c -m32 -O3 -DNDEBUG -D_WIN32_
 CFLAGS=-o
 LDFLAGS =
 
