@@ -4,28 +4,53 @@ set Path=%Path%;D:\mingw64\bin
 mingw32-make -f makefile64
 
 @ECHO off
+SET BIN_NAME=JungleOS.exe
+
 setlocal enabledelayedexpansion
-SET extension=".o"
+
+SET extension_o=".o"
+SET extension_a=".a"
+SET extension_dll=".dll"
+
 SET OBJ_DIR=obj
-SET root_path=%~dp0
-SET obj_list=
+SET LIB_DIR=lib64
+SET BIN_DIR=bin64
+SET ROOT_DIR=%~dp0
 
-echo 进入目录%~dp0%OBJ_DIR%
-cd %~dp0%OBJ_DIR%
+SET OBJ_LIST=
+SET LIB_LIST=
 
-FOR %%a IN (*%extension%) DO (
-    SET obj_list=!obj_list! %OBJ_DIR%\%%a
+echo 进入目录%ROOT_DIR%%OBJ_DIR%
+cd %ROOT_DIR%%OBJ_DIR%
+
+FOR %%a IN (*%extension_o%) DO (
+    SET OBJ_LIST=!OBJ_LIST! %OBJ_DIR%\%%a
     echo %OBJ_DIR%\%%a
 )
 
+echo 进入目录%ROOT_DIR%LIB_DIR%
+cd %ROOT_DIR%%LIB_DIR%
 
-echo 进入目录%root_path%
-cd %root_path%
+FOR %%a IN (*%extension_a%) DO (
+    SET LIB_LIST=!LIB_LIST! %LIB_DIR%\%%a
+    echo %LIB_DIR%\%%a
+)
 
-g++.exe  -static -o  bin64/JungleOS -L"\lib64" %obj_list% -l wsock32 lib64\libmysql.a lib64\libmysql.dll lib64\psapi.a lib64\psapi.dll lib64\pcre3.a lib64\pcre3.dll lib64\libcurl.a lib64\libcurl.dll
+FOR %%a IN (*%extension_dll%) DO (
+    SET LIB_LIST=!LIB_LIST! %LIB_DIR%\%%a
+    echo %LIB_DIR%\%%a
+)
 
+echo 进入目录%ROOT_DIR%
+cd %ROOT_DIR%
 
-cd bin64
-JungleOS.exe
+@ECHO on
+g++.exe -static -o  %BIN_DIR%/%BIN_NAME% -L"%LIB_DIR%" %OBJ_LIST% -l wsock32 %LIB_LIST%
+@ECHO off
+
+echo 进入目录%ROOT_DIR%%BIN_DIR%
+cd %ROOT_DIR%%BIN_DIR%
+echo 启动%BIN_NAME%
+%BIN_NAME%
 
 pause

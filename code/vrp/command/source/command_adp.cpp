@@ -2,6 +2,115 @@
 #include "..\include\command_inc.h"
 
 
+/*****************************************************************************
+ 函 数 名  : cmd_resolve_enter
+ 功能描述  : 适配回车执行命令行
+ 输入参数  : struct cmd_vty *vty
+ 输出参数  : 无
+ 返 回 值  : void
+ 调用函数  :
+ 被调函数  :
+
+ 修改历史      :
+  1.日    期   : 2013年11月17日
+    作    者   : weizengke
+    修改内容   : 新生成函数
+
+bugs:
+	1:	display loopback-detect brief
+		display loopback brief
+
+		<Jungle-config>dis loop brief
+		Command 'dis loop brief ' anbigous follow:
+		 brief                     brief
+		<Jungle-config>
+
+	2:
+		display loopback-detect brief
+		display loopback brief
+		disable loopback-detect
+
+		<Jungle-config>dis loopback
+		Command 'dis loopback' anbigous follow:
+		 loopback                  loopback-detect
+		<Jungle-config>
+
+*****************************************************************************/
+void cmd_resolve_enter_ex(char* buf)
+{
+	struct para_desc *match[CMD_MAX_MATCH_SIZE];	// matched string
+	int match_size = 0;
+
+	int match_type = CMD_NO_MATCH;
+	cmd_vector_t *v;
+
+	int i = 0;
+	int nomath_pos = -1;
+
+	//printf("enter(%d %d %s)\r\n", vty->used_len, vty->buf_len, vty->buffer);
+
+	strcpy(vty->buffer, buf);
+
+	v = str2vec(vty->buffer);
+	if (v == NULL) {
+		cmd_outstring("%s", CMD_ENTER);
+		cmd_outprompt(vty->prompt);
+		return;
+	}
+
+	/* BEGIN: Added by weizengke, 2013/10/5   PN:for cmd end with <CR> */
+	cmd_vector_insert_cr(v);
+	/* END:   Added by weizengke, 2013/10/5   PN:None */
+
+	cmd_outstring("%s", CMD_ENTER);
+
+	// do command
+	match_type = cmd_execute_command(v, vty, match, &match_size, &nomath_pos);
+	// add executed command into history
+	cmd_vty_add_history(vty);
+
+	if (match_type == CMD_NO_MATCH)
+	{
+		cmd_output_missmatch(vty, nomath_pos);
+	}
+	else if (match_type == CMD_ERR_ARGU)
+	{
+		cmd_outstring("Too Many Arguments");
+		cmd_outstring("%s", CMD_ENTER);
+	}
+
+	if (match_type == CMD_ERR_AMBIGOUS)
+	{
+		if (match_size)
+		{
+			cmd_outstring("Command '%s' anbigous follow:", vty->buffer);
+			cmd_outstring("%s", CMD_ENTER);
+			for (i = 0; i < match_size; i++)
+			{
+				if (ANOTHER_LINE(i))
+					cmd_outstring("%s", CMD_ENTER);
+				cmd_outstring(" %-25s", match[i]->para);
+			}
+			cmd_outstring("%s", CMD_ENTER);
+			/* del 10-29
+			cmd_outprompt(vty->prompt);
+			cmd_outstring("%s", vty->buffer);
+			*/
+			vty->cur_pos = vty->used_len = 0;
+			memset(vty->buffer, 0, vty->buf_len);
+			cmd_outprompt(vty->prompt);
+		}
+	}
+	else
+	{
+		// ready for another command
+		vty->cur_pos = vty->used_len = 0;
+		memset(vty->buffer, 0, vty->buf_len);
+		cmd_outprompt(vty->prompt);
+	}
+}
+
+
 /* ------------------ Interface Function ----------------- */
 int cmd_resolve(char c)
 {

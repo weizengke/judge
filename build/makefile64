@@ -12,8 +12,6 @@ CCFLAGS = -w -c -m64 -O3 -DNDEBUG
 CFLAGS=-o
 LDFLAGS =
 
-BIN=cmd-sys
-
 #################
 include $(VRP_ROOT)/vrp.mk
 include $(PRODUCT_ROOT)/product.mk
