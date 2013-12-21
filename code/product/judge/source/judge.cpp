@@ -332,30 +332,24 @@ HANDLE CreateSandBox()
 
 bool ProcessToSandbox(HANDLE job,PROCESS_INFORMATION p)
 {
-	try
+	if(AssignProcessToJobObject(job,p.hProcess))
 	{
-		if(AssignProcessToJobObject(job,p.hProcess))
+		//顺便调整本进程优先级为高
+		/*
+		HANDLE   hPS   =   OpenProcess(PROCESS_ALL_ACCESS,   false,  p.dwProcessId);
+		if(!SetPriorityClass(hPS,   HIGH_PRIORITY_CLASS))
 		{
-			//顺便调整本进程优先级为高
-			/*
-			HANDLE   hPS   =   OpenProcess(PROCESS_ALL_ACCESS,   false,  p.dwProcessId);
-			if(!SetPriorityClass(hPS,   HIGH_PRIORITY_CLASS))
-			{
-				write_log(JUDGE_SYSTEM_ERROR,"SetPriorityClass        [Error:%d]\n",GetLastError());
-			}
-			CloseHandle(hPS);
-			*/
-			return true;
+			write_log(JUDGE_SYSTEM_ERROR,"SetPriorityClass        [Error:%d]\n",GetLastError());
 		}
-		else
-		{
-			write_log(JUDGE_SYSTEM_ERROR,"AssignProcessToJobObject Error:%s",GetLastError());
-		}
+		CloseHandle(hPS);
+		*/
+		return true;
 	}
-	catch(exception & e)
+	else
 	{
-		pdt_debug_print("Error:%s",e.what());
+		write_log(JUDGE_SYSTEM_ERROR,"AssignProcessToJobObject Error:%s",GetLastError());
 	}
+
 	return false;
 }
 
