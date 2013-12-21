@@ -36,13 +36,8 @@ void pdt_debug_print(const char *format, ...)
     p->tm_year = p->tm_year + 1900;
     p->tm_mon = p->tm_mon + 1;
 
-	/*
-	sprintf(buf, "<%04d-%02d-%02d %02d:%02d:%02d>",p->tm_year, p->tm_mon, p->tm_mday,p->tm_hour,p->tm_min,p->tm_sec);
-	*/
-
 	va_list args;
 	va_start(args, format);
-	//vprintf(format, args);
 	vsprintf(buf_t,format, args);
 	sprintf(buf,"%s%s", buf,buf_t);
 	va_end(args);

@@ -103,8 +103,12 @@ int InitSocket()
 
 	int trybind=50;  //重试bind次数
 	int ret=0;
-	while((ret=bind(sListen,(LPSOCKADDR)&sin,sizeof(sin)))==SOCKET_ERROR&&trybind>0)
+
+	ret = bind(sListen,(LPSOCKADDR)&sin,sizeof(sin));
+
+	while(ret == SOCKET_ERROR && trybind > 0)
 	{
+		bind(sListen,(LPSOCKADDR)&sin,sizeof(sin));
 		write_log(JUDGE_SYSTEM_ERROR,"bind failed:%d , it will try later...",WSAGetLastError());
 		trybind--;
 		Sleep(100);
@@ -112,9 +116,22 @@ int InitSocket()
 
 	if(ret<0)
 	{
-		write_log(JUDGE_SYSTEM_ERROR,"Bind failed...");
-		return 0;
+		while (ret == SOCKET_ERROR)
+		{
+			port++;
+			sin.sin_port = htons(port);
+			ret =  bind(sListen,(LPSOCKADDR)&sin,sizeof(sin));
+			if (ret != SOCKET_ERROR)
+			{
+				char szPort[10] = {0};
+				(void)itoa(port, szPort ,10);
+				WritePrivateProfileString("Tool","Port",szPort,INI_filename);
+			}
+			Sleep(10);
+		}
 	}
+
+	pdt_debug_print("Info: Socket Bind port(%u) ok.", port);
 
 	write_log(JUDGE_INFO,"Bind success...");
 
@@ -125,15 +142,19 @@ int InitSocket()
 		write_log(JUDGE_SYSTEM_ERROR,"listen failed:%d , it will try later..",WSAGetLastError());
 		trylisten--;
 		Sleep(100);
-		return 0;
 	}
 
 	if(ret<0)
 	{
 		write_log(JUDGE_SYSTEM_ERROR,"Listen failed...");
+		pdt_debug_print("Error: Listen port(%u) failed......[code:%u]", port, GetLastError());
+
+		closesocket(sListen);
+		WSACleanup();
 		return 0;
 	}
 
+	pdt_debug_print("Info: Socket Listen ok.");
 	write_log(JUDGE_INFO,"Listen success...");
 
 	return 1;
@@ -311,21 +332,30 @@ HANDLE CreateSandBox()
 
 bool ProcessToSandbox(HANDLE job,PROCESS_INFORMATION p)
 {
-	if(AssignProcessToJobObject(job,p.hProcess))
+	try
 	{
-		//顺便调整本进程优先级为高
-		/*HANDLE   hPS   =   OpenProcess(PROCESS_ALL_ACCESS,   false,  p.dwProcessId);
-		if(!SetPriorityClass(hPS,   HIGH_PRIORITY_CLASS)){
-			write_log(JUDGE_SYSTEM_ERROR,"SetPriorityClass        [Error:%d]\n",GetLastError());
+		if(AssignProcessToJobObject(job,p.hProcess))
+		{
+			//顺便调整本进程优先级为高
+			/*
+			HANDLE   hPS   =   OpenProcess(PROCESS_ALL_ACCESS,   false,  p.dwProcessId);
+			if(!SetPriorityClass(hPS,   HIGH_PRIORITY_CLASS))
+			{
+				write_log(JUDGE_SYSTEM_ERROR,"SetPriorityClass        [Error:%d]\n",GetLastError());
+			}
+			CloseHandle(hPS);
+			*/
+			return true;
 		}
-		CloseHandle(hPS);*/
-		return true;
+		else
+		{
+			write_log(JUDGE_SYSTEM_ERROR,"AssignProcessToJobObject Error:%s",GetLastError());
+		}
 	}
-	else
+	catch(exception & e)
 	{
-		write_log(JUDGE_SYSTEM_ERROR,"AssignProcessToJobObject Error:%s",GetLastError());
+		pdt_debug_print("Error:%s",e.what());
 	}
-
 	return false;
 }
 
@@ -463,19 +493,33 @@ DWORD WINAPI Judge_RunProgramThread(LPVOID lp) //ac
 	StartupInfo.hStdInput = ChildIn_Read;
 	StartupInfo.dwFlags |= STARTF_USESTDHANDLES;
 
+	write_log(JUDGE_INFO,"CreateProcess(%s)", runCmd_str);
+
 	/* |CREATE_NEW_CONSOLE */
 	if(CreateProcess(NULL,runCmd_str,NULL,NULL,TRUE,CREATE_SUSPENDED,NULL,NULL,&StartupInfo,&G_pi))
 	{
+		write_log(JUDGE_INFO,"CreateProcess ok...");
 
 		G_job = CreateSandBox();
 		if(G_job!=NULL)
 		{
+			write_log(JUDGE_INFO,"CreateSandBox ok...");
+
 			if(ProcessToSandbox(G_job,G_pi))
 			{
+				write_log(JUDGE_INFO,"ProcessToSandbox ok...");
+
 				ResumeThread(G_pi.hThread);
 				CloseHandle(G_pi.hThread);
 
-				InputFile= CreateFile(inFileName, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_READONLY, NULL);
+				write_log(JUDGE_INFO,"CreateFile inFileName(%s)", inFileName);
+
+				InputFile= CreateFile(inFileName, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_READONLY, NULL);
+				if (InputFile <= 0)
+				{
+					write_log(JUDGE_ERROR,"CreateFile inFileName(%s) Error:%s", inFileName, GetLastError());
+				}
+
 				BOOL flag = FALSE;
 				while (true)
 				{
@@ -494,6 +538,10 @@ DWORD WINAPI Judge_RunProgramThread(LPVOID lp) //ac
 
 				//读取子进程的标准输出，并将其传递给文件输出
 				OutputFile= CreateFile(outFileName, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+				if (NULL == OutputFile)
+				{
+					write_log(JUDGE_ERROR,"CreateFile outFileName(%s) Error:%s", outFileName, GetLastError());
+				}
 
 				startt = clock();
 
@@ -520,7 +568,8 @@ DWORD WINAPI Judge_RunProgramThread(LPVOID lp) //ac
 				CloseHandle(ChildIn_Read);ChildIn_Read=NULL;
 				CloseHandle(ChildOut_Read);ChildOut_Read=NULL;
 				CloseHandle(OutputFile);OutputFile=NULL;
-				//printf("OK\n");
+
+				write_log(JUDGE_INFO,"Judge_RunProgramThread test OK..inFileName(%s)",inFileName);
 				return 1;
 			}else{
 				write_log(JUDGE_SYSTEM_ERROR,"ProcessToSandBox Error:%s",GetLastError());
@@ -581,10 +630,14 @@ int Judge_RunLocalSolution(int solutionId)
 		sprintf(srcPath, "%s",outFileName);
 		sprintf(ansPath, "%s%d\\data%d.out",dataPath,GL_problemId,case_);
 
+		write_log(JUDGE_INFO,"TEST(%d)\r\n inFileName:%s\r\n outFileName:%s\r\n srcPath:%s\r\n ansPath:%s\r\n",
+					i, inFileName, outFileName, srcPath, ansPath);
+
 		if( (_access(inFileName, 0 )) == -1 )   {
 			write_log(JUDGE_INFO,"Test over..");
 			break ;
 		}
+
 		GL_testcase = case_;
 
 		SQL_updateSolution(solutionId,V_RUN,case_,GL_time-GL_time%10,GL_memory);
@@ -595,6 +648,8 @@ int Judge_RunLocalSolution(int solutionId)
 			write_log(JUDGE_ERROR,"Create thread error");
 			CloseHandle(hThread_run);
 		}
+
+		write_log(JUDGE_ERROR,"Create Judge_RunProgramThread ok...");
 
 		DWORD status_ = WaitForSingleObject(hThread_run,GL_time_limit+2000);   //放宽时限2S,返回值大于零说明超时.
 		if(status_>0){
@@ -639,8 +694,8 @@ int Judge_RunLocalSolution(int solutionId)
 				GL_time = GL_time_limit;
 				goto l;
 			}
-
 		}
+
 		caseTime = endt - startt;
 		if(caseTime<0){
 			caseTime = GL_time_limit;
@@ -897,7 +952,6 @@ DWORD WINAPI Judge_DispatchThread(LPVOID lpParam)
 		if(!Q.empty())
 		{
 				jd=Q.front();
-
 				//judge_outstring("Info: Start to judge the solution, please wait...");
 				//MSG_StartDot();
 
@@ -967,9 +1021,14 @@ DWORD WINAPI Judge_ListenThread(LPVOID lpParam)
 
 long WINAPI ExceptionFilter(EXCEPTION_POINTERS * lParam)
 {
+	pdt_debug_print("Judge Thread Exit...[code:%u]", GetLastError());
 	write_log(JUDGE_ERROR,"Judge Thread Exit after 10 second...(GetLastError=%u)",GetLastError());
-	Sleep(10000);
+	Sleep(1);
 	//ShellExecuteA(NULL,"open",judgePath,NULL,NULL,SW_SHOWNORMAL);
+
+	closesocket(sListen);
+	WSACleanup();
+
 	return EXCEPTION_EXECUTE_HANDLER;
 }
 
@@ -1021,6 +1080,11 @@ int OJ_Init()
 	//关闭调试开关
 	Judge_DebugSwitch(JUDGE_DEBUG_OFF);
 
+	return OS_OK;
+}
+
+void OJ_TaskEntry(void *pEntry)
+{
 	write_log(JUDGE_INFO,"Running Judge Core...");
 
 	InitConfig();
@@ -1028,21 +1092,13 @@ int OJ_Init()
 	if(InitMySQL()==0)
 	{
 		write_log(JUDGE_ERROR,"Init MySQL JUDGE_ERROR...");
-		return OS_ERR;
+		pdt_debug_print("Error: Judge can not connect to MySQL.");
 	}
-
-	write_log(JUDGE_INFO,"Init MySQL Success...");
-
-	return OS_OK;
-}
-
-void OJ_TaskEntry(void *pEntry)
-{
 
 	if(InitSocket()==0)
 	{
 		write_log(JUDGE_ERROR,"Init Socket JUDGE_ERROR...");
-		return ;
+		pdt_debug_print("Error: Judge task killed itself...[code:%u]", GetLastError());
 	}
 
 	HANDLE hThreadD=CreateThread(NULL,NULL,Judge_DispatchThread,0,0,0);
