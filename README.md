@@ -11,7 +11,7 @@ Function:
 
 Project site:   http://weizengke.com/archives/143
 
-Environment：Windows 8.1  64bit， MinGW64 
+Environment：Windows， MinGW , VS2010
 
 
 usefull site:
