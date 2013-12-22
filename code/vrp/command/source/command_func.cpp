@@ -40,56 +40,6 @@ DEFUN(cmd_undo_debugging_enable_st, (char*)"undo debugging enable", (char*)"Debu
 	return 0;
 }
 
-DEFUN(date_elem_st, (char*)"date", (char*)"Display date-time now", date)
-{
-	if(argc == 0) {
-		time_t	timep = time(NULL);
-		struct tm *p;
-
-		p = localtime(&timep);
-		p->tm_year = p->tm_year + 1900;
-		p->tm_mon = p->tm_mon + 1;
-
-		printf(" Date of device:\r\n %04d-%02d-%02d %02d:%02d:%02d UTC(+8) DTS\n",p->tm_year, p->tm_mon, p->tm_mday,p->tm_hour,p->tm_min,p->tm_sec);
-
-		return 0;
-	}
-
-	printf("Syntax Error\n");
-	return -1;
-}
-
-
-DEFUN(cmd_dhcp_enable_st, (char*)"dhcp enable", (char*)"Dynamic Host Configuration Protocol", dhcp_enable)
-{
-	printf("Info: dhcp enable successful.\n");
-	return 0;
-}
-
-DEFUN(cmd_dhcp_disable_st, (char*)"dhcp enable", (char*)"Dynamic Host Configuration Protocol", dhcp_disable)
-{
-	printf("Info: dhcp disable successful.\n");
-	return 0;
-}
-
-
-DEFUN(cmd_stp_enable_st, (char*)"stp enable", (char*)"Spanning tree protocol", stp_enable)
-{
-	//printf("argc=%d, %s %s", argc, argv[0], argv[1]);
-
-	printf("Info: stp enable successful.\n");
-
-	return 0;
-}
-
-DEFUN(cmd_stp_disable_st, (char*)"stp disable", (char*)"Spanning tree protocol", stp_disable)
-{
-	//printf("argc=%d, %s %s", argc, argv[0], argv[1]);
-
-	printf("Info: stp disable successful.\n");
-
-	return 0;
-}
 
 DEFUN(cmd_display_clock_st, (char*)"display clock", (char*)"Display clock of device", display_clock)
 {
@@ -117,25 +67,7 @@ DEFUN(cmd_display_version_st, (char*)"display version", (char*)"Display device v
 	return 0;
 }
 
-DEFUN(cmd_display_stp_st, (char*)"display stp", (char*)"Display stp information", display_stp)
-{
-	printf("Test command 'display stp'.\n");
-	return 0;
-}
 
-
-DEFUN(cmd_display_stp_brief_st, (char*)"display stp brief", (char*)"Display stp brief information", display_stp_brief)
-{
-	printf("Test command 'display stp brief'.\n");
-	return 0;
-}
-
-DEFUN(cmd_display_stp_verbose_st, (char*)"display stp verbose", (char*)"Display device version", display_stp_verbose)
-{
-	printf("Test command 'display stp verbose'.\n");
-
-	return 0;
-}
 
 DEFUN(cmd_virtual_judge_enable_st, (char*)"virtual-judge enable", (char*)"Enable virtual judge", virtual_judge_enable)
 {
@@ -151,13 +83,6 @@ DEFUN(cmd_undo_virtual_judge_enable_st, (char*)"undo virtual-judge enable", (cha
 	return 0;
 }
 
-
-DEFUN(cmd_disable_st, (char*)"disable", (char*)"disable", disable)
-{
-	printf("Info: disable.\n");
-
-	return 0;
-}
 
 DEFUN(cmd_display_st, (char*)"display", (char*)"display", display)
 {
@@ -234,41 +159,6 @@ DEFUN(cmd_display_history_n_st, (char*)"display history INTEGER<1-100>", (char*)
 
 	debug_print_ex(CMD_DEBUG_TYPE_FUNC,"+");
 
-	return 0;
-}
-
-DEFUN(cmd_loopback_internal_st, (char*)"loopback internal", (char*)"loopback internal", loopback_internal)
-{
-	printf("Info: loopback internal.\n");
-	return 0;
-}
-
-DEFUN(cmd_loopback_detect_enable_st, (char*)"loopback-detect enable", (char*)"loopback-detect enable", loopback_detect_enable)
-{
-	printf("Info: loopback-detect enable.\n");
-	return 0;
-}
-
-DEFUN(cmd_display_loopback_st, (char*)"display loopback", (char*)"display loopback info", display_loopback)
-{
-	printf("Info: display loopback.\n");
-	return 0;
-}
-DEFUN(cmd_disable_loopback_detect_st, (char*)"disable loopback-detect", (char*)"disable loopback-detect protocol", disable_loopback_detect)
-{
-	printf("Info: disable loopback-detect.\n");
-	return 0;
-}
-
-DEFUN(cmd_display_loopback_brief_st, (char*)"display loopback brief", (char*)"display loopback brief info", display_loopback_brief)
-{
-	printf("Info: display loopback.\n");
-	return 0;
-}
-
-DEFUN(cmd_display_loopback_detect_brief_st, (char*)"display loopback-detect brief", (char*)"display loopback-detect protocol brief Info", display_loopback_detect_brief)
-{
-	printf("Info: display loopback-detect brief.\n");
 	return 0;
 }
 
@@ -428,7 +318,6 @@ DEFUN(cmd_display_hdujudge_status_st, (char*)"display hdu-judge status STRING<1-
 	return 0;
 }
 
-
 DEFUN(cmd_judge_solution_st, (char*)"judge solution INTEGER<1-65535>", (char*)"judge solution <ID>", judge_solution)
 {
 	int solutionId = 0;
@@ -445,6 +334,16 @@ DEFUN(cmd_judge_solution_st, (char*)"judge solution INTEGER<1-65535>", (char*)"j
 	return 0;
 }
 
+
+DEFUN(cmd_display_command_tree_st, (char*)"display command-tree", (char*)"display command tree", display_command_tree)
+{
+	extern void cmd_show_command_tree();
+	cmd_show_command_tree();
+
+	return 0;
+}
+
+
 void cmd_install()
 {
 	/* reg cmd-element */
@@ -452,6 +351,7 @@ void cmd_install()
 	cmd_reg_newcmdelement(CMD_ELEM_ID_STRING1TO24,  CMD_ELEM_TYPE_STRING,       "STRING<1-24>",     "String lenth range form 1 to 24");
 	cmd_reg_newcmdelement(CMD_ELEM_ID_INTEGER1TO24, CMD_ELEM_TYPE_INTEGER,      "INTEGER<1-100>",   "Integer range form 1 to 100");
 	cmd_reg_newcmdelement(CMD_ELEM_ID_INTEGER1TO65535, CMD_ELEM_TYPE_INTEGER,   "INTEGER<1-65535>",   "Integer range form 1 to 100");
+	cmd_reg_newcmdelement(CMD_ELEM_ID_COMMAND_TREE, CMD_ELEM_TYPE_KEY,          "command-tree",     "Command tree");
 
 	cmd_reg_newcmdelement(CMD_ELEM_ID_SYSNAME, 		CMD_ELEM_TYPE_KEY,   		"sysname",          "Set system name");
 	cmd_reg_newcmdelement(CMD_ELEM_ID_UNDO, 			CMD_ELEM_TYPE_KEY,   		"undo",				"Undo operation");
@@ -461,22 +361,13 @@ void cmd_install()
 	cmd_reg_newcmdelement(CMD_ELEM_ID_DEBUG,        CMD_ELEM_TYPE_KEY,   		"debugging",		"Debugging switch");
 	cmd_reg_newcmdelement(CMD_ELEM_ID_ON, 			CMD_ELEM_TYPE_KEY,   		"on",				"Debug switch open");
 	cmd_reg_newcmdelement(CMD_ELEM_ID_OFF, 			CMD_ELEM_TYPE_KEY,   		"off",				"Debug switch close");
-	cmd_reg_newcmdelement(CMD_ELEM_ID_DATE, 			CMD_ELEM_TYPE_KEY,   		"date",				"Show date-time now");
-	cmd_reg_newcmdelement(CMD_ELEM_ID_DHCP, 			CMD_ELEM_TYPE_KEY,   		"dhcp",				"Dynamic Host Configuration Protocol");
 	cmd_reg_newcmdelement(CMD_ELEM_ID_VERSION, 		CMD_ELEM_TYPE_KEY,   		"version",			"Show version of solfware");
-	cmd_reg_newcmdelement(CMD_ELEM_ID_STP, 			CMD_ELEM_TYPE_KEY,   		"stp",				"Spanning tree protocol");
 
 	cmd_reg_newcmdelement(CMD_ELEM_ID_CLOCK,        CMD_ELEM_TYPE_KEY,   		"clock",			"Show clock now");
 	cmd_reg_newcmdelement(CMD_ELEM_ID_COMPUTER, 		CMD_ELEM_TYPE_KEY,   		"computer",			"Show computer information");
 
 	cmd_reg_newcmdelement(CMD_ELEM_ID_HISTTORY, 		CMD_ELEM_TYPE_KEY,   		"history",			"Histrory command");
-	cmd_reg_newcmdelement(CMD_ELEM_ID_BRIEF,        CMD_ELEM_TYPE_KEY,   		"brief",			"Brief information");
-	cmd_reg_newcmdelement(CMD_ELEM_ID_VERBOSE, 		CMD_ELEM_TYPE_KEY,   		"verbose",			"Verbose information");
 	cmd_reg_newcmdelement(CMD_ELEM_ID_VJUDGE,	    CMD_ELEM_TYPE_KEY,   		"virtual-judge", 	"Virtual judge");
-
-	cmd_reg_newcmdelement(CMD_ELEM_ID_LOOPBACK,		CMD_ELEM_TYPE_KEY,   		"loopback", 		"Loopback");
-	cmd_reg_newcmdelement(CMD_ELEM_ID_LOOPBACK_DETECT,CMD_ELEM_TYPE_KEY,   		"loopback-detect", 	"loopback-detect protocol");
-	cmd_reg_newcmdelement(CMD_ELEM_ID_INTERNAL,		CMD_ELEM_TYPE_KEY,			"internal", 		"Internal");
 
 	cmd_reg_newcmdelement(CMD_ELEM_ID_DEBUG_ERROR,  CMD_ELEM_TYPE_KEY,			"error",			"Error");
 	cmd_reg_newcmdelement(CMD_ELEM_ID_DEBUG_FUNC,   CMD_ELEM_TYPE_KEY,			"function",			"Function");
@@ -493,6 +384,8 @@ void cmd_install()
 
 	cmd_reg_newcmdelement(CMD_ELEM_ID_JUDGE,			CMD_ELEM_TYPE_KEY,			"judge",			"Judge of OJ");
 	cmd_reg_newcmdelement(CMD_ELEM_ID_SOLUTION,		CMD_ELEM_TYPE_KEY,			"solution",			"The Solution");
+
+
 	// install command
 	// ---------------------------------------------------
 
@@ -501,38 +394,16 @@ void cmd_install()
 	install_element(&cmd_debugging_enable_st);
  	install_element(&cmd_undo_debugging_enable_st);
 
-	install_element(&cmd_stp_enable_st);
-	install_element(&cmd_stp_disable_st);
-
  	install_element(&cmd_display_clock_st);
  	install_element(&cmd_display_computer_st);
  	install_element(&cmd_display_version_st);
  	install_element(&cmd_display_history_st);
 	install_element(&cmd_display_history_n_st);
 
-	install_element(&cmd_display_stp_st);
-	install_element(&cmd_display_stp_brief_st);
-
-
-	install_element(&cmd_display_stp_verbose_st);
-
 	install_element(&cmd_virtual_judge_enable_st);
 	install_element(&cmd_undo_virtual_judge_enable_st);
 
-
-	install_element(&cmd_disable_st);
-
 	install_element(&cmd_display_st);
-
-	install_element(&cmd_loopback_internal_st);
-	install_element(&cmd_loopback_detect_enable_st);
-
-	install_element(&cmd_display_loopback_st);
-	install_element(&cmd_disable_loopback_detect_st);
-
-
-	install_element(&cmd_display_loopback_brief_st);
-	install_element(&cmd_display_loopback_detect_brief_st);
 
 	install_element(&cmd_debugging_error_st);
 	install_element(&cmd_undo_debugging_error_st);
@@ -560,6 +431,8 @@ void cmd_install()
 
 
 	install_element(&cmd_judge_solution_st);
+
+	install_element(&cmd_display_command_tree_st);
 	// ---------------------------------------------------
 
 }

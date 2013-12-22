@@ -1,16 +1,26 @@
 /*
-Author: Jungle Wei
-Date  : 2013-10
-Description: A mini common command line system
-
-Note:
-	_LINUX_ for compile on Linux , #define _LINUX_  or g++ -D_LINUX_ cmd.cpp
+	Author: Jungle Wei
+	Date  : 2013-10
+	Description: A mini common command line system
 
 */
 
 #include "vrp\command\include\command_inc.h"
 
+void cmd_show_command_tree()
+{
+	int i;
+	cmd_vector_t *cmd_vec_copy = cmd_vector_copy(cmd_vec);
 
+	int used_size = cmd_vector_max(cmd_vec_copy);
+
+	cmd_outstring("Command active (%u):\r\n", used_size);
+	for (i = 0; i < cmd_vector_max(cmd_vec_copy); i++)
+	{
+		struct cmd_elem_st * cmd_elem = (struct cmd_elem_st *)cmd_vector_slot(cmd_vec_copy, i);
+		cmd_outstring(" %s\r\n", cmd_elem->string);
+	}
+}
 
 /*****************************************************************************
  Prototype    : cmd_elem_is_para_type

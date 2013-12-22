@@ -939,7 +939,6 @@ DWORD WINAPI Judge_DispatchThread(LPVOID lpParam)
 	{
 		if(Q.size()>limitJudge)
 		{
-			int a=0;
 			return 0;
 		}
 
@@ -997,19 +996,24 @@ DWORD WINAPI Judge_ListenThread(LPVOID lpParam)
 	while(TRUE)
 	{
 		sClient = accept(sListen, (SOCKADDR*)&remoteAddr, &nAddrLen);
-		if(sClient == INVALID_SOCKET){
+		if(sClient == INVALID_SOCKET)
+		{
 			write_log(JUDGE_ERROR,"Accept() Error");
 			continue;
 		}
+
 		int ret=recv(sClient,(char*)&j,sizeof(j),0);
-		if(ret>0){
+		if(ret>0)
+		{
 			write_log(JUDGE_INFO,"Push SolutionId:%d into Judge Queue....",j.solutionId);
 			Q.push(j);
 		}
 		Sleep(1);
 	}
+
 	write_log(JUDGE_ERROR,"ListenThread Crash");
 	closesocket(sClient);
+
 	return 0;
 }
 

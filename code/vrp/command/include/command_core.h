@@ -7,6 +7,8 @@ extern void cmd_vty_deinit(struct cmd_vty *vty);
 extern void cmd_vty_add_history(struct cmd_vty *vty);
 extern void cmd_vector_insert_cr(cmd_vector_t *v);
 
+extern cmd_vector_t *cmd_vector_copy(cmd_vector_t *v);
+
 extern cmd_vector_t *str2vec(char *string);
 extern cmd_vector_t *cmd2vec(char *string, char *doc);
 extern int cmd_vector_fetch(cmd_vector_t *v);
