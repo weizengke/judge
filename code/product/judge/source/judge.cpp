@@ -20,7 +20,7 @@
 using namespace std;
 
 
-char INI_filename[]="GDOJ\\data.ini";
+char INI_filename[] = STARTUP_CFG;
 
 int isDeleteTemp=0;
 int isRestrictedFunction=0;
@@ -284,6 +284,30 @@ void InitPath()
 	sprintf(judge_log_filename,"%sjudge-log-%d.log",judgeLogPath,GL_solutionId);
 
 	//	cout<<DebugFile<<endl;
+}
+
+void Judge_ShowCfgContent()
+{
+	HANDLE hFile ;
+	hFile= CreateFile(STARTUP_CFG, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_READONLY, NULL);
+	if (hFile <= 0)
+	{
+		write_log(JUDGE_ERROR,"CreateFile inFileName(%s) Error:%s", STARTUP_CFG, GetLastError());
+	}
+
+	BOOL flag = FALSE;
+	while (true)
+	{
+		char buffer[BUFSIZE] = {0};
+		DWORD BytesRead, BytesWritten;
+		flag = ReadFile(hFile, buffer, BUFSIZE, &BytesRead, NULL);
+		if (!flag || (BytesRead == 0)) break;
+
+		judge_outstring("%s",buffer);
+
+		if (!flag){ break;}
+	}
+
 }
 
 HANDLE CreateSandBox()

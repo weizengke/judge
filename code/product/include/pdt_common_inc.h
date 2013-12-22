@@ -16,6 +16,10 @@
 
 #define APP_NAME_SIZE 20
 
+#define SOLFWARE_VERSION "V100R001C00B010"
+
+#define STARTUP_CFG "conf\\config.ini"
+
 typedef struct tagAPP_INFO_S
 {
 	unsigned long taskMID;

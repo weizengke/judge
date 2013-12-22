@@ -343,6 +343,13 @@ DEFUN(cmd_display_command_tree_st, (char*)"display command-tree", (char*)"displa
 	return 0;
 }
 
+DEFUN(cmd_display_current_configuration_st, (char*)"display current-configuration", (char*)"display current-configuration", display_current_configuration)
+{
+	extern void Judge_ShowCfgContent();
+	Judge_ShowCfgContent();
+
+	return 0;
+}
 
 void cmd_install()
 {
@@ -352,6 +359,8 @@ void cmd_install()
 	cmd_reg_newcmdelement(CMD_ELEM_ID_INTEGER1TO24, CMD_ELEM_TYPE_INTEGER,      "INTEGER<1-100>",   "Integer range form 1 to 100");
 	cmd_reg_newcmdelement(CMD_ELEM_ID_INTEGER1TO65535, CMD_ELEM_TYPE_INTEGER,   "INTEGER<1-65535>",   "Integer range form 1 to 100");
 	cmd_reg_newcmdelement(CMD_ELEM_ID_COMMAND_TREE, CMD_ELEM_TYPE_KEY,          "command-tree",     "Command tree");
+
+	cmd_reg_newcmdelement(CMD_ELEM_ID_CURRENT_CFG,  CMD_ELEM_TYPE_KEY,          "current-configuration",     "Current Configuration");
 
 	cmd_reg_newcmdelement(CMD_ELEM_ID_SYSNAME, 		CMD_ELEM_TYPE_KEY,   		"sysname",          "Set system name");
 	cmd_reg_newcmdelement(CMD_ELEM_ID_UNDO, 			CMD_ELEM_TYPE_KEY,   		"undo",				"Undo operation");
@@ -433,6 +442,8 @@ void cmd_install()
 	install_element(&cmd_judge_solution_st);
 
 	install_element(&cmd_display_command_tree_st);
+
+	install_element(&cmd_display_current_configuration_st);
 	// ---------------------------------------------------
 
 }
