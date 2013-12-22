@@ -596,7 +596,7 @@ int getStatusEx(char *hdu_username)
 
     if ( curl )
 	{
-		FILE *fp = fopen(tfilename, "ab+");
+		FILE *fp = fopen(tfilename, "w+");
 		curl_easy_setopt( curl, CURLOPT_VERBOSE, 0L );
 		curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "hdu.cookie");
 		char url[255] = {0};
@@ -640,14 +640,16 @@ int getStatusEx(char *hdu_username)
 		MSG_OUPUT_DBG("getResult failed.");
 	}
 
+	MSG_StopDot();
+	judge_outstring("done.\r\n");
+
 	if (OS_TRUE != ulRet)
 	{
+		judge_outstring("Error: Get status failed [%s].\r\n", hdu_username);
 		MSG_OUPUT_DBG("get record failed.");
 		return OS_FALSE;
 	}
 
-	MSG_StopDot();
-	judge_outstring("done.\r\n");
 	judge_outstring("Problem[%s] language[%s] verdict[%s] submissionID[%s] time[%sms] memory[%skb].\r\n", pid.c_str(), lang.c_str(), result.c_str(), runid.c_str(), tu.c_str(), mu.c_str());
 
 	MSG_OUPUT_DBG("get status success...");
@@ -680,7 +682,7 @@ ULONG getStatus(string hdu_username, string pid,string lang, string &runid, stri
 
     if ( curl )
 	{
-		FILE *fp = fopen(tfilename, "ab+");
+		FILE *fp = fopen(tfilename, "w+");
 		curl_easy_setopt( curl, CURLOPT_VERBOSE, 0L );
 		curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "hdu.cookie");
 		char url[255] = {0};
