@@ -10,14 +10,25 @@
 void cmd_show_command_tree()
 {
 	int i;
+	int used_size;
+
 	cmd_vector_t *cmd_vec_copy = cmd_vector_copy(cmd_vec);
+	if (NULL == cmd_vec_copy)
+	{
+		return ;
+	}
 
-	int used_size = cmd_vector_max(cmd_vec_copy);
-
+	used_size = cmd_vector_max(cmd_vec_copy);
 	cmd_outstring("Command active (%u):\r\n", used_size);
+
 	for (i = 0; i < cmd_vector_max(cmd_vec_copy); i++)
 	{
 		struct cmd_elem_st * cmd_elem = (struct cmd_elem_st *)cmd_vector_slot(cmd_vec_copy, i);
+		if (NULL == cmd_elem)
+		{
+			continue;
+		}
+
 		cmd_outstring(" %s\r\n", cmd_elem->string);
 	}
 }
