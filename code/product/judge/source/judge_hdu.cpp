@@ -870,9 +870,10 @@ ULONG checkStringExsit(char *filename, char *pattern)
     rc = pcre_exec(re,NULL, ts.c_str(), strlen(ts.c_str()), 0, 0, ovector, OVECCOUNT);
 	// 返回值：匹配成功返回非负数，没有匹配返回负数
     if (rc < 0) {                     //如果没有匹配，返回错误信息
-        if (rc == PCRE_ERROR_NOMATCH) printf("Sorry, no match ...\n");
+        if (rc == PCRE_ERROR_NOMATCH) MSG_OUPUT_DBG("Sorry, no match ...\n");
         else MSG_OUPUT_DBG("Matching error %d\n", rc);
         pcre_free(re);
+
         return OS_FALSE;
     }
 
@@ -914,7 +915,7 @@ ULONG getInfoByTag(char *src, char *pattern, ENUM_PROVLEM enProblem, char *res)
 
 	i = (rc==0)?(0):(rc-1);
 
-	printf("iiiiiiii=%d , rc=%d\n",i,rc);
+//	printf("iiiiiiii=%d , rc=%d\n",i,rc);
 
 //	for (i = 0; i < rc; i++) //分别取出捕获分组 $0整个正则公式 $1第一个()
 	{
@@ -960,6 +961,7 @@ int getProblemInfo_Brief(string pid)
     {
         ts +=tmps;
     }
+
     fclose(fp);
 
 	char  patternTime [] = "(\\d*) MS";  // 将要被编译的字符串形式的正则表达式
@@ -980,9 +982,6 @@ int getProblemInfo_Brief(string pid)
 
 	char  patternAuthor [] = "Author</div> <div class=panel_content>([\\s\\S]*?)</div><div class=panel_bottom>&nbsp;</div>";  // 将要被编译的字符串形式的正则表达式
 
-	//char  patternTitle [] = "<h1 style='color:#1A5CC8'>([\\s\\S]*?)</h1>";  // 将要被编译的字符串形式的正则表达式
-
-
 	for (loop = 0; loop < PROBLEM_TAG_MAX; loop++)
 	{
 		g_problem_string[loop] = "";
@@ -996,7 +995,8 @@ int getProblemInfo_Brief(string pid)
 	{
 		g_problem_string[0] = "1000";
 	}
-	MSG_OUPUT_DBG("Memoty");
+
+	MSG_OUPUT_DBG("Memory");
 	ulRet = getInfoByTag((char*)ts.c_str(), patternMemory, PROBLEM_MEMORY, NULL);
 	if(ulRet == 0)
 	{
@@ -1028,25 +1028,40 @@ int getProblemInfo_Brief(string pid)
 
 	if (ulRet != 0)
 	{
-		if (OS_TRUE == checkStringExsit(tfilename, "No such problem"))
+		if (OS_TRUE == checkStringExsit(tfilename, "No such problem")
+			|| OS_TRUE == checkStringExsit(tfilename, "<DIV>Invalid Parameter.</DIV>"))
 		{
-			MSG_OUPUT_DBG("No such problem %s", pid.c_str());
+			pdt_debug_print("No such problem %s on hdu-judge", pid.c_str());
 
-			return 0;
+			return OS_FALSE;
 		}
 	}
 
-	//SQL_updateProblemInfo("HDU",pid);
+	/*
+
+	pdt_debug_print("Time\r\n%s", g_problem_string[PROBLEM_TIME].c_str());
+	pdt_debug_print("Memory\r\n%s", g_problem_string[PROBLEM_MEMORY].c_str());
+	pdt_debug_print("Title\r\n%s", g_problem_string[PROBLEM_TITLE].c_str());
+	pdt_debug_print("Description\r\n%s", g_problem_string[PROBLEM_DESCRIPTION].c_str());
+	pdt_debug_print("Input\r\n%s", g_problem_string[PROBLEM_INPUT].c_str());
+	pdt_debug_print("Output\r\n%s", g_problem_string[PROBLEM_OUTPUT].c_str());
+	pdt_debug_print("Sample Input\r\n%s", g_problem_string[PROBLEM_SAMPLE_INPUT].c_str());
+	pdt_debug_print("Sample Output\r\n%s", g_problem_string[PROBLEM_SAMPLE_OUTPUT].c_str());
+	pdt_debug_print("Author\r\n%s", g_problem_string[PROBLEM_AUTHOR].c_str());
+*/
+
+	SQL_updateProblemInfo("HDU",pid);
 
 	MSG_OUPUT_DBG("Get Problem %s OK.", pid.c_str());
 
-    return 0;
+    return OS_TRUE;
 }
 
 ULONG getProblemInfo(string pid)
 {
 	CURL *curl;
     CURLcode res;
+	int ret = OS_TRUE;
 
 	curl = curl_easy_init();
 
@@ -1071,12 +1086,12 @@ ULONG getProblemInfo(string pid)
 		fclose(fp);
 	}
 
-	getProblemInfo_Brief(pid);
+	ret = getProblemInfo_Brief(pid);
 
-	return OS_TRUE;
+	return ret;
 }
 
-ULONG DLL_GetProblemInfoFromHDU(int pid)
+int DLL_GetProblemInfoFromHDU(int pid)
 {
 	char tmp[10]={0};
 	itoa(pid,tmp,10);
@@ -1123,7 +1138,6 @@ ULONG DLL_HDUGetStatus(string hdu_username, int pid, int langid, string &runid, 
 	char tmp[10]={0};
 	itoa(pid,tmp,10);
 	string pid_s = tmp;
-	//string runid,result,ce_info,tu, mu;
 
 	char tmplang[10]={0};
 	itoa(langid,tmplang,10);
@@ -1191,7 +1205,7 @@ ULONG getHDUStatus(string hdu_username, int pid,int lang, string &runid, string 
 	return OS_TRUE;
 }
 
-int Judge_Remote()
+int Judge_Via_python()
 {
 	char current_path[MAX_PATH] = {0};
 	char tmp_source_path[MAX_PATH] = {0};
@@ -1199,7 +1213,7 @@ int Judge_Remote()
 	GetCurrentDirectory(sizeof(current_path),current_path);
 
 	sprintf(tmp_source_path, "%s//%s",current_path,sourcePath);
-	sprintf(tmp_return_path, "%s//OJ_TMP//hdubjudge-%d.tmp",current_path,GL_solutionId);
+	sprintf(tmp_return_path, "%s//OJ_TMP//hdujudge-%d.tmp",current_path,GL_solutionId);
 
 	strcpy(tfilename,tmp_return_path);
 
@@ -1222,7 +1236,7 @@ int Judge_Remote()
 		while (ret != OS_TRUE)
 		{
 			result = "";
-			puts("Get Status...");
+			MSG_OUPUT_DBG("Get Status...");
 
 			Sleep(10000);
 
@@ -1237,7 +1251,7 @@ int Judge_Remote()
 				|| result.find("Compiling")!=string::npos
 				|| result.find("Running")!=string::npos)
 			{
-				puts("Get Status, Queuing or Compiling or Running , try again...");
+				pdt_debug_print("Get Status, Queuing or Compiling or Running , try again...");
 				ret = OS_FALSE;
 			}
 
@@ -1262,12 +1276,12 @@ int Judge_Remote()
 
 		if (OS_FALSE == ret)
 		{
-			puts("Get Status Error...");
+			MSG_OUPUT_DBG("Get Status Error...");
 			GL_verdictId = V_SE;
 		}
 		else
 		{
-			puts("Get Status success...");
+			MSG_OUPUT_DBG("Get Status success...");
 			if (result.find("Accepted")!=string::npos)
 			{
 				GL_verdictId = V_AC;
@@ -1323,6 +1337,12 @@ int Judge_Remote()
 	DeleteFile(tmp_return_path);
 
 	return OS_TRUE;
+
+}
+
+int Judge_Remote()
+{
+	return Judge_Via_python();
 }
 
 

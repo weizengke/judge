@@ -351,6 +351,28 @@ DEFUN(cmd_display_current_configuration_st, (char*)"display current-configuratio
 	return 0;
 }
 
+DEFUN(cmd_display_hdu_judge_problem_by_pid_st, (char*)"display hdu-judge problem INTEGER<1-65535>", (char*)"display hdu-judge problem by problem ID", display_hdu_judge_problem_by_pid)
+{
+	int problemId = 0;
+
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "%d %s %s %s %s\n", argc, argv[0], argv[1], argv[2], argv[2]);
+
+	problemId = atoi(argv[3]);
+
+
+	extern int DLL_GetProblemInfoFromHDU(int pid);
+
+	int ret = DLL_GetProblemInfoFromHDU(problemId);
+	if (OS_FALSE == ret)
+	{
+		cmd_outstring("Info: No such problam %d on hdu-judge.\r\n", problemId);
+	}
+
+	return 0;
+}
+
+
+
 void cmd_install()
 {
 	/* reg cmd-element */
@@ -394,6 +416,7 @@ void cmd_install()
 	cmd_reg_newcmdelement(CMD_ELEM_ID_JUDGE,			CMD_ELEM_TYPE_KEY,			"judge",			"Judge of OJ");
 	cmd_reg_newcmdelement(CMD_ELEM_ID_SOLUTION,		CMD_ELEM_TYPE_KEY,			"solution",			"The Solution");
 
+	cmd_reg_newcmdelement(CMD_ELEM_ID_PROBLEM,		CMD_ELEM_TYPE_KEY,			"problem",			"The Problem of OJ");
 
 	// install command
 	// ---------------------------------------------------
@@ -444,6 +467,8 @@ void cmd_install()
 	install_element(&cmd_display_command_tree_st);
 
 	install_element(&cmd_display_current_configuration_st);
+
+	install_element(&cmd_display_hdu_judge_problem_by_pid_st);
 	// ---------------------------------------------------
 
 }
