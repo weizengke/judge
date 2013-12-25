@@ -63,8 +63,6 @@ UCHAR gaucLanguageName[][MAX_LANG_SIZE] = {
 int GL_vjudge;
 int GL_vpid;
 
-
-
 /* HDU VJUDGE */
 
 char hdu_username[1000]="weizengke";
@@ -1205,6 +1203,151 @@ ULONG getHDUStatus(string hdu_username, int pid,int lang, string &runid, string 
 	return OS_TRUE;
 }
 
+int Judge_Via_CurlLib()
+{
+	int ret = OS_TRUE;
+	char current_path[MAX_PATH] = {0};
+	char tmp_source_path[MAX_PATH] = {0};
+	char tmp_return_path[MAX_PATH] = {0};
+	GetCurrentDirectory(sizeof(current_path),current_path);
+
+	sprintf(tmp_source_path, "%s//%s",current_path,sourcePath);
+	sprintf(tmp_return_path, "%s//OJ_TMP//hdujudge-%d.tmp",current_path,GL_solutionId);
+	do
+	{
+
+		ret = DLL_HDULogin();
+		if (OS_TRUE != ret)
+		{
+			pdt_debug_print("Error: Login hdu-judge failed.");
+		}
+
+		/* get source , just get 0xFFFFFF size */
+		string source_ = "";
+		int lang_id = getHDULangID(GL_languageId);
+
+		int cnt_ = 0xFFFF;
+		FILE * fp=fopen(sourcePath,"r");
+    	while (fgets(tmps,0xFFFFFF,fp))
+    	{
+			source_+=tmps;
+			if (cnt_-- <=0) break;
+		}
+
+	    fclose(fp);
+
+		pdt_debug_print("PID:%d, LangID:%d\r\nSource:\r\n%s", GL_vpid, lang_id, source_.c_str());
+
+		ret = DLL_HDUSubmit(GL_vpid, lang_id, source_);
+		if (OS_TRUE != ret)
+		{
+			pdt_debug_print("Error: Submit solution to hdu-judge failed.");
+		}
+
+		/* get status */
+		string runid, result,ce_info,tu,mu;
+		int tryTime = 6;
+		//hdu 的status多1
+		lang_id += 1;
+		ret = OS_FALSE;
+		while (ret != OS_TRUE)
+		{
+			result = "";
+			MSG_OUPUT_DBG("Get Status...");
+
+			Sleep(10000);
+
+			ret =DLL_HDUGetStatus(hdu_username, GL_vpid, lang_id, runid, result,ce_info,tu,mu);
+			if (ret != OS_TRUE
+				||result.find("Queuing")!=string::npos
+				|| result.find("Compiling")!=string::npos
+				|| result.find("Running")!=string::npos)
+			{
+				pdt_debug_print("Get Status, Queuing or Compiling or Running , try again...");
+				ret = OS_FALSE;
+			}
+
+			if (result.find("Compilation Error")!=string::npos)
+			{
+				//获取编译错误信息
+				string  CE_Info = getCEinfo(runid);
+				ce_info = CE_Info;
+				pdt_debug_print("CE:%s", CE_Info.c_str());
+			}
+
+			tryTime --;
+			/* 循环等待60s */
+			if (0 == tryTime)
+			{
+				break;
+			}
+		}
+
+		if (OS_FALSE == ret)
+		{
+			MSG_OUPUT_DBG("Get Status Error...");
+			GL_verdictId = V_SE;
+		}
+		else
+		{
+			MSG_OUPUT_DBG("Get Status success...");
+			if (result.find("Accepted")!=string::npos)
+			{
+				GL_verdictId = V_AC;
+			}
+			else if (result.find("Presentation Error")!=string::npos)
+			{
+				GL_verdictId = V_PE;
+			}
+			else if (result.find("Runtime Error")!=string::npos)
+			{
+				GL_verdictId = V_RE;
+			}
+			else if (result.find("Time Limit Exceeded")!=string::npos)
+			{
+				GL_verdictId = V_TLE;
+			}
+			else if (result.find("Memory Limit Exceeded")!=string::npos)
+			{
+				GL_verdictId = V_TLE;
+			}
+			else if (result.find("Output Limit Exceeded")!=string::npos)
+			{
+				GL_verdictId = V_OLE;
+			}
+			else if (result.find("Wrong Answer")!=string::npos)
+			{
+				GL_verdictId = V_WA;
+			}
+			else if (result.find("Compilation Error")!=string::npos)
+			{
+				GL_verdictId = V_CE;
+				FILE *fp;
+				char buffer[4096]={0};
+				if ((fp = fopen (DebugFile, "w")) == NULL){
+					write_log(JUDGE_ERROR,"DebugFile open error");
+					break;
+				}
+				fputs(ce_info.c_str(),fp);
+				fclose(fp);
+				SQL_updateCompileInfo(GL_solutionId);
+			}
+			else
+			{
+				GL_verdictId = V_SE;
+			}
+		}
+
+		GL_time = atoi(tu.c_str());
+		GL_memory = atoi(mu.c_str());
+
+	}while(0);
+
+	DeleteFile(tfilename);
+
+	return OS_TRUE;
+}
+
 int Judge_Via_python()
 {
 	char current_path[MAX_PATH] = {0};
@@ -1342,7 +1485,9 @@ int Judge_Via_python()
 
 int Judge_Remote()
 {
-	return Judge_Via_python();
+	return Judge_Via_CurlLib();
+
+	//return Judge_Via_python();
 }
 
 
