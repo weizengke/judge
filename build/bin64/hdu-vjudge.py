@@ -75,13 +75,13 @@ def submit(pid,lang,source_path):
     source += str('                                                 ');
 
     url='http://acm.hdu.edu.cn/submit.php?action=submit'
-    values={'check':'0','problemid':pid,'language':lang,'usercode':source}
-    data = urllib.urlencode(values)
-    headers ={"User-agent":"Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1"}
-    req = urllib2.Request(url, data,headers)
-    opener=urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
-    response =opener.open(req)
-    html_content =response.read()
+	values={'check':'0','problemid':pid,'language':lang,'usercode':source}
+	data = urllib.urlencode(values)
+	headers ={"User-agent":"Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1"}
+	req = urllib2.Request(url, data,headers)
+	opener=urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+	response =opener.open(req)
+	html_content =response.read()
 
     sErrorString = 'One or more following ERROR(s) occurred.'
     pos = html_content.find(sErrorString)

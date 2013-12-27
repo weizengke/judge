@@ -32,8 +32,8 @@ extern int nProcessLimit;
 
 
 
-extern char sourcePath[1024];
-extern char exePath[1024];
+extern char sourcePath[MAX_PATH];
+extern char exePath[MAX_PATH];
 
 
 extern char inFileName[MAX_PATH];
@@ -43,5 +43,11 @@ extern char ErrorFile[MAX_PATH];
 
 
 extern int g_oj_debug_switch;
+
+
+extern int GL_vjudge;
+extern int GL_vpid;
+extern char g_Vjudgetfilename[MAX_PATH];
+
 
 #endif

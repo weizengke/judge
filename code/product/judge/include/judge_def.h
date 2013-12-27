@@ -58,5 +58,8 @@ const int MAX_CONTENT = 100000;
 const int MAX_WAITTIME = 10000 ;
 
 
+#define VJUDGE_MAX_SIZE_BUF 10000000
+#define VJUDGE_OVECCOUNT 30    /* should be a multiple of 3 */
+#define VJUDGE_MAX_LANG_SIZE 255
 
 

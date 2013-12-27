@@ -68,34 +68,6 @@ DEFUN(cmd_display_version_st, (char*)"display version", (char*)"Display device v
 }
 
 
-
-DEFUN(cmd_virtual_judge_enable_st, (char*)"virtual-judge enable", (char*)"Enable virtual judge", virtual_judge_enable)
-{
-	printf("Info: virtual judge enable successful, support hdoj virtual-judge only.\n");
-
-	return 0;
-}
-
-DEFUN(cmd_undo_virtual_judge_enable_st, (char*)"undo virtual-judge enable", (char*)"Undo enable virtual judge", undo_virtual_judge_enable)
-{
-	printf("Info: virtual judge is disable successful.\n");
-
-	return 0;
-}
-
-
-DEFUN(cmd_display_st, (char*)"display", (char*)"display", display)
-{
-	printf("Info: display thread info.\n");
-
-	extern int GetProcessThreadList();
-	GetProcessThreadList();
-
-	return 0;
-}
-
-
-
 DEFUN(cmd_sysname_st, (char*)"sysname STRING<1-24>", (char*)"set system name", sysname)
 {
 	CMD_DBGASSERT(argv[1] != 0);
@@ -312,7 +284,7 @@ DEFUN(cmd_display_hdujudge_status_st, (char*)"display hdu-judge status STRING<1-
 
 	strcpy(username_, argv[3]);
 
-	extern int getStatusEx(char *hdu_username);
+	extern int getStatusEx(char *);
 	getStatusEx(username_);
 
 	return 0;
@@ -334,6 +306,19 @@ DEFUN(cmd_judge_solution_st, (char*)"judge solution INTEGER<1-65535>", (char*)"j
 	return 0;
 }
 
+DEFUN(cmd_display_guetjudge_status_st, (char*)"display guet-judge status STRING<1-24>", (char*)"display guetjudge status <username>", display_guetjudge_status)
+{
+	char username_[25] = {0};
+
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "%d %s %s %s\n", argc, argv[0], argv[1], argv[2], argv[3]);
+
+	strcpy(username_, argv[3]);
+
+	extern int GUET_getStatusEx(char *);
+	GUET_getStatusEx(username_);
+
+	return 0;
+}
 
 DEFUN(cmd_display_command_tree_st, (char*)"display command-tree", (char*)"display command tree", display_command_tree)
 {
@@ -367,6 +352,26 @@ DEFUN(cmd_display_hdu_judge_problem_by_pid_st, (char*)"display hdu-judge problem
 	{
 		cmd_outstring("Info: No such problam %d on hdu-judge.\r\n", problemId);
 	}
+
+	return 0;
+}
+
+
+
+DEFUN(cmd_display_st, (char*)"display", (char*)"display", display)
+{
+	printf("Info: display thread info.\n");
+
+	extern int GetProcessThreadList();
+	GetProcessThreadList();
+
+	char current_path[MAX_PATH] = {0};
+	GetCurrentDirectory(sizeof(current_path),current_path);
+
+	char cmd_string[MAX_PATH];
+	sprintf(cmd_string,"python -O %s\\pytesser_v0.0.1\\captcha.py", current_path);
+
+	system(cmd_string) ;
 
 	return 0;
 }
@@ -411,6 +416,8 @@ void cmd_install()
 	cmd_reg_newcmdelement(CMD_ELEM_ID_LOGIN,     	CMD_ELEM_TYPE_KEY,			"login",			"Login");
 
 	cmd_reg_newcmdelement(CMD_ELEM_ID_HDUJUDGE,		CMD_ELEM_TYPE_KEY,			"hdu-judge",		"HDU-Judge");
+	cmd_reg_newcmdelement(CMD_ELEM_ID_GUETJUDGE,		CMD_ELEM_TYPE_KEY,			"guet-judge",		"GUET-Judge");
+
 	cmd_reg_newcmdelement(CMD_ELEM_ID_STATUS,		CMD_ELEM_TYPE_KEY,			"status",			"Status");
 
 	cmd_reg_newcmdelement(CMD_ELEM_ID_JUDGE,			CMD_ELEM_TYPE_KEY,			"judge",			"Judge of OJ");
@@ -431,9 +438,6 @@ void cmd_install()
  	install_element(&cmd_display_version_st);
  	install_element(&cmd_display_history_st);
 	install_element(&cmd_display_history_n_st);
-
-	install_element(&cmd_virtual_judge_enable_st);
-	install_element(&cmd_undo_virtual_judge_enable_st);
 
 	install_element(&cmd_display_st);
 
@@ -460,7 +464,7 @@ void cmd_install()
 
 	install_element(&cmd_hdujudge_login_st);
 	install_element(&cmd_display_hdujudge_status_st);
-
+	install_element(&cmd_display_guetjudge_status_st);
 
 	install_element(&cmd_judge_solution_st);
 

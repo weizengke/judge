@@ -24,13 +24,6 @@
 
 using namespace std;
 
-#define MAX_SIZE_BUF 10000000
-
-#define DEBUG_PRINT(X)   X
-
-#define OVECCOUNT 30    /* should be a multiple of 3 */
-
-#define MAX_LANG_SIZE 255
 
 enum ENUM_PROVLEM
 {
@@ -47,11 +40,11 @@ enum ENUM_PROVLEM
 	PROBLEM_TAG_MAX
 };
 
-string g_problem_string[PROBLEM_TAG_MAX];
-char tmps[MAX_SIZE_BUF];
+string g_HDU_problem_string[PROBLEM_TAG_MAX];
+char g_HDUtmps[VJUDGE_MAX_SIZE_BUF];
 
 /* hdu language list */
-UCHAR gaucLanguageName[][MAX_LANG_SIZE] = {
+UCHAR gaucHDULanguageName[][VJUDGE_MAX_LANG_SIZE] = {
 	"G++",
 	"GCC",
 	"C++",
@@ -60,24 +53,21 @@ UCHAR gaucLanguageName[][MAX_LANG_SIZE] = {
 	"Java"
 };
 
-int GL_vjudge;
-int GL_vpid;
 
 /* HDU VJUDGE */
 
 char hdu_username[1000]="weizengke";
 char hdu_password[1000]="********";
 
-char tfilename[1000]="tmpfile.txt";
 
 ULONG getLanguageNameByID(ULONG id, UCHAR *ucLanguageName)
 {
-	if (id < 0 || id >= sizeof(gaucLanguageName)/MAX_LANG_SIZE)
+	if (id < 0 || id >= sizeof(gaucHDULanguageName)/VJUDGE_MAX_LANG_SIZE)
 	{
 		return OS_FALSE;
 	}
 
-	strcpy((char *)ucLanguageName, (char *)gaucLanguageName[id]);
+	strcpy((char *)ucLanguageName, (char *)gaucHDULanguageName[id]);
 	return OS_TRUE;
 }
 
@@ -85,9 +75,9 @@ ULONG getLanguageIDByName(UCHAR *ucLanguageName, ULONG *id)
 {
 	USHORT usLoop = 0;
 
-	for (usLoop = 0; usLoop <= sizeof(gaucLanguageName)/MAX_LANG_SIZE; ++usLoop)
+	for (usLoop = 0; usLoop <= sizeof(gaucHDULanguageName)/VJUDGE_MAX_LANG_SIZE; ++usLoop)
 	{
-		if (strcmp((CHAR*)ucLanguageName, (CHAR*)gaucLanguageName[usLoop]) == 0)
+		if (strcmp((CHAR*)ucLanguageName, (CHAR*)gaucHDULanguageName[usLoop]) == 0)
 		{
 			*id = usLoop;
 			return OS_TRUE;
@@ -164,14 +154,11 @@ string deescapeURL(const string &URL)
 	}
 	return result;
 }
-
-
-
 string getAllFromFile(char *filename)
 {
     string res="";
     FILE * fp=fopen(filename,"r");
-    while (fgets(tmps,1000000,fp)) res+=tmps;
+    while (fgets(g_HDUtmps,1000000,fp)) res+=g_HDUtmps;
     fclose(fp);
     return res;
 }
@@ -226,22 +213,22 @@ string getCEinfo_brief(char *filename)
 	string res="",ts;
     FILE * fp=fopen(filename,"r");
 
-    while (fgets(tmps,1000000,fp))
+    while (fgets(g_HDUtmps,1000000,fp))
     {
-        ts=tmps;
+        ts=g_HDUtmps;
         if (ts.find("View Compilation Error")!=string::npos)
         {
-            while (fgets(tmps,1000000,fp))
+            while (fgets(g_HDUtmps,1000000,fp))
 			{
-                ts=tmps;
+                ts=g_HDUtmps;
 				int pos = ts.find("<pre>");
                 if (pos !=string::npos)
 				{
 					res = ts.substr(pos + 5, ts.length() - pos - 5);
 
-					while (fgets(tmps,1000000,fp))
+					while (fgets(g_HDUtmps,1000000,fp))
 					{
-						ts=tmps;
+						ts=g_HDUtmps;
 						if (ts.find("</pre>")!=string::npos)
 						{
 							MSG_OUPUT_DBG("FOUND CE_INFO");
@@ -300,16 +287,16 @@ string getLineFromFile(char *filename,int line)
     string res="";
     FILE * fp=fopen(filename,"r");
     int cnt=0;
-    while (fgets(tmps,10000000,fp))
+    while (fgets(g_HDUtmps,10000000,fp))
 	{
         cnt++;
-        res=tmps;
+        res=g_HDUtmps;
         if (res.find("<h1>Realtime Status</h1>")!=string::npos)
 		{
-            fgets(tmps,10000000,fp);
-            res=res+tmps;
-            fgets(tmps,10000000,fp);
-            res=res+tmps;
+            fgets(g_HDUtmps,10000000,fp);
+            res=res+g_HDUtmps;
+            fgets(g_HDUtmps,10000000,fp);
+            res=res+g_HDUtmps;
             break;
         }
     }
@@ -320,7 +307,7 @@ string getLineFromFile(char *filename,int line)
 /* HDU Virtual Judge */
 /*
 HDU 支持的语言
-char gaucLanguageName[][255] = {
+char gaucHDULanguageName[][255] = {
 	"G++",
 	"GCC",
 	"C++",
@@ -343,7 +330,7 @@ struct curl_slist *headerlist=NULL;
 
 int loginEx(char *uname, char *pdw)
 {
-    FILE * fp=fopen(tfilename,"w+");
+    FILE * fp=fopen(g_Vjudgetfilename,"w+");
 	CURL *curl;
 	CURLcode res;
 
@@ -372,7 +359,7 @@ int loginEx(char *uname, char *pdw)
 
     if (res) return OS_FALSE;
 
-    string ts=getAllFromFile(tfilename);
+    string ts=getAllFromFile(g_Vjudgetfilename);
     if (ts.find("No such user or wrong password.")!=string::npos)
 	{
 		judge_outstring("Error: No such user or wrong password.\r\n");
@@ -385,7 +372,7 @@ int loginEx(char *uname, char *pdw)
 
 ULONG login()
 {
-    FILE * fp=fopen(tfilename,"w+");
+    FILE * fp=fopen(g_Vjudgetfilename,"w+");
 	CURL *curl;
 	CURLcode res;
 
@@ -407,11 +394,12 @@ ULONG login()
 		curl_easy_cleanup(curl);
     }
 
+
 	fclose(fp);
 
     if (res) return OS_FALSE;
 
-    string ts=getAllFromFile(tfilename);
+    string ts=getAllFromFile(g_Vjudgetfilename);
     if (ts.find("No such user or wrong password.")!=string::npos)
 	{
 		MSG_OUPUT_DBG("Login failed.");
@@ -427,14 +415,14 @@ ULONG getSubmitError(char *filename, string &res)
     FILE * fp=fopen(filename,"r");
 	int begin_ = 0;
 	int end_ = 0;
-    while (fgets(tmps,1000000,fp))
+    while (fgets(g_HDUtmps,1000000,fp))
     {
-        ts=tmps;
+        ts=g_HDUtmps;
         if (ts.find("<form id=\"submit\" name=\"submit\"")!=string::npos)
         {
-            while (fgets(tmps,1000000,fp))
+            while (fgets(g_HDUtmps,1000000,fp))
 			{
-                ts=tmps;
+                ts=g_HDUtmps;
 				begin_ = ts.find("<span>");
                 if (begin_!=string::npos)
 				{
@@ -449,9 +437,9 @@ ULONG getSubmitError(char *filename, string &res)
 						return OS_TRUE;
 					}
 
-					while (fgets(tmps,1000000,fp))
+					while (fgets(g_HDUtmps,1000000,fp))
 					{
-						ts=tmps;
+						ts=g_HDUtmps;
 						end_ = ts.find("</span>");
 						if (end_ !=string::npos)
 						{
@@ -480,10 +468,10 @@ ULONG submit(string pid, string lang, string source)
 {
 	CURL *curl;
 	CURLcode res;
-	FILE * fp=fopen(tfilename,"w+");
+	FILE * fp=fopen(g_Vjudgetfilename,"w+");
 	if (NULL == fp)
 	{
-		MSG_OUPUT_DBG("Open %s failed...", tfilename);
+		MSG_OUPUT_DBG("Open %s failed...", g_Vjudgetfilename);
 	}
 
     curl = curl_easy_init();
@@ -528,7 +516,7 @@ ULONG submit(string pid, string lang, string source)
 		return OS_FALSE;
 	}
 
-    string tss=getAllFromFile(tfilename);
+    string tss=getAllFromFile(g_Vjudgetfilename);
     if (tss.find("Connect(0) to MySQL Server failed.")!=string::npos||tss.find("<b>One or more following JUDGE_ERROR(s) occurred.")!=string::npos||tss.find("<h2>The requested URL could not be retrieved</h2>")!=string::npos||tss.find("PHP: Maximum execution time of")!=string::npos)
 	{
 		MSG_OUPUT_DBG("One or more JUDGE_ERROR(s) occurred.....");
@@ -544,7 +532,7 @@ ULONG submit(string pid, string lang, string source)
 #if(VJUDGE_CURL==VOS_YES)
 string getCEinfo(string runid)
 {
-	FILE *fp = fopen(tfilename, "ab+");
+	FILE *fp = fopen(g_Vjudgetfilename, "ab+");
 	CURL *curl;
 	CURLcode res;
 
@@ -566,7 +554,7 @@ string getCEinfo(string runid)
 
     fclose(fp);
 
-    string info = getCEinfo_brief(tfilename);
+    string info = getCEinfo_brief(g_Vjudgetfilename);
     return info;
 }
 
@@ -594,7 +582,7 @@ int getStatusEx(char *hdu_username)
 
     if ( curl )
 	{
-		FILE *fp = fopen(tfilename, "w+");
+		FILE *fp = fopen(g_Vjudgetfilename, "w+");
 		curl_easy_setopt( curl, CURLOPT_VERBOSE, 0L );
 		curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "hdu.cookie");
 		char url[255] = {0};
@@ -612,7 +600,7 @@ int getStatusEx(char *hdu_username)
 		fclose(fp);
 	}
 
-	ts = getLineFromFile(tfilename,77);
+	ts = getLineFromFile(g_Vjudgetfilename,77);
 
 	if(OS_FALSE == getUsedTime(ts, tu))
 	{
@@ -680,7 +668,7 @@ ULONG getStatus(string hdu_username, string pid,string lang, string &runid, stri
 
     if ( curl )
 	{
-		FILE *fp = fopen(tfilename, "w+");
+		FILE *fp = fopen(g_Vjudgetfilename, "w+");
 		curl_easy_setopt( curl, CURLOPT_VERBOSE, 0L );
 		curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "hdu.cookie");
 		char url[255] = {0};
@@ -698,7 +686,7 @@ ULONG getStatus(string hdu_username, string pid,string lang, string &runid, stri
 		fclose(fp);
 	}
 
-	ts = getLineFromFile(tfilename,77);
+	ts = getLineFromFile(g_Vjudgetfilename,77);
 
 	if(OS_FALSE == getUsedTime(ts, tu))
 	{
@@ -771,9 +759,9 @@ void SQL_updateProblemInfo(string v_ojname, string v_pid)
 {
 	string val_str="";
 	/*
-	val_str = g_problem_string[0] + "," + g_problem_string[1]+ "," + "'" + g_problem_string[2] + "'" + "," +
-	"'" + g_problem_string[3] + "'" + "," + "'" + g_problem_string[4] + "'" + "," + "'" + g_problem_string[5] + "'" + "," +
-	"'" + g_problem_string[6] + "'" + "," + "'" + g_problem_string[7] + "'" + "," + "'" + g_problem_string[8] + "'" + "," +
+	val_str = g_HDU_problem_string[0] + "," + g_HDU_problem_string[1]+ "," + "'" + g_HDU_problem_string[2] + "'" + "," +
+	"'" + g_HDU_problem_string[3] + "'" + "," + "'" + g_HDU_problem_string[4] + "'" + "," + "'" + g_HDU_problem_string[5] + "'" + "," +
+	"'" + g_HDU_problem_string[6] + "'" + "," + "'" + g_HDU_problem_string[7] + "'" + "," + "'" + g_HDU_problem_string[8] + "'" + "," +
 	"'" + getCurrentTime() + "', 'N', 0,0,0,0,0,1, '" + v_ojname +"', " + v_pid + "";
     */
 
@@ -783,9 +771,9 @@ void SQL_updateProblemInfo(string v_ojname, string v_pid)
 	{
 
 		//char *end;
-		//char *string_ = (char*)malloc(sizeof(char)*g_problem_string[i].length()+1);
+		//char *string_ = (char*)malloc(sizeof(char)*g_HDU_problem_string[i].length()+1);
 
-		//strcpy(string_,g_problem_string[i].c_str());
+		//strcpy(string_,g_HDU_problem_string[i].c_str());
 		/*
 		end = string_;
 		end += strlen(string_);                //point sql tail
@@ -800,26 +788,26 @@ void SQL_updateProblemInfo(string v_ojname, string v_pid)
 
 		if (i == PROBLEM_TITLE)
 		{
-			replace_all_distinct(g_problem_string[i], "\"", " ");
-			g_problem_string[i] = "HDU." + v_pid + " - " + g_problem_string[i];
+			replace_all_distinct(g_HDU_problem_string[i], "\"", " ");
+			g_HDU_problem_string[i] = "HDU." + v_pid + " - " + g_HDU_problem_string[i];
 		}
 
 		if (OS_TRUE == isNeed2HTML((ENUM_PROVLEM)i))
 		{
-			replace_all_distinct(g_problem_string[i], "\"", "&quot;");
-			replace_all_distinct(g_problem_string[i], "src=/data/images/", "src=http://acm.hdu.edu.cn/data/images/");
-			replace_all_distinct(g_problem_string[i], "src=../../data/images/", "src=http://acm.hdu.edu.cn/data/images/");
-			replace_all_distinct(g_problem_string[i], "\n", "<br>");
+			replace_all_distinct(g_HDU_problem_string[i], "\"", "&quot;");
+			replace_all_distinct(g_HDU_problem_string[i], "src=/data/images/", "src=http://acm.hdu.edu.cn/data/images/");
+			replace_all_distinct(g_HDU_problem_string[i], "src=../../data/images/", "src=http://acm.hdu.edu.cn/data/images/");
+			replace_all_distinct(g_HDU_problem_string[i], "\n", "<br>");
 		}
-		//val_str += g_problem_string[i];
+		//val_str += g_HDU_problem_string[i];
 	}
 
-	val_str = g_problem_string[0] + "," + g_problem_string[1]+ "," + "\"" + g_problem_string[2] + "\"" + "," +
-		"\"" + g_problem_string[3] + "\"" + "," + "\"" + g_problem_string[4] + "\"" + "," + "\"" + g_problem_string[5] + "\"" + "," +
-		"\"" + g_problem_string[6] + "\"" + "," + "\"" + g_problem_string[7] + "\"" + "," + "\"" + g_problem_string[8] + "\"" + "," +
+	val_str = g_HDU_problem_string[0] + "," + g_HDU_problem_string[1]+ "," + "\"" + g_HDU_problem_string[2] + "\"" + "," +
+		"\"" + g_HDU_problem_string[3] + "\"" + "," + "\"" + g_HDU_problem_string[4] + "\"" + "," + "\"" + g_HDU_problem_string[5] + "\"" + "," +
+		"\"" + g_HDU_problem_string[6] + "\"" + "," + "\"" + g_HDU_problem_string[7] + "\"" + "," + "\"" + g_HDU_problem_string[8] + "\"" + "," +
 		"'" + getCurrentTime() + "', 'N', 0,0,0,0,0,0,1, '" + v_ojname +"', " + v_pid + "";
 
-	if (val_str.length() >= MAX_SIZE_BUF)
+	if (val_str.length() >= VJUDGE_MAX_SIZE_BUF)
 	{
 		MSG_OUPUT_DBG("JUDGE_ERROR, too large size of buffer...");
 		return;
@@ -845,15 +833,15 @@ ULONG checkStringExsit(char *filename, char *pattern)
     pcre  *re;
     const char *error;
     int  erroffset;
-    int  ovector[OVECCOUNT];
+    int  ovector[VJUDGE_OVECCOUNT];
     int  rc;
 
 	string ts;
     FILE * fp=fopen(filename,"r");
 
-    while (fgets(tmps, MAX_SIZE_BUF, fp))
+    while (fgets(g_HDUtmps, VJUDGE_MAX_SIZE_BUF, fp))
     {
-        ts +=tmps;
+        ts +=g_HDUtmps;
     }
 
     fclose(fp);
@@ -865,7 +853,7 @@ ULONG checkStringExsit(char *filename, char *pattern)
         return OS_FALSE;
     }
 
-    rc = pcre_exec(re,NULL, ts.c_str(), strlen(ts.c_str()), 0, 0, ovector, OVECCOUNT);
+    rc = pcre_exec(re,NULL, ts.c_str(), strlen(ts.c_str()), 0, 0, ovector, VJUDGE_OVECCOUNT);
 	// 返回值：匹配成功返回非负数，没有匹配返回负数
     if (rc < 0) {                     //如果没有匹配，返回错误信息
         if (rc == PCRE_ERROR_NOMATCH) MSG_OUPUT_DBG("Sorry, no match ...\n");
@@ -885,7 +873,7 @@ ULONG getInfoByTag(char *src, char *pattern, ENUM_PROVLEM enProblem, char *res)
     pcre  *re;
     const char *error;
     int  erroffset;
-    int  ovector[OVECCOUNT];
+    int  ovector[VJUDGE_OVECCOUNT];
     int  rc, i;
 
 	MSG_OUPUT_DBG("In getInfoByTag...");
@@ -897,13 +885,13 @@ ULONG getInfoByTag(char *src, char *pattern, ENUM_PROVLEM enProblem, char *res)
         return OS_FALSE;
     }
 
-    rc = pcre_exec(re,NULL, src, strlen(src), 0, 0, ovector, OVECCOUNT);
+    rc = pcre_exec(re,NULL, src, strlen(src), 0, 0, ovector, VJUDGE_OVECCOUNT);
 	// 返回值：匹配成功返回非负数，没有匹配返回负数
     if (rc < 0) {                     //如果没有匹配，返回错误信息
 		if (rc == PCRE_ERROR_NOMATCH) MSG_OUPUT_DBG("Sorry, no match ...\n");
 		else {
 			MSG_OUPUT_DBG("Matching error %d\n", rc);
-			g_problem_string[enProblem] = "Not Found";
+			g_HDU_problem_string[enProblem] = "Not Found";
 		}
 		pcre_free(re);
 		return OS_FALSE;
@@ -921,7 +909,7 @@ ULONG getInfoByTag(char *src, char *pattern, ENUM_PROVLEM enProblem, char *res)
         int substring_length = ovector[2*i+1] - ovector[2*i];
         	MSG_OUPUT_DBG("In getInfoByTag 1 substring_length=%d...",substring_length);
 		char *str_tmp = (char*)malloc(sizeof(char)*substring_length+100);
-		//	char str_tmp[MAX_SIZE_BUF] ={0};
+		//	char str_tmp[VJUDGE_MAX_SIZE_BUF] ={0};
 			MSG_OUPUT_DBG("In getInfoByTag 2...");
 		sprintf(str_tmp, "%.*s\n", substring_length, substring_start);
 
@@ -932,7 +920,7 @@ ULONG getInfoByTag(char *src, char *pattern, ENUM_PROVLEM enProblem, char *res)
 		//string string_ = str_tmp;
 			MSG_OUPUT_DBG("In getInfoByTag 4...(length = %d)", strlen(str_tmp));
 
-			g_problem_string[enProblem].assign(str_tmp,strlen(str_tmp));
+			g_HDU_problem_string[enProblem].assign(str_tmp,strlen(str_tmp));
 
 			MSG_OUPUT_DBG("End getInfoByTag success...");
 
@@ -953,11 +941,11 @@ int getProblemInfo_Brief(string pid)
 	ULONG ulRet = 0;
 	int loop = 0;
 	string res="",ts;
-    FILE * fp=fopen(tfilename,"r");
+    FILE * fp=fopen(g_Vjudgetfilename,"r");
 
-    while (fgets(tmps, MAX_SIZE_BUF, fp))
+    while (fgets(g_HDUtmps, VJUDGE_MAX_SIZE_BUF, fp))
     {
-        ts +=tmps;
+        ts +=g_HDUtmps;
     }
 
     fclose(fp);
@@ -982,7 +970,7 @@ int getProblemInfo_Brief(string pid)
 
 	for (loop = 0; loop < PROBLEM_TAG_MAX; loop++)
 	{
-		g_problem_string[loop] = "";
+		g_HDU_problem_string[loop] = "";
 	}
 
 	MSG_OUPUT_DBG("Start Problem %s ...", pid.c_str());
@@ -991,14 +979,14 @@ int getProblemInfo_Brief(string pid)
 	ulRet = getInfoByTag((char*)ts.c_str(), patternTime, PROBLEM_TIME ,NULL);
 	if(ulRet == 0)
 	{
-		g_problem_string[0] = "1000";
+		g_HDU_problem_string[0] = "1000";
 	}
 
 	MSG_OUPUT_DBG("Memory");
 	ulRet = getInfoByTag((char*)ts.c_str(), patternMemory, PROBLEM_MEMORY, NULL);
 	if(ulRet == 0)
 	{
-		g_problem_string[1] = "65535";
+		g_HDU_problem_string[1] = "65535";
 	}
 
 	ulRet = 0;
@@ -1026,8 +1014,8 @@ int getProblemInfo_Brief(string pid)
 
 	if (ulRet != 0)
 	{
-		if (OS_TRUE == checkStringExsit(tfilename, "No such problem")
-			|| OS_TRUE == checkStringExsit(tfilename, "<DIV>Invalid Parameter.</DIV>"))
+		if (OS_TRUE == checkStringExsit(g_Vjudgetfilename, "No such problem")
+			|| OS_TRUE == checkStringExsit(g_Vjudgetfilename, "<DIV>Invalid Parameter.</DIV>"))
 		{
 			pdt_debug_print("No such problem %s on hdu-judge", pid.c_str());
 
@@ -1037,15 +1025,15 @@ int getProblemInfo_Brief(string pid)
 
 	/*
 
-	pdt_debug_print("Time\r\n%s", g_problem_string[PROBLEM_TIME].c_str());
-	pdt_debug_print("Memory\r\n%s", g_problem_string[PROBLEM_MEMORY].c_str());
-	pdt_debug_print("Title\r\n%s", g_problem_string[PROBLEM_TITLE].c_str());
-	pdt_debug_print("Description\r\n%s", g_problem_string[PROBLEM_DESCRIPTION].c_str());
-	pdt_debug_print("Input\r\n%s", g_problem_string[PROBLEM_INPUT].c_str());
-	pdt_debug_print("Output\r\n%s", g_problem_string[PROBLEM_OUTPUT].c_str());
-	pdt_debug_print("Sample Input\r\n%s", g_problem_string[PROBLEM_SAMPLE_INPUT].c_str());
-	pdt_debug_print("Sample Output\r\n%s", g_problem_string[PROBLEM_SAMPLE_OUTPUT].c_str());
-	pdt_debug_print("Author\r\n%s", g_problem_string[PROBLEM_AUTHOR].c_str());
+	pdt_debug_print("Time\r\n%s", g_HDU_problem_string[PROBLEM_TIME].c_str());
+	pdt_debug_print("Memory\r\n%s", g_HDU_problem_string[PROBLEM_MEMORY].c_str());
+	pdt_debug_print("Title\r\n%s", g_HDU_problem_string[PROBLEM_TITLE].c_str());
+	pdt_debug_print("Description\r\n%s", g_HDU_problem_string[PROBLEM_DESCRIPTION].c_str());
+	pdt_debug_print("Input\r\n%s", g_HDU_problem_string[PROBLEM_INPUT].c_str());
+	pdt_debug_print("Output\r\n%s", g_HDU_problem_string[PROBLEM_OUTPUT].c_str());
+	pdt_debug_print("Sample Input\r\n%s", g_HDU_problem_string[PROBLEM_SAMPLE_INPUT].c_str());
+	pdt_debug_print("Sample Output\r\n%s", g_HDU_problem_string[PROBLEM_SAMPLE_OUTPUT].c_str());
+	pdt_debug_print("Author\r\n%s", g_HDU_problem_string[PROBLEM_AUTHOR].c_str());
 */
 
 	SQL_updateProblemInfo("HDU",pid);
@@ -1063,13 +1051,13 @@ ULONG getProblemInfo(string pid)
 
 	curl = curl_easy_init();
 
-	if (access(tfilename, 0) == 0)
+	if (access(g_Vjudgetfilename, 0) == 0)
 	{
-		DeleteFile(tfilename);
+		DeleteFile(g_Vjudgetfilename);
 	}
 
     if ( curl ) {
-		FILE *fp = fopen(tfilename, "ab+");
+		FILE *fp = fopen(g_Vjudgetfilename, "ab+");
 		curl_easy_setopt( curl, CURLOPT_VERBOSE, 0L );
 		curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "hdu.cookie");
 		char url[255] = {0};
@@ -1164,7 +1152,7 @@ ULONG getHDUStatus(string hdu_username, int pid,int lang, string &runid, string 
 
 	MSG_OUPUT_DBG("Do get status...");
 
-	ts = getLineFromFile(tfilename,77);
+	ts = getLineFromFile(g_Vjudgetfilename,77);
 
 	if(OS_FALSE == getUsedTime(ts, tu))
 	{
@@ -1228,9 +1216,9 @@ int Judge_Via_CurlLib()
 
 		int cnt_ = 0xFFFF;
 		FILE * fp=fopen(sourcePath,"r");
-    	while (fgets(tmps,0xFFFFFF,fp))
+    	while (fgets(g_HDUtmps,0xFFFFFF,fp))
     	{
-			source_+=tmps;
+			source_+=g_HDUtmps;
 			if (cnt_-- <=0) break;
 		}
 
@@ -1343,7 +1331,7 @@ int Judge_Via_CurlLib()
 
 	}while(0);
 
-	DeleteFile(tfilename);
+	DeleteFile(g_Vjudgetfilename);
 
 	return OS_TRUE;
 }
@@ -1358,7 +1346,7 @@ int Judge_Via_python()
 	sprintf(tmp_source_path, "%s//%s",current_path,sourcePath);
 	sprintf(tmp_return_path, "%s//OJ_TMP//hdujudge-%d.tmp",current_path,GL_solutionId);
 
-	strcpy(tfilename,tmp_return_path);
+	strcpy(g_Vjudgetfilename,tmp_return_path);
 
 	do
 	{
@@ -1404,7 +1392,7 @@ int Judge_Via_python()
 				sprintf(cmd_string,"python -O hdu-vjudge.py ce %s %s",runid.c_str(), tmp_return_path);
 				system(cmd_string) ;
 
-				string CE_Info = getCEinfo_brief(tfilename);
+				string CE_Info = getCEinfo_brief(tmp_return_path);
 				ce_info = CE_Info;
 				//MSG_OUPUT_DBG(CE_Info.c_str());
 			}
@@ -1489,6 +1477,7 @@ int Judge_Remote()
 
 	//return Judge_Via_python();
 }
+
 
 
 #endif

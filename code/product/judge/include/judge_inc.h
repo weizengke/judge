@@ -25,6 +25,7 @@
 #include "product\judge\include\judge_io.h"
 #include "product\judge\include\judge_sql.h"
 #include "product\judge\include\judge_hdu.h"
+#include "product\judge\include\judge_guet.h"
 
 
 #ifdef _WIN32_

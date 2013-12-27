@@ -27,8 +27,8 @@ int isTranscoding=0;   //Õë¶ÔVSµÄ×ªÂë
 int limitIndex=1;
 int nProcessLimit=1;
 
-char sourcePath[1024]={0};
-char exePath[1024]={0};
+char sourcePath[MAX_PATH]={0};
+char exePath[MAX_PATH]={0};
 
 
 char inFileName[MAX_PATH];
@@ -38,3 +38,9 @@ char ErrorFile[MAX_PATH];
 
 
 int g_oj_debug_switch = JUDGE_DEBUG_OFF;
+
+int GL_vjudge;
+int GL_vpid;
+char g_Vjudgetfilename[MAX_PATH]="tmpfile.txt";
+
+

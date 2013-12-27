@@ -185,6 +185,10 @@ void InitConfig()
 	GetPrivateProfileString("HDU","username","",hdu_username,sizeof(hdu_username),INI_filename);
 	GetPrivateProfileString("HDU","password","",hdu_password,sizeof(hdu_password),INI_filename);
 
+	GetPrivateProfileString("GUET_DEPT3","username","",guet_username,sizeof(guet_username),INI_filename);
+	GetPrivateProfileString("GUET_DEPT3","password","",guet_password,sizeof(guet_password),INI_filename);
+
+
 	write_log(JUDGE_INFO,"Socketport:%d, Data:%s, Workpath:%s",port,dataPath,workPath);
 	write_log(JUDGE_INFO,"MySQL:%s %s %s %s %d",Mysql_url,Mysql_username,Mysql_password,Mysql_table,Mysql_port);
 

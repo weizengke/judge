@@ -3,7 +3,8 @@ JUDGE_OBJ=$(OBJ_DIR)/judge.o \
 	$(OBJ_DIR)/judge_io.o \
 	$(OBJ_DIR)/judge_hdu.o \
 	$(OBJ_DIR)/judge_var.o \
-	$(OBJ_DIR)/judge_sql.o
+	$(OBJ_DIR)/judge_sql.o\
+	$(OBJ_DIR)/judge_guet.o
 
 all:$(JUDGE_OBJ)
 
