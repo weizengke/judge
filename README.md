@@ -9,6 +9,8 @@ Function:
 
 ② Online Judge Platform System , work with  GDOJ Project(https://github.com/weizengke/gdoj)
 
+③  Virtual Judge For HDUOJ  , GUET_DEPT3 OJ
+
 Project site:   http://weizengke.com/archives/143
 
 Environment：Windows， MinGW , VS2010
