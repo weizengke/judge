@@ -21,6 +21,7 @@ extern char GL_languageExe[10];
 extern int GL_time_limit;
 extern int GL_memory_limit;
 extern int GL_spj;
+extern string GL_ojname;
 
 
 extern string GL_source;

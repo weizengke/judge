@@ -14,6 +14,7 @@ cj=cookielib.CookieJar()
 
 FALSE = 0
 TRUE  = 1
+MAX_TRY = 50
 
 filename = 'd:/guet-file.html'
 
@@ -31,7 +32,6 @@ def login(username,password):
     url = 'http://onlinejudge.guet.edu.cn/guetoj/site/login.html'
     login_data = {'LoginForm[username]':username,'LoginForm[password]':password, 'LoginForm[rememberMe]':'1', 'LoginForm[verifyCode]':verifyCode, 'yt0':'Login'}
     data = urllib.urlencode(login_data)
-    print data
     request=urllib2.Request(url, data)
     urlcontent=opener.open(request)
     print 'goto: ' + urlcontent.geturl()
@@ -45,21 +45,12 @@ def login(username,password):
 #status
 def status(username):
     print 'start to get status...'
-
-    #<tr class="odd">
-    #<td>1476</td><td class="link-column"><a href="/guetoj/problem/view/1000.html">1000</a></td>
-    #<td class="link-column"><a href="/guetoj/user/view/1000847.html">vjudge</a></td>
-    #<td>G++</td><td>9</td><td>800</td><td>2013-12-27 22:58:42</td><td>Accepted</td></tr>
-    #<tr class="even">
-
     url='http://onlinejudge.guet.edu.cn/guetoj/user/submissions/'+username+'.html'
     data = urllib.urlopen(url)
     html_content =data.read()
-
     f = open(filename,'w')
     f.write(html_content)
     f.close()
-
     print 'save status_content to ',filename
 
 def submit(pid,lang,source_path):
@@ -75,23 +66,15 @@ def submit(pid,lang,source_path):
         # Notice comma to avoid automatic newline added by Python
     f.close()
     # close the file
-
-    print source
-
     #incase that less than 50 byte
     source += str('                                                 ');
-
     url='http://onlinejudge.guet.edu.cn/guetoj/problem/submit/'+pid+'.html'
     values={'Problem[source_code]':source,'Problem[language]':lang}
-    data = urllib.urlencode(values)
-    headers ={"User-agent":"Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1"}
-    req = urllib2.Request(url, data,headers)
     opener=urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
     data = urllib.urlencode(values)
     request=urllib2.Request(url, data)
     urlcontent=opener.open(request)
     print 'goto: ' + urlcontent.geturl()
-
     if (0==cmp('http://onlinejudge.guet.edu.cn/guetoj/runs.html',urlcontent.geturl())):
         print 'Submit ok...'
         return TRUE
@@ -101,15 +84,22 @@ def submit(pid,lang,source_path):
 
 def compileError(runId):
     #onlinejudge.guet.edu.cn/guetoj/run/view/1474.html
-    url='onlinejudge.guet.edu.cn/guetoj/run/view/'+runId+'.html'
-    data = urllib.urlopen(url)
-    html_content =data.read()
-
-    f = open(filename,'w')
-    f.write(html_content)
-    f.close()
-
-    print 'save compile_content to ',filename
+    url='http://onlinejudge.guet.edu.cn/guetoj/run/view/'+runId+'.html'
+    opener=urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+    request=urllib2.Request(url)
+    urlcontent=opener.open(url)
+    print 'goto: ' + urlcontent.geturl()
+    if (0==cmp(url,urlcontent.geturl())):
+        html_content=opener.open(url).read()
+        f = open(filename,'w')
+        f.write(html_content)
+        f.close()
+        print 'CE ok...'
+        print 'save compile_content to ',filename
+        return TRUE
+    else:
+        print 'CE failed...'
+        return FALSE
 
 if __name__=="__main__":
 
@@ -138,12 +128,12 @@ if __name__=="__main__":
             print pid,lang,username,password,source_path,filename
 
             x = urllib2.urlopen("http://onlinejudge.guet.edu.cn/guetoj/site/captcha.html?refresh=1")
-            loop = 20
+            loop = MAX_TRY
             ret = FALSE
             while(ret!=TRUE and loop>0):
                 ret = login(username, password)
                 loop=loop-1;
-            loop = 20
+            loop = MAX_TRY
             ret = FALSE
             while(ret!=TRUE and loop>0):
                 ret = submit(pid,lang,source_path)
@@ -159,16 +149,30 @@ if __name__=="__main__":
 
         if sys.argv[1] == 'ce':
             print 'Do ce...'
-            rid = sys.argv[2]
-            filename = sys.argv[3]
-            print rid,filename
-            compileError(rid)
+            username = sys.argv[2]
+            password = sys.argv[3]
+            rid = sys.argv[4]
+            filename = sys.argv[5]
+            print username,password,rid,filename
+            x = urllib2.urlopen("http://onlinejudge.guet.edu.cn/guetoj/site/captcha.html?refresh=1")
+            loop = MAX_TRY
+            ret = FALSE
+            while(ret!=TRUE and loop>0):
+                ret = login(username, password)
+                loop=loop-1;
+
+            loop = MAX_TRY
+            ret = FALSE
+            while(ret!=TRUE and loop>0):
+                ret = compileError(rid)
+                loop=loop-1;
+
             break
         else:
             print "Error: Command line option syntax error, the follow fomart supported."
             print " 1: submit pid lang username password source-path return-file-path"
             print " 2: status username return-file-path"
-            print " 3: ce rid return-file-path"
+            print " 3: ce username password rid return-file-path"
             break
 
 

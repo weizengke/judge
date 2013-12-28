@@ -845,6 +845,25 @@ int Judge_Local()
 	return OS_TRUE;
 }
 
+void Judge_Remote()
+{
+	do
+	{
+		if (0 == strcmp(GL_ojname.c_str(),"HDU"))
+		{
+			(void)HDU_VJudge();
+			break;
+		}
+
+		if (0 == strcmp(GL_ojname.c_str(),"GUET_DEPT3"))
+		{
+			(void)GUET_VJudge();
+			break;
+		}
+
+	}while(0);
+
+}
 
 int Judge_Proc(int solutionId)
 {

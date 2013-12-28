@@ -19,7 +19,7 @@ char GL_languageExe[10]={0};
 int GL_time_limit;
 int GL_memory_limit;
 int GL_spj;
-
+string GL_ojname;
 string GL_source;   /* no used */
 
 

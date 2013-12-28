@@ -145,7 +145,7 @@ int SQL_getSolutionInfo(int *pIsExist)
 
 int SQL_getProblemInfo()
 {
-	sprintf(query,"select time_limit,memory_limit,spj,isvirtual,oj_pid from problem where problem_id=%d",GL_problemId);
+	sprintf(query,"select time_limit,memory_limit,spj,isvirtual,oj_pid,oj_name from problem where problem_id=%d",GL_problemId);
 
 	int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));
 	if(ret)
@@ -169,6 +169,7 @@ int SQL_getProblemInfo()
 		GL_spj=atoi(row[2]);
 		GL_vjudge=atoi(row[3]);
 		GL_vpid=atoi(row[4]);
+		GL_ojname=row[5];
 	}
 
 	mysql_free_result(recordSet);//释放结果集

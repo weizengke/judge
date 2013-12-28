@@ -8,11 +8,8 @@ extern int GL_vpid;
 extern char hdu_username[1000];
 extern char hdu_password[1000];
 
-extern char tfilename[1000];
 
-
-
-extern int Judge_Remote();
+extern int HDU_VJudge();
 
 
 #endif

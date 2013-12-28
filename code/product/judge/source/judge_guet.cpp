@@ -65,38 +65,84 @@ ULONG GUET_getLanguageIDByName(UCHAR *ucLanguageName, ULONG *id)
 }
 
 
-ULONG GUET_getResult(string s, string &res)
+ULONG GUET_getResult(string s, string &status)
 {
-    int pos=s.find("<font color=");
-	if (-1 == pos)
+	/*
+	<td>1487</td>
+	<td class="link-column"><a href="/guetoj/problem/view/1000.html">1000</a></td>
+	<td class="link-column"><a href="/guetoj/user/view/1000847.html">vjudge</a></td>
+	<td>G++</td>
+	<td>10</td>
+	<td>800</td>
+	<td>2013-12-28 01:58:42</td>
+	<td>Accepted</td></tr>
+	*/
+	int pos = 0;
+	int n_right = 0;
+	int max_len = s.length();
+
+	for (; n_right < 8; )
 	{
-		return OS_FALSE;
+		int pos=s.find("<td");
+		if (-1 == pos)
+		{
+			return OS_FALSE;
+			break;
+		}
+
+		n_right++;
+		s.erase(0,pos+3);
 	}
 
-    while (s[pos]!='>') pos++;
-    pos++;
+	pos = 0;
+	while (s[pos]!='<') pos++;
+	pos--;
 
-    int st=pos;
-    while (s[pos]!='<') pos++;
-    res = s.substr(st,pos-st);
+	status = s.substr(1,pos);
+
+	cout<<"Runid("<<status<<")"<<endl;
+
 
 	return OS_TRUE;
 }
 
-ULONG GUET_getRunid(string s, string &res) {
-    int pos=s.find("<td height=22px>");
-	if (-1 == pos)
+ULONG GUET_getRunid(string s, string &rid)
+{
+
+	/*
+	<td>1487</td>
+	<td class="link-column"><a href="/guetoj/problem/view/1000.html">1000</a></td>
+	<td class="link-column"><a href="/guetoj/user/view/1000847.html">vjudge</a></td>
+	<td>G++</td>
+	<td>10</td>
+	<td>800</td>
+	<td>2013-12-28 01:58:42</td>
+	<td>Accepted</td></tr>
+	*/
+	int pos = 0;
+	int n_right = 0;
+	int max_len = s.length();
+
+	for (; n_right < 1; )
 	{
-		return OS_FALSE;
+		int pos=s.find("<td");
+		if (-1 == pos)
+		{
+			return OS_FALSE;
+			break;
+		}
+
+		n_right++;
+		s.erase(0,pos+3);
 	}
 
-    while (s[pos]!='>') pos++;
-    pos++;
+	pos = 0;
+	while (s[pos]!='<') pos++;
+	pos--;
 
-    int st=pos;
-    while (s[pos]!='<') pos++;
+	rid = s.substr(1,pos);
 
-    res = s.substr(st,pos-st);
+	cout<<"Runid("<<rid<<")"<<endl;
 
 	return OS_TRUE;
 }
@@ -110,22 +156,23 @@ string GUET_getCEinfo_brief(char *filename)
     while (fgets(g_GUETtmps,1000000,fp))
     {
         ts=g_GUETtmps;
-        if (ts.find("View Compilation Error")!=string::npos)
+        if (ts.find("<p>Compile Error</p>")!=string::npos)
         {
+			pdt_debug_print("Found Compile Info.");
             while (fgets(g_GUETtmps,1000000,fp))
 			{
                 ts=g_GUETtmps;
-				int pos = ts.find("<pre>");
+				int pos = ts.find("<pre class=\"text\">");
                 if (pos !=string::npos)
 				{
-					res = ts.substr(pos + 5, ts.length() - pos - 5);
-
+					int len_ = strlen("<pre class=\"text\">");
+					res = ts.erase(0, pos + len_);
 					while (fgets(g_GUETtmps,1000000,fp))
 					{
 						ts=g_GUETtmps;
-						if (ts.find("</pre>")!=string::npos)
+						if (ts.find("</div>")!=string::npos)
 						{
-							MSG_OUPUT_DBG("FOUND CE_INFO");
+							pdt_debug_print("Get Compile Info ok.");
 							break;
 						}
 						else
@@ -138,6 +185,7 @@ string GUET_getCEinfo_brief(char *filename)
 			}
             break;
         }
+
     }
     fclose(fp);
     return res;
@@ -147,32 +195,81 @@ string GUET_getCEinfo_brief(char *filename)
 
 ULONG GUET_getUsedTime(string s, string &timeuse)
 {
-    int pos=s.find("MS</td>");
-	if (-1 == pos)
+
+	/*
+	<td>1487</td>
+	<td class="link-column"><a href="/guetoj/problem/view/1000.html">1000</a></td>
+	<td class="link-column"><a href="/guetoj/user/view/1000847.html">vjudge</a></td>
+	<td>G++</td>
+	<td>10</td>
+	<td>800</td>
+	<td>2013-12-28 01:58:42</td>
+	<td>Accepted</td></tr>
+	*/
+	int pos = 0;
+	int n_right = 0;
+	int max_len = s.length();
+
+	for (; n_right < 5; )
 	{
-		return OS_FALSE;
+		int pos=s.find("<td");
+		if (-1 == pos)
+		{
+			break;
+		}
+
+		n_right++;
+		s.erase(0,pos+3);
 	}
 
-    int st=pos;
-    while (s[pos]!='>') pos--;
-    pos++;
+	pos = 0;
+	while (s[pos]!='<') pos++;
+	pos--;
 
-    timeuse =  s.substr(pos,st-pos);
+	timeuse = s.substr(1,pos);
+
+	cout<<"Time("<<timeuse<<")"<<endl;
+
 	return OS_TRUE;
 }
 
 ULONG GUET_getUsedMem(string s, string &memuse)
 {
-	int pos=s.find("K</td>");
-	if (-1 == pos)
+
+	/*
+	<td>1487</td>
+	<td class="link-column"><a href="/guetoj/problem/view/1000.html">1000</a></td>
+	<td class="link-column"><a href="/guetoj/user/view/1000847.html">vjudge</a></td>
+	<td>G++</td>
+	<td>10</td>
+	<td>800</td>
+	<td>2013-12-28 01:58:42</td>
+	<td>Accepted</td></tr>
+	*/
+	int pos = 0;
+	int n_right = 0;
+	int max_len = s.length();
+
+	for (; n_right < 6; )
 	{
-		return OS_FALSE;
+		int pos=s.find("<td");
+		if (-1 == pos)
+		{
+			break;
+		}
+
+		n_right++;
+		s.erase(0,pos+3);
 	}
 
-	int st=pos;
-	while (s[pos]!='>') pos--;
-	pos++;
-	memuse = s.substr(pos,st-pos);
+	pos = 0;
+	while (s[pos]!='<') pos++;
+	pos--;
+
+	memuse = s.substr(1,pos);
+
+	cout<<"Memuse("<<memuse<<")"<<endl;
+
 	return OS_TRUE;
 }
 
@@ -188,26 +285,23 @@ string GUET_getLineFromFile(char *filename,int line)
 		return res;
 	}
 
-	pdt_debug_print("filename:%s",filename);
-
     while (fgets(g_GUETtmps,10000000,fp))
 	{
         cnt++;
         res=g_GUETtmps;
-        if (res.find("Submit Date</a></th>")!=string::npos)
+        if (res.find("Submit Date</a></th>")!=-1)
 		{
-			pdt_debug_print("Found status.");
             fgets(g_GUETtmps,10000000,fp);
-            res=res+g_GUETtmps;
             fgets(g_GUETtmps,10000000,fp);
-            res=res+g_GUETtmps;
+			fgets(g_GUETtmps,10000000,fp);
+			fgets(g_GUETtmps,10000000,fp);
+            res=g_GUETtmps;
             break;
         }
     }
 
-	pdt_debug_print("cnt:%d",cnt);
-
     fclose(fp);
+
     return res;
 }
 
@@ -215,7 +309,7 @@ string GUET_getLineFromFile(char *filename,int line)
 
 int GUET_getGUETLangID(int GDOJlangID)
 {
-	int alang[25] = {0,2,3,0,1,5,0,0,4,0,0,0};
+	int alang[25] = {1,6,3,2,1,1,1,1,1,1,1,1};
 
 	return alang[GDOJlangID];
 }
@@ -230,8 +324,6 @@ ULONG GUET_getStatus(string username, int pid,int lang, string &runid, string &r
 	MSG_OUPUT_DBG("Do get status...");
 
 	ts = GUET_getLineFromFile(g_Vjudgetfilename,77);
-
-	puts(ts.c_str());
 
 	if(OS_FALSE == GUET_getUsedTime(ts, tu))
 	{
@@ -289,17 +381,16 @@ ULONG GUET_getStatusEx(char *username)
 	string mu;
 
 	GetCurrentDirectory(sizeof(current_path),current_path);
-	sprintf(tmp_return_path, "%s//OJ_TMP//guet-judge.tmp",current_path);
+	sprintf(tmp_return_path, "%s/\OJ_TMP/\guet-judge.tmp",current_path);
 	strcpy(g_Vjudgetfilename,tmp_return_path);
 
-	puts(tmp_return_path);
-
-	sprintf(cmd_string,"python -O pytesser_v0.0.1\\guet-vjudge.py status %s %s",username,tmp_return_path);
+	sprintf(cmd_string,"python -O guet-vjudge.py status %s %s",username,tmp_return_path);
 	system(cmd_string) ;
 
 	/* id转换 */
 	int lang_id = GUET_getGUETLangID(GL_languageId);
-
+	GL_vpid = 1000;
+	lang_id = 2;
 	ret =GUET_getStatus(username, GL_vpid, lang_id, runid, result,ce_info,tu,mu);
 
 	if (result.find("Queuing")!=string::npos
@@ -310,10 +401,10 @@ ULONG GUET_getStatusEx(char *username)
 		ret = OS_ERR;
 	}
 
-	if (result.find("Compilation Error")!=string::npos)
+	if (result.find("Compile Error")!=string::npos)
 	{
 		//获取编译错误信息
-		sprintf(cmd_string,"python -O guet-vjudge.py ce %s %s",runid.c_str(), tmp_return_path);
+		sprintf(cmd_string,"python -O guet-vjudge.py ce %s %s %s %s",guet_username, guet_password, runid.c_str(), tmp_return_path);
 		system(cmd_string) ;
 
 		string CE_Info = GUET_getCEinfo_brief(tmp_return_path);
@@ -374,7 +465,7 @@ int GUET_Judge_python()
 				ret = OS_FALSE;
 			}
 
-			if (result.find("Compilation Error")!=string::npos)
+			if (result.find("Compile Error")!=string::npos)
 			{
 				//获取编译错误信息
 				sprintf(cmd_string,"python -O guet-vjudge.py ce %s %s",runid.c_str(), tmp_return_path);
@@ -382,6 +473,7 @@ int GUET_Judge_python()
 
 				string CE_Info = GUET_getCEinfo_brief(g_Vjudgetfilename);
 				ce_info = CE_Info;
+
 			}
 
 			tryTime --;
@@ -394,12 +486,12 @@ int GUET_Judge_python()
 
 		if (OS_FALSE == ret)
 		{
-			MSG_OUPUT_DBG("Get Status Error...");
+			pdt_debug_print("Get Status Error...");
 			GL_verdictId = V_SE;
 		}
 		else
 		{
-			MSG_OUPUT_DBG("Get Status success...");
+			pdt_debug_print("Get Status success...");
 			if (result.find("Accepted")!=string::npos)
 			{
 				GL_verdictId = V_AC;
@@ -428,7 +520,7 @@ int GUET_Judge_python()
 			{
 				GL_verdictId = V_WA;
 			}
-			else if (result.find("Compilation Error")!=string::npos)
+			else if (result.find("Compile Error")!=string::npos)
 			{
 				GL_verdictId = V_CE;
 				FILE *fp;

@@ -1224,7 +1224,7 @@ int Judge_Via_CurlLib()
 
 	    fclose(fp);
 
-		pdt_debug_print("PID:%d, LangID:%d\r\nSource:\r\n%s", GL_vpid, lang_id, source_.c_str());
+		//pdt_debug_print("PID:%d, LangID:%d\r\nSource:\r\n%s", GL_vpid, lang_id, source_.c_str());
 
 		ret = DLL_HDUSubmit(GL_vpid, lang_id, source_);
 		if (OS_TRUE != ret)
@@ -1260,7 +1260,7 @@ int Judge_Via_CurlLib()
 				//获取编译错误信息
 				string  CE_Info = getCEinfo(runid);
 				ce_info = CE_Info;
-				pdt_debug_print("CE:%s", CE_Info.c_str());
+				//pdt_debug_print("CE:%s", CE_Info.c_str());
 			}
 
 			tryTime --;
@@ -1471,7 +1471,7 @@ int Judge_Via_python()
 
 }
 
-int Judge_Remote()
+int HDU_VJudge()
 {
 	return Judge_Via_CurlLib();
 
