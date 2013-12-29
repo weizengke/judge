@@ -1,3 +1,9 @@
+#
+# For GUET_DEPT3_OJ Virtual Judge
+# Author: Jungle Wei
+# Create Date: 2013-12-28
+#
+
 import urllib
 import urllib2
 import cookielib
@@ -28,15 +34,15 @@ def login(username,password):
     f.close()
     image = Image.open('verify.png')
     verifyCode = image_to_string(image).rstrip()
-    print 'Login:'+username,password,verifyCode
+    #print 'Login:'+username,password,verifyCode
     url = 'http://onlinejudge.guet.edu.cn/guetoj/site/login.html'
     login_data = {'LoginForm[username]':username,'LoginForm[password]':password, 'LoginForm[rememberMe]':'1', 'LoginForm[verifyCode]':verifyCode, 'yt0':'Login'}
     data = urllib.urlencode(login_data)
     request=urllib2.Request(url, data)
     urlcontent=opener.open(request)
-    print 'goto: ' + urlcontent.geturl()
+    #print 'goto: ' + urlcontent.geturl()
     if (cmp("http://onlinejudge.guet.edu.cn/guetoj/",urlcontent.geturl())==0):
-        print 'Login ok...'
+        #print 'Login ok...'
         return TRUE
     else:
         print 'Login failed...'
@@ -44,14 +50,13 @@ def login(username,password):
 
 #status
 def status(username):
-    print 'start to get status...'
     url='http://onlinejudge.guet.edu.cn/guetoj/user/submissions/'+username+'.html'
     data = urllib.urlopen(url)
     html_content =data.read()
     f = open(filename,'w')
     f.write(html_content)
     f.close()
-    print 'save status_content to ',filename
+    #print 'save status_content to ',filename
 
 def submit(pid,lang,source_path):
     source = ''
@@ -74,9 +79,9 @@ def submit(pid,lang,source_path):
     data = urllib.urlencode(values)
     request=urllib2.Request(url, data)
     urlcontent=opener.open(request)
-    print 'goto: ' + urlcontent.geturl()
+    #print 'goto: ' + urlcontent.geturl()
     if (0==cmp('http://onlinejudge.guet.edu.cn/guetoj/runs.html',urlcontent.geturl())):
-        print 'Submit ok...'
+        #print 'Submit ok...'
         return TRUE
     else:
         print 'Submit failed...'
@@ -88,14 +93,15 @@ def compileError(runId):
     opener=urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
     request=urllib2.Request(url)
     urlcontent=opener.open(url)
-    print 'goto: ' + urlcontent.geturl()
+    #print 'goto: ' + urlcontent.geturl()
     if (0==cmp(url,urlcontent.geturl())):
         html_content=opener.open(url).read()
+        html_content=unicode(html_content, "utf-8").encode("gbk")
         f = open(filename,'w')
         f.write(html_content)
         f.close()
-        print 'CE ok...'
-        print 'save compile_content to ',filename
+        #print 'CE ok...'
+        #print 'save compile_content to ',filename
         return TRUE
     else:
         print 'CE failed...'
@@ -105,28 +111,25 @@ if __name__=="__main__":
 
     while 1:
         count = len(sys.argv)
-        print 'Argv-num :',count
+        #print 'Argv-num :',count
 
         if count <= 1:
             print 'No argv, so break.'
             break
 
-        print type(sys.argv)
-        print str(sys.argv)
+        #print type(sys.argv)
+        #print str(sys.argv)
 
         #for a in range(1, len(sys.argv)):
         #    print sys.argv[a]
 
         if sys.argv[1] == 'submit':
-            print 'Do submit...'
             pid = sys.argv[2]
             lang = sys.argv[3]
             username = sys.argv[4]
             password = sys.argv[5]
             source_path = sys.argv[6]
             filename = sys.argv[7]
-            print pid,lang,username,password,source_path,filename
-
             x = urllib2.urlopen("http://onlinejudge.guet.edu.cn/guetoj/site/captcha.html?refresh=1")
             loop = MAX_TRY
             ret = FALSE
@@ -141,19 +144,16 @@ if __name__=="__main__":
             break
 
         if sys.argv[1] == 'status':
-            print 'Do status...'
             username = sys.argv[2]
             filename = sys.argv[3]
             status(username)
             break
 
         if sys.argv[1] == 'ce':
-            print 'Do ce...'
             username = sys.argv[2]
             password = sys.argv[3]
             rid = sys.argv[4]
             filename = sys.argv[5]
-            print username,password,rid,filename
             x = urllib2.urlopen("http://onlinejudge.guet.edu.cn/guetoj/site/captcha.html?refresh=1")
             loop = MAX_TRY
             ret = FALSE

@@ -1,6 +1,8 @@
 /*
 
   ≈‰HDOJ virtual-judge
+Author: Jungle Wei
+Create Date: 2012-05-12
 
 */
 
@@ -1357,7 +1359,7 @@ int Judge_Via_python()
 				GL_vpid, lang_id, hdu_username, hdu_password, tmp_source_path,tmp_return_path);
 		system(cmd_string) ;
 
-		int tryTime = 6;
+		int tryTime = 10;
 		int ret = OS_FALSE;
 		string runid, result,ce_info,tu,mu;
 
@@ -1369,7 +1371,7 @@ int Judge_Via_python()
 			result = "";
 			MSG_OUPUT_DBG("Get Status...");
 
-			Sleep(10000);
+			Sleep(6000);
 
 			sprintf(cmd_string,"python -O hdu-vjudge.py status %d %d %s %s",
 				GL_vpid, lang_id , hdu_username,tmp_return_path);

@@ -97,9 +97,6 @@ def submit(pid,lang,source_path):
 def status(pid,username,lang):
     print 'start to get status...'
     url='http://acm.hdu.edu.cn/status.php?first=&pid='+ str(pid) +'&user='+ str(username) +'&lang=' + str(lang)+ '&status=0'
-
-    print url
-
     data = urllib.urlopen(url)
     html_content =data.read()
 

@@ -2,6 +2,8 @@
 
 适配GUETOJ virtual-judge
 http://onlinejudge.guet.edu.cn/guetoj/index.html
+Author: Jungle Wei
+Create Date: 2013-12-28
 
 */
 
@@ -100,9 +102,6 @@ ULONG GUET_getResult(string s, string &status)
 
 	status = s.substr(1,pos);
 
-	cout<<"Runid("<<status<<")"<<endl;
-
-
 	return OS_TRUE;
 }
 
@@ -141,8 +140,6 @@ ULONG GUET_getRunid(string s, string &rid)
 	pos--;
 
 	rid = s.substr(1,pos);
-
-	cout<<"Runid("<<rid<<")"<<endl;
 
 	return OS_TRUE;
 }
@@ -228,8 +225,6 @@ ULONG GUET_getUsedTime(string s, string &timeuse)
 
 	timeuse = s.substr(1,pos);
 
-	cout<<"Time("<<timeuse<<")"<<endl;
-
 	return OS_TRUE;
 }
 
@@ -268,8 +263,6 @@ ULONG GUET_getUsedMem(string s, string &memuse)
 
 	memuse = s.substr(1,pos);
 
-	cout<<"Memuse("<<memuse<<")"<<endl;
-
 	return OS_TRUE;
 }
 
@@ -306,10 +299,15 @@ string GUET_getLineFromFile(char *filename,int line)
 }
 
 
+/*
+1	GCC
+2	GCC
+3	C
+*/
 
 int GUET_getGUETLangID(int GDOJlangID)
 {
-	int alang[25] = {1,6,3,2,1,1,1,1,1,1,1,1};
+	int alang[25] = {1,2,3,2,1,1,1,1,1,1,1,1};
 
 	return alang[GDOJlangID];
 }
@@ -349,7 +347,7 @@ ULONG GUET_getStatus(string username, int pid,int lang, string &runid, string &r
 		MSG_OUPUT_DBG("GUET_getResult failed.");
 	}
 
-	judge_outstring("Info: problem[%d] language[%d]  verdict[%s] submissionID[%s] time[%s ms] memory[%s kb].\r\n", pid, lang, result.c_str(), runid.c_str(), tu.c_str(), mu.c_str());
+	//judge_outstring("Info: problem[%d] language[%d]  verdict[%s] submissionID[%s] time[%s ms] memory[%s kb].\r\n", pid, lang, result.c_str(), runid.c_str(), tu.c_str(), mu.c_str());
 
 	if (OS_TRUE != ulRet)
 	{
@@ -384,14 +382,14 @@ ULONG GUET_getStatusEx(char *username)
 	sprintf(tmp_return_path, "%s/\OJ_TMP/\guet-judge.tmp",current_path);
 	strcpy(g_Vjudgetfilename,tmp_return_path);
 
-	sprintf(cmd_string,"python -O guet-vjudge.py status %s %s",username,tmp_return_path);
+	sprintf(cmd_string,"python -O guet-vjudge.py status %s %s",guet_username,tmp_return_path);
 	system(cmd_string) ;
 
 	/* id转换 */
 	int lang_id = GUET_getGUETLangID(GL_languageId);
 	GL_vpid = 1000;
 	lang_id = 2;
-	ret =GUET_getStatus(username, GL_vpid, lang_id, runid, result,ce_info,tu,mu);
+	ret =GUET_getStatus(guet_username, GL_vpid, lang_id, runid, result,ce_info,tu,mu);
 
 	if (result.find("Queuing")!=string::npos
 		|| result.find("Compiling")!=string::npos
@@ -410,6 +408,8 @@ ULONG GUET_getStatusEx(char *username)
 		string CE_Info = GUET_getCEinfo_brief(tmp_return_path);
 		ce_info = CE_Info;
 	}
+
+	judge_outstring("Info: problem[%d] language[%d]  verdict[%s] submissionID[%s] time[%s ms] memory[%s kb].\r\n", GL_vpid, lang_id, result.c_str(), runid.c_str(), tu.c_str(), mu.c_str());
 
 	return ret;
 
@@ -436,19 +436,18 @@ int GUET_Judge_python()
 				GL_vpid, lang_id, guet_username, guet_password, tmp_source_path,tmp_return_path);
 		system(cmd_string) ;
 
-		int tryTime = 6;
+		int tryTime = 10;
 		int ret = OS_FALSE;
 		string runid, result,ce_info,tu,mu;
 
-		//hdu 的status多1
-		lang_id += 1;
+		//lang_id += 1;
 
 		while (ret != OS_TRUE)
 		{
 			result = "";
 			MSG_OUPUT_DBG("Get Status...");
 
-			Sleep(10000);
+			Sleep(6000);
 
 			sprintf(cmd_string,"python -O guet-vjudge.py status %s %s",
 				guet_username,tmp_return_path);
@@ -468,12 +467,11 @@ int GUET_Judge_python()
 			if (result.find("Compile Error")!=string::npos)
 			{
 				//获取编译错误信息
-				sprintf(cmd_string,"python -O guet-vjudge.py ce %s %s",runid.c_str(), tmp_return_path);
+				sprintf(cmd_string,"python -O guet-vjudge.py ce %s %s %s %s",guet_username, guet_password, runid.c_str(), tmp_return_path);
 				system(cmd_string) ;
 
 				string CE_Info = GUET_getCEinfo_brief(g_Vjudgetfilename);
 				ce_info = CE_Info;
-
 			}
 
 			tryTime --;
@@ -491,7 +489,6 @@ int GUET_Judge_python()
 		}
 		else
 		{
-			pdt_debug_print("Get Status success...");
 			if (result.find("Accepted")!=string::npos)
 			{
 				GL_verdictId = V_AC;
@@ -527,6 +524,7 @@ int GUET_Judge_python()
 				char buffer[4096]={0};
 				if ((fp = fopen (DebugFile, "w")) == NULL){
 					write_log(JUDGE_ERROR,"DebugFile open error");
+					pdt_debug_print("DebugFile open error. File:",DebugFile);
 					break;
 				}
 				fputs(ce_info.c_str(),fp);
