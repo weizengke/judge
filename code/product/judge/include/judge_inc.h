@@ -16,7 +16,7 @@
 #include "product\include\pdt_common_inc.h"
 /* END:   Added by weizengke, 2013/11/15 */
 
-#include "vrp\common\include\vrp_common_def.h"
+#include "osp\common\include\osp_common_def.h"
 
 
 #include "product\judge\include\judge_def.h"

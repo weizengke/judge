@@ -1,5 +1,13 @@
 //#define   _WIN32_WINNT     0x0500
 
+/*
+For Online Judge Core
+
+Author:Jungle Wei
+Create Date:2011-08
+
+*/
+
 #include <windows.h>
 #include <process.h>
 #include <iostream>
@@ -31,7 +39,7 @@ char judgeLogPath[MAX_PATH];
 int JUDGE_LOG_BUF_SIZE = 200;
 char dataPath[MAX_PATH];  //Êý¾Ý
 char logPath[MAX_PATH]="log\\";  //log
-char judgePath[MAX_PATH]; //judge.exe
+char judgePath[MAX_PATH];
 
 char judge_log_filename[MAX_PATH] = {0};
 

@@ -6,5 +6,5 @@ CMD_OBJ=$(OBJ_DIR)/command_var.o \
 
 all:$(CMD_OBJ)
 
-$(CMD_OBJ):$(OBJ_DIR)/%.o:$(VRP_ROOT)/command/source/%.cpp
+$(CMD_OBJ):$(OBJ_DIR)/%.o:$(OSP_ROOT)/command/source/%.cpp
 	$(CC) $(CCFLAGS) $< $(CFLAGS) $@

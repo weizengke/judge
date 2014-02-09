@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <queue>
 
-#include "vrp\debug\include\debug_center_inc.h"
+#include "osp\debug\include\debug_center_inc.h"
 
 using namespace std;
 

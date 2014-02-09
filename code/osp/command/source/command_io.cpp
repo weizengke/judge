@@ -1,5 +1,5 @@
 
-#include "vrp\command\include\command_inc.h"
+#include "osp\command\include\command_inc.h"
 
 
 void debug_print_ex(CMD_DEBUG_TYPE_EM type, const char *format, ...)

@@ -1,7 +1,7 @@
 #ifndef _VRP_COMMON_DEF_
 #define _VRP_COMMON_DEF_
 
-#include "..\..\..\product\include\pdt_common_inc.h"
+#include "product\include\pdt_common_inc.h"
 
 
 

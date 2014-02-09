@@ -1,5 +1,5 @@
 
-#include "vrp\command\include\command_inc.h"
+#include "osp\command\include\command_inc.h"
 
 
 DEFUN(cmd_debugging_enable_st, (char*)"debugging enable", (char*)"Debugging switch on", Debugging_enable)
@@ -367,11 +367,6 @@ DEFUN(cmd_display_st, (char*)"display", (char*)"display", display)
 
 	char current_path[MAX_PATH] = {0};
 	GetCurrentDirectory(sizeof(current_path),current_path);
-
-	char cmd_string[MAX_PATH];
-	sprintf(cmd_string,"python -O %s\\pytesser_v0.0.1\\captcha.py", current_path);
-
-	system(cmd_string) ;
 
 	return 0;
 }

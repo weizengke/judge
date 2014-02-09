@@ -3,7 +3,7 @@
 
 MY_ROOT=..
 PRODUCT_ROOT=$(MY_ROOT)/code/product
-VRP_ROOT=$(MY_ROOT)/code/vrp
+OSP_ROOT=$(MY_ROOT)/code/osp
 OBJ_DIR=./obj
 
 CC=g++
@@ -13,13 +13,13 @@ CFLAGS=-o
 LDFLAGS =
 
 #################
-include $(VRP_ROOT)/vrp.mk
+include $(OSP_ROOT)/osp.mk
 include $(PRODUCT_ROOT)/product.mk
 
 ##########
 
 OBJ=$(PRODUCT_OBJ) \
-	$(VRP_OBJ)
+	$(OSP_OBJ)
 
 
 
