@@ -356,7 +356,96 @@ DEFUN(cmd_display_hdu_judge_problem_by_pid_st, (char*)"display hdu-judge problem
 	return 0;
 }
 
+#include <windows.h>
+#include <conio.h>
+#include <stdlib.h>
+/*
+COORD和CONSOLE_SCREEN_BUFFER_ INFO是wincon.h定义的控制台结构体类型，其原型如下：
 
+// 坐标结构体
+typedef struct _COORD {
+SHORT X;
+SHORT Y;
+} COORD;
+
+// 控制台窗口信息结构体
+typedef struct _CONSOLE_SCREEN_BUFFER_INFO {
+COORD dwSize; // 缓冲区大小
+COORD dwCursorPosition; // 当前光标位置
+WORD wAttributes; // 字符属性
+SMALL_RECT srWindow; // 当前窗口显示的大小和位置
+COORD dwMaximumWindowSize; // 最大的窗口缓冲区大小
+} CONSOLE_SCREEN_BUFFER_INFO ;
+
+*/
+
+void gotoxy(int Wide,int High)
+{
+	HANDLE hOut;
+	hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+
+	COORD loc;
+	loc.X=Wide;
+	loc.Y=High;
+	SetConsoleCursorPosition(hOut, loc);
+}
+
+/*
+#define FOREGROUND_BLUE      0x0001 // text color contains blue.
+#define FOREGROUND_GREEN     0x0002 // text color contains green.
+#define FOREGROUND_RED       0x0004 // text color contains red.
+#define FOREGROUND_INTENSITY 0x0008 // text color is intensified.
+#define BACKGROUND_BLUE      0x0010 // background color contains blue.
+#define BACKGROUND_GREEN     0x0020 // background color contains green.
+#define BACKGROUND_RED       0x0040 // background color contains red.
+#define BACKGROUND_INTENSITY 0x0080 // background color is intensified.
+*/
+void TestColor()
+{
+	HANDLE consolehwnd;
+	consolehwnd = GetStdHandle(STD_OUTPUT_HANDLE);
+
+	int i=0;
+	SetConsoleTextAttribute(consolehwnd,i);
+	printf("The color-value is %d\n", i);
+
+	for(i=1;i<=0xFC;i++)
+	{
+		SetConsoleTextAttribute(consolehwnd,i);
+		printf("The color-value is %d\n", i);
+
+		/* 改变console text & backround */
+		char clor[128] = {0};
+		sprintf(clor, "color %x", i);
+		system(clor);
+	}
+
+	//SetConsoleTextAttribute(consolehwnd,255);
+
+	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),23);
+	printf("The color-value is %d..\n", 23);
+
+}
+
+void Test()
+{
+	HANDLE hOut;
+	hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+	CONSOLE_SCREEN_BUFFER_INFO bInfo;
+	GetConsoleScreenBufferInfo(hOut, &bInfo );
+
+	printf("Buf:X*Y=%u, Cur:X=%u, Y=%u\r\n"
+			"WindowsSize:Bottom=%u, Left=%u, Right=%u, Top=%u\r\n",
+			bInfo.dwSize.X * bInfo.dwSize.Y,
+			bInfo.dwCursorPosition.X, bInfo.dwCursorPosition.Y,
+			bInfo.srWindow.Bottom, bInfo.srWindow.Left, bInfo.srWindow.Right, bInfo.srWindow.Top);
+
+	GetConsoleScreenBufferInfo(hOut, &bInfo );
+	gotoxy(bInfo.dwCursorPosition.X+1, bInfo.dwCursorPosition.Y+1);
+
+	TestColor();
+
+}
 
 DEFUN(cmd_display_st, (char*)"display", (char*)"display", display)
 {
@@ -367,6 +456,8 @@ DEFUN(cmd_display_st, (char*)"display", (char*)"display", display)
 
 	char current_path[MAX_PATH] = {0};
 	GetCurrentDirectory(sizeof(current_path),current_path);
+
+	//Test();
 
 	return 0;
 }
