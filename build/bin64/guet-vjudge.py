@@ -34,7 +34,7 @@ def login(username,password):
     f.close()
     image = Image.open('verify.png')
     verifyCode = image_to_string(image).rstrip()
-    #print 'Login:'+username,password,verifyCode
+    print 'Login:'+username,password,verifyCode
     url = 'http://onlinejudge.guet.edu.cn/guetoj/site/login.html'
     login_data = {'LoginForm[username]':username,'LoginForm[password]':password, 'LoginForm[rememberMe]':'1', 'LoginForm[verifyCode]':verifyCode, 'yt0':'Login'}
     data = urllib.urlencode(login_data)
@@ -42,7 +42,7 @@ def login(username,password):
     urlcontent=opener.open(request)
     #print 'goto: ' + urlcontent.geturl()
     if (cmp("http://onlinejudge.guet.edu.cn/guetoj/",urlcontent.geturl())==0):
-        #print 'Login ok...'
+        print 'Login ok...'
         return TRUE
     else:
         print 'Login failed...'
@@ -53,7 +53,8 @@ def status(username):
     url='http://onlinejudge.guet.edu.cn/guetoj/user/submissions/'+username+'.html'
     data = urllib.urlopen(url)
     html_content =data.read()
-    f = open(filename,'w')
+    #print html_content
+    f = open(filename,'wb')
     f.write(html_content)
     f.close()
     #print 'save status_content to ',filename
@@ -123,6 +124,23 @@ if __name__=="__main__":
         #for a in range(1, len(sys.argv)):
         #    print sys.argv[a]
 
+        if sys.argv[1] == 'login':
+            username = sys.argv[2]
+            password = sys.argv[3]
+            x = urllib2.urlopen("http://onlinejudge.guet.edu.cn/guetoj/site/captcha.html?refresh=1")
+            loop = MAX_TRY
+            ret = FALSE
+            while(ret!=TRUE and loop>0):
+                ret = login(username, password)
+                loop=loop-1;
+            break
+
+        if sys.argv[1] == 'status':
+            username = sys.argv[2]
+            filename = sys.argv[3]
+            status(username)
+            break
+
         if sys.argv[1] == 'submit':
             pid = sys.argv[2]
             lang = sys.argv[3]
@@ -143,13 +161,8 @@ if __name__=="__main__":
                 loop=loop-1;
             break
 
-        if sys.argv[1] == 'status':
-            username = sys.argv[2]
-            filename = sys.argv[3]
-            status(username)
-            break
-
         if sys.argv[1] == 'ce':
+            #print 'CompileError...'
             username = sys.argv[2]
             password = sys.argv[3]
             rid = sys.argv[4]

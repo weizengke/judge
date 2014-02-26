@@ -108,8 +108,9 @@ ULONG GUET_getResult(string s, string &status)
 ULONG GUET_getRunid(string s, string &rid)
 {
 
+
 	/*
-	<td>1487</td>
+	<td class="link-column"><a href="/guetoj/run/view/1487.html">1487</td>
 	<td class="link-column"><a href="/guetoj/problem/view/1000.html">1000</a></td>
 	<td class="link-column"><a href="/guetoj/user/view/1000847.html">vjudge</a></td>
 	<td>G++</td>
@@ -122,9 +123,9 @@ ULONG GUET_getRunid(string s, string &rid)
 	int n_right = 0;
 	int max_len = s.length();
 
-	for (; n_right < 1; )
+	for (; n_right < 2; )
 	{
-		int pos=s.find("<td");
+		int pos=s.find(">");
 		if (-1 == pos)
 		{
 			return OS_FALSE;
@@ -132,14 +133,15 @@ ULONG GUET_getRunid(string s, string &rid)
 		}
 
 		n_right++;
-		s.erase(0,pos+3);
+		s.erase(0,pos+1);
+
 	}
 
 	pos = 0;
 	while (s[pos]!='<') pos++;
-	pos--;
+	//pos--;
 
-	rid = s.substr(1,pos);
+	rid = s.substr(0,pos);
 
 	return OS_TRUE;
 }
@@ -347,7 +349,7 @@ ULONG GUET_getStatus(string username, int pid,int lang, string &runid, string &r
 		MSG_OUPUT_DBG("GUET_getResult failed.");
 	}
 
-	//judge_outstring("Info: problem[%d] language[%d]  verdict[%s] submissionID[%s] time[%s ms] memory[%s kb].\r\n", pid, lang, result.c_str(), runid.c_str(), tu.c_str(), mu.c_str());
+	judge_outstring("Info: problem[%d] language[%d]  verdict[%s] submissionID[%s] time[%s ms] memory[%s kb].\r\n", pid, lang, result.c_str(), runid.c_str(), tu.c_str(), mu.c_str());
 
 	if (OS_TRUE != ulRet)
 	{
@@ -379,6 +381,13 @@ ULONG GUET_getStatusEx(char *username)
 	string mu;
 
 	GetCurrentDirectory(sizeof(current_path),current_path);
+	sprintf(tmp_return_path, "%s/\OJ_TMP",current_path);
+
+	if( (_access(tmp_return_path, 0 )) == -1 )
+	{
+		CreateDirectory(tmp_return_path,NULL);
+	}
+
 	sprintf(tmp_return_path, "%s/\OJ_TMP/\guet-judge.tmp",current_path);
 	strcpy(g_Vjudgetfilename,tmp_return_path);
 
@@ -409,7 +418,7 @@ ULONG GUET_getStatusEx(char *username)
 		ce_info = CE_Info;
 	}
 
-	judge_outstring("Info: problem[%d] language[%d]  verdict[%s] submissionID[%s] time[%s ms] memory[%s kb].\r\n", GL_vpid, lang_id, result.c_str(), runid.c_str(), tu.c_str(), mu.c_str());
+	judge_outstring("Info: problem[%d] language[%d]  verdict[%s] submissionID[%s] time[%s ms] memory[%s kb].\r\n\r\n%s\r\n", GL_vpid, lang_id, result.c_str(), runid.c_str(), tu.c_str(), mu.c_str(), ce_info.c_str());
 
 	return ret;
 
