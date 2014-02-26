@@ -415,6 +415,14 @@ ULONG GUET_getStatusEx(char *username)
 
 }
 
+int GUET_Login(char *uname, char *psw)
+{
+	char cmd_string[MAX_PATH];
+	sprintf(cmd_string,"python -O guet-vjudge.py login %s %s",uname, psw);
+	system(cmd_string) ;
+
+}
+
 int GUET_Judge_python()
 {
 	char current_path[MAX_PATH] = {0};

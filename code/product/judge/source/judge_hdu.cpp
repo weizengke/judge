@@ -330,7 +330,7 @@ int getHDULangID(int GDOJlangID)
 
 struct curl_slist *headerlist=NULL;
 
-int loginEx(char *uname, char *pdw)
+int HDU_loginEx(char *uname, char *pdw)
 {
     FILE * fp=fopen(g_Vjudgetfilename,"w+");
 	CURL *curl;
@@ -372,7 +372,7 @@ int loginEx(char *uname, char *pdw)
     return OS_TRUE;
 }
 
-ULONG login()
+ULONG HDU_login()
 {
     FILE * fp=fopen(g_Vjudgetfilename,"w+");
 	CURL *curl;
@@ -466,7 +466,7 @@ ULONG getSubmitError(char *filename, string &res)
     return OS_FALSE;
 }
 
-ULONG submit(string pid, string lang, string source)
+ULONG HDU_submit(string pid, string lang, string source)
 {
 	CURL *curl;
 	CURLcode res;
@@ -1096,7 +1096,7 @@ int DLL_GetProblemInfoFromHDU(int pid)
 
 ULONG DLL_HDULogin()
 {
-	if (OS_TRUE != login())
+	if (OS_TRUE != HDU_login())
 	{
 		return OS_FALSE;
 	}
@@ -1114,7 +1114,7 @@ ULONG DLL_HDUSubmit(int pid, int langid, string source)
 	itoa(langid,tmplang,10);
 	string lang_string = tmplang;
 
-	if (OS_TRUE != submit(pid_s, lang_string, source))
+	if (OS_TRUE != HDU_submit(pid_s, lang_string, source))
 	{
 		return OS_FALSE;
 	}

@@ -260,6 +260,19 @@ DEFUN(cmd_display_debugging_st, (char*)"display debugging", (char*)"display debu
 	return 0;
 }
 
+/*
+version    : r90
+description: 带参数命令，错误在参数时，无法定位错误位置
+brief      :
+
+hdu-judge login STRING<1-24> STRING<1-24>
+
+<Jungle>hdu-judge  login  sa
+        ^
+Error: Unrecognized command at '^' position.
+<Jungle>
+
+*/
 DEFUN(cmd_hdujudge_login_st, (char*)"hdu-judge login STRING<1-24> STRING<1-24>", (char*)"hdujudge login", hdujudge_login)
 {
 	char username_[25] = {0};
@@ -270,8 +283,8 @@ DEFUN(cmd_hdujudge_login_st, (char*)"hdu-judge login STRING<1-24> STRING<1-24>",
 	strcpy(username_, argv[2]);
 	strcpy(pwd, argv[3]);
 
-	extern int loginEx(char *uname, char *pdw);
-	loginEx(username_, pwd);
+	extern int HDU_loginEx(char *uname, char *pdw);
+	HDU_loginEx(username_, pwd);
 
 	return 0;
 }
@@ -316,6 +329,21 @@ DEFUN(cmd_display_guetjudge_status_st, (char*)"display guet-judge status STRING<
 
 	extern int GUET_getStatusEx(char *);
 	GUET_getStatusEx(username_);
+
+	return 0;
+}
+DEFUN(cmd_guetjudge_login_st, (char*)"guet-judge login STRING<1-24> STRING<1-24>", (char*)"guet-judge login <username> <password>", guetjudge_login_st)
+{
+	char username_[25] = {0};
+	char psw_[25] = {0};
+
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "%d %s %s %s\n", argc, argv[0], argv[1], argv[2], argv[3]);
+
+	strcpy(username_, argv[2]);
+	strcpy(psw_, argv[3]);
+
+	extern int GUET_Login(char *uname, char *psw);
+	GUET_Login(username_, psw_);
 
 	return 0;
 }
@@ -551,6 +579,7 @@ void cmd_install()
 	install_element(&cmd_hdujudge_login_st);
 	install_element(&cmd_display_hdujudge_status_st);
 	install_element(&cmd_display_guetjudge_status_st);
+	install_element(&cmd_guetjudge_login_st);
 
 	install_element(&cmd_judge_solution_st);
 
