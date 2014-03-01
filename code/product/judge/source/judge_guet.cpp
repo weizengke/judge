@@ -349,7 +349,7 @@ ULONG GUET_getStatus(string username, int pid,int lang, string &runid, string &r
 		MSG_OUPUT_DBG("GUET_getResult failed.");
 	}
 
-	judge_outstring("Info: problem[%d] language[%d]  verdict[%s] submissionID[%s] time[%s ms] memory[%s kb].\r\n", pid, lang, result.c_str(), runid.c_str(), tu.c_str(), mu.c_str());
+	//judge_outstring("Info: problem[%d] language[%d]  verdict[%s] submissionID[%s] time[%s ms] memory[%s kb].\r\n", pid, lang, result.c_str(), runid.c_str(), tu.c_str(), mu.c_str());
 
 	if (OS_TRUE != ulRet)
 	{
@@ -364,6 +364,7 @@ ULONG GUET_getStatus(string username, int pid,int lang, string &runid, string &r
 
 ULONG GUET_getStatusEx(char *username)
 {
+
 
 	char cmd_string[MAX_PATH];
 	char current_path[MAX_PATH] = {0};

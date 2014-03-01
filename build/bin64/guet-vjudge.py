@@ -45,7 +45,7 @@ def login(username,password):
         print 'Login ok...'
         return TRUE
     else:
-        print 'Login failed...'
+        print '.'
         return FALSE
 
 #status
@@ -81,11 +81,11 @@ def submit(pid,lang,source_path):
     request=urllib2.Request(url, data)
     urlcontent=opener.open(request)
     #print 'goto: ' + urlcontent.geturl()
-    if (0==cmp('http://onlinejudge.guet.edu.cn/guetoj/runs.html',urlcontent.geturl())):
-        #print 'Submit ok...'
+    if (0==cmp('http://onlinejudge.guet.edu.cn/guetoj/problems.html',urlcontent.geturl())):
+        print 'Submit ok...'
         return TRUE
     else:
-        print 'Submit failed...'
+        print '.'
         return FALSE
 
 def compileError(runId):
@@ -105,7 +105,7 @@ def compileError(runId):
         #print 'save compile_content to ',filename
         return TRUE
     else:
-        print 'CE failed...'
+        print '.'
         return FALSE
 
 if __name__=="__main__":
