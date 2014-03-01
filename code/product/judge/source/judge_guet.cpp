@@ -419,7 +419,7 @@ ULONG GUET_getStatusEx(char *username)
 		ce_info = CE_Info;
 	}
 
-	judge_outstring("Info: problem[%d] language[%d]  verdict[%s] submissionID[%s] time[%s ms] memory[%s kb].\r\n\r\n%s\r\n", GL_vpid, lang_id, result.c_str(), runid.c_str(), tu.c_str(), mu.c_str(), ce_info.c_str());
+	judge_outstring("Info: problem[%d] language[%d]  verdict[%s] submissionID[%s] time[%s ms] memory[%s kb].\r\n\r\n", GL_vpid, lang_id, result.c_str(), runid.c_str(), tu.c_str(), mu.c_str());
 
 	return ret;
 
