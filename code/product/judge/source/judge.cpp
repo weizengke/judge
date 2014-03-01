@@ -185,16 +185,16 @@ void InitConfig()
 	GetPrivateProfileString("Tool","JudgeLogPath","",judgeLogPath,sizeof(judgeLogPath),INI_filename);
 
 	GetPrivateProfileString("MySQL","url","",Mysql_url,sizeof(Mysql_url),INI_filename);
-	GetPrivateProfileString("MySQL","username","",Mysql_username,sizeof(Mysql_username),INI_filename);
-	GetPrivateProfileString("MySQL","password","",Mysql_password,sizeof(Mysql_password),INI_filename);
+	GetPrivateProfileString("MySQL","username","NULL",Mysql_username,sizeof(Mysql_username),INI_filename);
+	GetPrivateProfileString("MySQL","password","NULL",Mysql_password,sizeof(Mysql_password),INI_filename);
 	GetPrivateProfileString("MySQL","table","",Mysql_table,sizeof(Mysql_table),INI_filename);
 	Mysql_port=GetPrivateProfileInt("MySQL","port",0,INI_filename);
 
-	GetPrivateProfileString("HDU","username","",hdu_username,sizeof(hdu_username),INI_filename);
-	GetPrivateProfileString("HDU","password","",hdu_password,sizeof(hdu_password),INI_filename);
+	GetPrivateProfileString("HDU","username","NULL",hdu_username,sizeof(hdu_username),INI_filename);
+	GetPrivateProfileString("HDU","password","NULL",hdu_password,sizeof(hdu_password),INI_filename);
 
-	GetPrivateProfileString("GUET_DEPT3","username","",guet_username,sizeof(guet_username),INI_filename);
-	GetPrivateProfileString("GUET_DEPT3","password","",guet_password,sizeof(guet_password),INI_filename);
+	GetPrivateProfileString("GUET_DEPT3","username","NULL",guet_username,sizeof(guet_username),INI_filename);
+	GetPrivateProfileString("GUET_DEPT3","password","NULL",guet_password,sizeof(guet_password),INI_filename);
 
 
 	write_log(JUDGE_INFO,"Socketport:%d, Data:%s, Workpath:%s",port,dataPath,workPath);
