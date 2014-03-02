@@ -57,6 +57,7 @@ enum CMD_ELEM_ID_EM {
 	CMD_ELEM_ID_COMPUTER,
 
 	CMD_ELEM_ID_STRING1TO24,
+	CMD_ELEM_ID_STRING1TO65535,
 	CMD_ELEM_ID_INTEGER1TO24,
 	CMD_ELEM_ID_INTEGER1TO65535,
     CMD_ELEM_ID_COMMAND_TREE,
@@ -80,6 +81,8 @@ enum CMD_ELEM_ID_EM {
     CMD_ELEM_ID_JUDGE,
     CMD_ELEM_ID_SOLUTION,
     CMD_ELEM_ID_PROBLEM,
+    CMD_ELEM_ID_SET,
+    CMD_ELEM_ID_CONFIG,
 
 	CMD_ELEM_ID_MAX,
 };
@@ -118,7 +121,7 @@ enum CMD_KEY_CODE_EM {
  *
  * @param prompt prompt string, such as cmd, then you see 'cmd>'
  * @param buffer buffer to store user input
- * @param buf_len buffer length
+ * @param buf_len buffer max_length
  * @param used_len buffer actually used length
  * @param cur_pos current cursor point in which position in buffer
  * @param c latest input key word
@@ -127,16 +130,19 @@ enum CMD_KEY_CODE_EM {
  * @param hindex history end index
  * */
 struct cmd_vty {
-	char prompt[CMD_MAX_PROMPT_SIZE];
-	char buffer[CMD_BUFFER_SIZE];
 	int buf_len;
 	int used_len;
 	int cur_pos;
 	char c;
+	char res[3];
+	char prompt[CMD_MAX_PROMPT_SIZE];
+	char buffer[CMD_BUFFER_SIZE];
 
-	char *history[HISTORY_MAX_SIZE];
 	int hpos;
 	int hindex;
+	char *history[HISTORY_MAX_SIZE];
+
+
 };
 
 /**
@@ -152,6 +158,14 @@ typedef struct cmd_vector {
 	void **data;
 } cmd_vector_t;
 
+/*
+ * A struct cmd_node relative to some command of special prompt
+*/
+typedef struct cmd_node {
+	char prompt[CMD_MAX_PROMPT_SIZE];
+    cmd_vector_t cmd_vector;
+
+}cmd_node_st;
 
 /**
  * A struct cmd_elem_st relative to One command

@@ -190,12 +190,19 @@ void InitConfig()
 	GetPrivateProfileString("MySQL","table","",Mysql_table,sizeof(Mysql_table),INI_filename);
 	Mysql_port=GetPrivateProfileInt("MySQL","port",0,INI_filename);
 
+	/* BEGIN: Added by weizengke,for hdu-vjudge*/
 	GetPrivateProfileString("HDU","username","NULL",hdu_username,sizeof(hdu_username),INI_filename);
 	GetPrivateProfileString("HDU","password","NULL",hdu_password,sizeof(hdu_password),INI_filename);
+	GetPrivateProfileString("HDU","judgerIP","127.0.0.1",hdu_judgerIP,sizeof(hdu_judgerIP),INI_filename);
+	hdu_sockport=GetPrivateProfileInt("HDU","socketport",6606,INI_filename);
+	hdu_remote_enable=GetPrivateProfileInt("HDU","remote_enable",OS_NO,INI_filename);
 
+	/* BEGIN: Added by weizengke, for guet-dept3-vjudge */
 	GetPrivateProfileString("GUET_DEPT3","username","NULL",guet_username,sizeof(guet_username),INI_filename);
 	GetPrivateProfileString("GUET_DEPT3","password","NULL",guet_password,sizeof(guet_password),INI_filename);
-
+	GetPrivateProfileString("GUET_DEPT3","judgerIP","127.0.0.1",guet_judgerIP,sizeof(guet_judgerIP),INI_filename);
+	guet_sockport=GetPrivateProfileInt("GUET_DEPT3","socketport",7706,INI_filename);
+	guet_remote_enable=GetPrivateProfileInt("GUET_DEPT3","remote_enable",OS_NO,INI_filename);
 
 	write_log(JUDGE_INFO,"Socketport:%d, Data:%s, Workpath:%s",port,dataPath,workPath);
 	write_log(JUDGE_INFO,"MySQL:%s %s %s %s %d",Mysql_url,Mysql_username,Mysql_password,Mysql_table,Mysql_port);
@@ -319,6 +326,8 @@ void Judge_ShowCfgContent()
 
 		if (!flag){ break;}
 	}
+
+	CloseHandle(hFile);
 
 }
 
@@ -853,24 +862,88 @@ int Judge_Local()
 	return OS_TRUE;
 }
 
-void Judge_Remote()
+int Judge_SendToJudger(int port,char *ip)
+{
+
+	SOCKET sClient_hdu;
+
+    sClient_hdu = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if(sClient_hdu == INVALID_SOCKET)
+	{
+		pdt_debug_print("Judge_SendToJudger socket error\n");
+		return OS_ERR;
+	}
+
+	sockaddr_in servAddr;
+	servAddr.sin_family = AF_INET;
+	servAddr.sin_port = htons(port);
+	servAddr.sin_addr.S_un.S_addr =inet_addr(ip);
+
+	if(connect(sClient_hdu,(sockaddr*)&servAddr,sizeof(servAddr))==SOCKET_ERROR)
+	{
+		pdt_debug_print("Judge_SendToJudger connect error\n");
+		closesocket(sClient_hdu);
+		return OS_ERR;
+	}
+
+	send(sClient_hdu,(const char*)&GL_solutionId,sizeof(GL_solutionId),0);
+
+	closesocket(sClient_hdu);
+
+	return OS_OK;
+}
+
+int Judge_Remote()
 {
 	do
 	{
 		if (0 == strcmp(GL_ojname.c_str(),"HDU"))
 		{
-			(void)HDU_VJudge();
+			int ret = OS_OK;
+
+			pdt_debug_print("virtua-judge HDU.(remote_anable=%d,port=%d,ip=%s)",hdu_remote_enable, hdu_sockport,hdu_judgerIP);
+			if (OS_YES == hdu_remote_enable)
+			{
+				ret = Judge_SendToJudger(hdu_sockport, hdu_judgerIP);
+				if (OS_OK == ret)
+				{
+					/* 这里返回ERR, 由远程judger继续执行 */
+					return OS_ERR;
+				}
+
+				return ret;
+			}
+
+			/* local vjudge */
+			ret = HDU_VJudge();
 			break;
 		}
 
 		if (0 == strcmp(GL_ojname.c_str(),"GUET_DEPT3"))
 		{
-			(void)GUET_VJudge();
+			int ret = OS_OK;
+			pdt_debug_print("virtua-judge GUET_DEPT3.(remote_anable=%d,port=%d,ip=%s)",guet_remote_enable, guet_sockport,guet_judgerIP);
+
+			if (OS_YES == guet_remote_enable)
+			{
+				ret = Judge_SendToJudger(guet_sockport, guet_judgerIP);
+				if (OS_OK == ret)
+				{
+					/* 这里返回ERR, 由远程judger继续执行 */
+					return OS_ERR;
+				}
+
+				return ret;
+			}
+
+			/* local vjudge */
+			ret = GUET_VJudge();
 			break;
 		}
 
 	}while(0);
 
+	return OS_OK;
 }
 
 int Judge_Proc(int solutionId)
@@ -920,14 +993,19 @@ int Judge_Proc(int solutionId)
 	write_log(JUDGE_INFO,"Do SQL_getProblemInfo ok. (solutionId=%d)", solutionId);
 
 
-	if (1 == GL_vjudge)
+	if (OS_YES == GL_vjudge)
 	{
 		#if(JUDGE_VIRTUAL == VOS_YES)
-		(void)Judge_Remote();
+		if (OS_OK != Judge_Remote())
+		{
+			pdt_debug_print("virtua-judge is fail...");
+			return OS_ERR;
+		}
 		#else
 		pdt_debug_print("virtua-judge is not support.");
 		return OS_ERR;
 		#endif
+
 		g_dwCode = 0;
 		GL_testcase = 0;
 	}

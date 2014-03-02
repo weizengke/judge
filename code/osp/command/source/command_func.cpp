@@ -490,6 +490,26 @@ DEFUN(cmd_display_st, (char*)"display", (char*)"display", display)
 	return 0;
 }
 
+DEFUN(cmd_set_config_section_name_value_st, (char*)"set config STRING<1-24> STRING<1-24> STRING<1-65535>",
+		(char*)"Set Config section name value", set_config_section_name_value_st)
+{
+	char section[25] = {0};
+	char name[25] = {0};
+	char value[65536]={0};
+
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "%d %s %s %s %s %s.\n", argc, argv[0], argv[1], argv[2], argv[3], argv[4]);
+
+	strcpy(section, argv[2]);
+	strcpy(name, argv[3]);
+	strcpy(value, argv[4]);
+
+	extern char INI_filename[];
+
+	int ret = WritePrivateProfileString(section,name,value,INI_filename);
+
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "WritePrivateProfileString return %u..", ret);
+
+}
 
 
 void cmd_install()
@@ -497,6 +517,7 @@ void cmd_install()
 	/* reg cmd-element */
 	cmd_reg_newcmdelement(CMD_ELEM_ID_CR, 			CMD_ELEM_TYPE_END,			CMD_END,			    ""               );
 	cmd_reg_newcmdelement(CMD_ELEM_ID_STRING1TO24,  CMD_ELEM_TYPE_STRING,       "STRING<1-24>",     "String lenth range form 1 to 24");
+	cmd_reg_newcmdelement(CMD_ELEM_ID_STRING1TO65535,  CMD_ELEM_TYPE_STRING,    "STRING<1-65535>",     "String lenth range form 1 to 65535");
 	cmd_reg_newcmdelement(CMD_ELEM_ID_INTEGER1TO24, CMD_ELEM_TYPE_INTEGER,      "INTEGER<1-100>",   "Integer range form 1 to 100");
 	cmd_reg_newcmdelement(CMD_ELEM_ID_INTEGER1TO65535, CMD_ELEM_TYPE_INTEGER,   "INTEGER<1-65535>",   "Integer range form 1 to 65535");
 	cmd_reg_newcmdelement(CMD_ELEM_ID_COMMAND_TREE, CMD_ELEM_TYPE_KEY,          "command-tree",     "Command tree");
@@ -538,6 +559,10 @@ void cmd_install()
 	cmd_reg_newcmdelement(CMD_ELEM_ID_SOLUTION,		CMD_ELEM_TYPE_KEY,			"solution",			"The Solution");
 
 	cmd_reg_newcmdelement(CMD_ELEM_ID_PROBLEM,		CMD_ELEM_TYPE_KEY,			"problem",			"The Problem of OJ");
+
+	cmd_reg_newcmdelement(CMD_ELEM_ID_SET,			CMD_ELEM_TYPE_KEY,			"set",				"Set value");
+	cmd_reg_newcmdelement(CMD_ELEM_ID_CONFIG,		CMD_ELEM_TYPE_KEY,			"config",			"Set Config section name value");
+
 
 	// install command
 	// ---------------------------------------------------
@@ -588,6 +613,8 @@ void cmd_install()
 	install_element(&cmd_display_current_configuration_st);
 
 	install_element(&cmd_display_hdu_judge_problem_by_pid_st);
+
+	install_element(&cmd_set_config_section_name_value_st);
 	// ---------------------------------------------------
 
 }

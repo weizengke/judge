@@ -38,6 +38,9 @@ UCHAR g_aucGUETLanguageName[][VJUDGE_MAX_LANG_SIZE] = {
 
 char guet_username[1000]="weizengke";
 char guet_password[1000]="********";
+char guet_judgerIP[20]="127.0.0.1";
+int guet_sockport = 7706;
+int guet_remote_enable=OS_NO;
 
 ULONG GUET_getLanguageNameByID(ULONG id, UCHAR *ucLanguageName)
 {

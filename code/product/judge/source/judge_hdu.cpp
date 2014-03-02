@@ -60,7 +60,9 @@ UCHAR gaucHDULanguageName[][VJUDGE_MAX_LANG_SIZE] = {
 
 char hdu_username[1000]="weizengke";
 char hdu_password[1000]="********";
-
+char hdu_judgerIP[20]="127.0.0.1";
+int hdu_sockport = 6606;
+int hdu_remote_enable=OS_NO;
 
 ULONG getLanguageNameByID(ULONG id, UCHAR *ucLanguageName)
 {
@@ -1473,8 +1475,12 @@ int Judge_Via_python()
 
 }
 
+
 int HDU_VJudge()
 {
+
+	pdt_debug_print("virtua-judge Local HDU.");
+
 	return Judge_Via_CurlLib();
 
 	//return Judge_Via_python();

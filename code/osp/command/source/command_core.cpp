@@ -656,7 +656,7 @@ cmd_vector_t *cmd2vec(char *string, char *doc)
 }
 
 
-/*  get range form INTEGER<a-b> ISTRING<a-b>
+/*  get range form INTEGER<a-b> STRING<a-b>
 
 	type for INTEGER or STRING
 */

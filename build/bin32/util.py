@@ -14,8 +14,8 @@ def	retrieve_text(scratch_text_name_root):
 
 def perform_cleanup(scratch_image_name, scratch_text_name_root):
 	"""Clean up temporary files from disk"""
-	for name in (scratch_image_name, scratch_text_name_root + '.txt', "tesseract.log"):
-		try:
-			os.remove(name)
-		except OSError:
-			pass
+	#for name in (scratch_image_name, scratch_text_name_root + '.txt', "tesseract.log"):
+	#	try:
+	#		os.remove(name)
+	#	except OSError:
+	#		pass
