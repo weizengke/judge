@@ -41,6 +41,9 @@ int g_oj_debug_switch = JUDGE_DEBUG_OFF;
 
 int GL_vjudge;
 int GL_vpid;
+int GL_vjudge_enable = OS_NO;  /* 全局使能vjudge */
+
+
 char g_Vjudgetfilename[MAX_PATH]="tmpfile.txt";
 
 

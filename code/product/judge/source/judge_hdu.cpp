@@ -63,6 +63,7 @@ char hdu_password[1000]="********";
 char hdu_judgerIP[20]="127.0.0.1";
 int hdu_sockport = 6606;
 int hdu_remote_enable=OS_NO;
+int hdu_vjudge_enable=OS_NO;
 
 ULONG getLanguageNameByID(ULONG id, UCHAR *ucLanguageName)
 {
@@ -1212,6 +1213,7 @@ int Judge_Via_CurlLib()
 		if (OS_TRUE != ret)
 		{
 			pdt_debug_print("Error: Login hdu-judge failed.");
+			return OS_ERR;
 		}
 
 		/* get source , just get 0xFFFFFF size */
@@ -1234,6 +1236,7 @@ int Judge_Via_CurlLib()
 		if (OS_TRUE != ret)
 		{
 			pdt_debug_print("Error: Submit solution to hdu-judge failed.");
+			return OS_ERR;
 		}
 
 		/* get status */
@@ -1337,7 +1340,7 @@ int Judge_Via_CurlLib()
 
 	DeleteFile(g_Vjudgetfilename);
 
-	return OS_TRUE;
+	return OS_OK;
 }
 
 int Judge_Via_python()

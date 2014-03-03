@@ -154,6 +154,8 @@ if __name__=="__main__":
             while(ret!=TRUE and loop>0):
                 ret = login(username, password)
                 loop=loop-1;
+            if (ret!=TRUE):
+                break
             loop = MAX_TRY
             ret = FALSE
             while(ret!=TRUE and loop>0):
@@ -173,7 +175,8 @@ if __name__=="__main__":
             while(ret!=TRUE and loop>0):
                 ret = login(username, password)
                 loop=loop-1;
-
+            if (ret!=TRUE):
+                break
             loop = MAX_TRY
             ret = FALSE
             while(ret!=TRUE and loop>0):

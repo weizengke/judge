@@ -43,6 +43,11 @@ int InitMySQL()
 	return 1;
 }
 
+int SQL_Destroy()
+{
+	mysql_close(mysql);
+}
+
 int SQL_getSolutionSource()
 {
 	sprintf(query,"select source from solution_source where solution_id=%d",GL_solutionId);

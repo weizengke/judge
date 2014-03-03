@@ -133,7 +133,7 @@ void MSGQueueMain(void *pEntry)
         while (!g_stMsgQueue.empty())
         {
             stMsgQ = g_stMsgQueue.front();
-			printf("\r\n%04d-%02d-%02d %02d:%02d:%02d",stMsgQ.stTime.tm_year, stMsgQ.stTime.tm_mon,stMsgQ.stTime.tm_mday,
+			printf("%04d-%02d-%02d %02d:%02d:%02d",stMsgQ.stTime.tm_year, stMsgQ.stTime.tm_mon,stMsgQ.stTime.tm_mday,
 													stMsgQ.stTime.tm_hour,stMsgQ.stTime.tm_min,stMsgQ.stTime.tm_sec);
             std::cout<<"/TASKID/" << stMsgQ.thread_id << "/DEBUG: " << stMsgQ.szMsgBuf;
 
@@ -142,13 +142,13 @@ void MSGQueueMain(void *pEntry)
 			extern void cmd_outcurrent();
 			cmd_outcurrent();
 			/* END:   Added by weizengke, 2013/11/17 */
-
-
             g_stMsgQueue.pop();
-
+			printf("\r\n");
             RunDelay(1);
         }
+
         RunDelay(1);
+
     }
 }
 

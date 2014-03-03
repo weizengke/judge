@@ -503,7 +503,6 @@ DEFUN(cmd_set_config_section_name_value_st, (char*)"set config STRING<1-24> STRI
 	strcpy(name, argv[3]);
 	strcpy(value, argv[4]);
 
-	extern char INI_filename[];
 
 	int ret = WritePrivateProfileString(section,name,value,INI_filename);
 
@@ -511,6 +510,162 @@ DEFUN(cmd_set_config_section_name_value_st, (char*)"set config STRING<1-24> STRI
 
 }
 
+/* BEGIN: Added by weizengke, 2014/3/3 for 全局使能vjudge */
+DEFUN(cmd_virtual_judge_enable_st, (char*)"virtual-judge enable", (char*)"virtual-judge enable", virtual_judge_enable_st)
+{
+	extern int GL_vjudge_enable;
+
+	if (OS_YES == GL_vjudge_enable)
+	{
+		printf("Info: virtual-judge is already enable.\r\n");
+		return OS_ERR;
+	}
+
+	int ret = WritePrivateProfileString("Tool","vjudge_enable","1",INI_filename);
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "WritePrivateProfileString return %u..", ret);
+
+	if (ret != 1)
+	{
+		printf("Error: virtual-judge enable failed.\r\n");
+		return OS_ERR;
+	}
+
+	GL_vjudge_enable = OS_YES;
+
+}
+
+/* BEGIN: Added by weizengke, 2014/3/3 for 全局去使能vjudge */
+DEFUN(cmd_undo_virtual_judge_enable_st, (char*)"undo virtual-judge enable", (char*)"undo virtual-judge enable", undo_virtual_judge_enable_st)
+{
+	extern int GL_vjudge_enable;
+
+	if (OS_NO == GL_vjudge_enable)
+	{
+		printf("Info: virtual-judge is already disable.\r\n");
+		return OS_ERR;
+	}
+
+	int ret = WritePrivateProfileString("Tool","vjudge_enable","0",INI_filename);
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "WritePrivateProfileString return %u..", ret);
+
+	if (ret != 1)
+	{
+		printf("Error: virtual-judge disable failed.\r\n");
+		return OS_ERR;
+	}
+
+	GL_vjudge_enable = OS_NO;
+
+}
+
+/* BEGIN: Added by weizengke, 2014/3/3 for 全局使能hdu-vjudge */
+DEFUN(cmd_hdu_judge_enable_st, (char*)"hdu-judge enable", (char*)"hdu-judge enable", hdu_judge_enable_st)
+{
+	extern int hdu_vjudge_enable;
+
+	if (OS_YES == hdu_vjudge_enable)
+	{
+		printf("Info: hdu-judge is already enable.\r\n");
+		return OS_ERR;
+	}
+
+	int ret = WritePrivateProfileString("HDU","vjudge_enable","1",INI_filename);
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "WritePrivateProfileString return %u..", ret);
+
+	if (ret != 1)
+	{
+		printf("Error: hdu-judge enable failed.\r\n");
+		return OS_ERR;
+	}
+
+	hdu_vjudge_enable = OS_YES;
+
+}
+
+/* BEGIN: Added by weizengke, 2014/3/3 for 全局去使能hdu-vjudge */
+DEFUN(cmd_undo_hdu_judge_enable_st, (char*)"undo hdu-judge enable", (char*)"undo hdu-judge enable", undo_hdu_judge_enable_st)
+{
+	extern int hdu_vjudge_enable;
+
+	if (OS_NO == hdu_vjudge_enable)
+	{
+		printf("Info: hdu-judge is already disable.\r\n");
+		return OS_ERR;
+	}
+
+	int ret = WritePrivateProfileString("HDU","hdu_enable","0",INI_filename);
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "WritePrivateProfileString return %u..", ret);
+
+	if (ret != 1)
+	{
+		printf("Error: hdu-judge disable failed.\r\n");
+		return OS_ERR;
+	}
+
+	hdu_vjudge_enable = OS_NO;
+
+
+}
+
+/* BEGIN: Added by weizengke, 2014/3/3 for 全局使能guet-vjudge */
+DEFUN(cmd_guet_judge_enable_st, (char*)"guet-judge enable", (char*)"guet-judge enable", guet_judge_enable_st)
+{
+	extern int guet_vjudge_enable;
+
+	if (OS_YES == guet_vjudge_enable)
+	{
+		printf("Info: guet-judge is already enable.\r\n");
+		return OS_ERR;
+	}
+
+	int ret = WritePrivateProfileString("GUET_DEPT3","vjudge_enable","1",INI_filename);
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "WritePrivateProfileString return %u..", ret);
+
+	if (ret != 1)
+	{
+		printf("Error: guet-judge enable failed.\r\n");
+		return OS_ERR;
+	}
+
+	guet_vjudge_enable = OS_YES;
+
+}
+
+/* BEGIN: Added by weizengke, 2014/3/3 for 全局去使能guet-vjudge */
+DEFUN(cmd_undo_guet_judge_enable_st, (char*)"undo guet-judge enable", (char*)"undo guet-judge enable", undo_guet_judge_enable_st)
+{
+	extern int guet_vjudge_enable;
+
+	if (OS_NO == guet_vjudge_enable)
+	{
+		printf("Info: guet-judge is already disable.\r\n");
+		return OS_ERR;
+	}
+
+	int ret = WritePrivateProfileString("GUET_DEPT3","vjudge_enable","0",INI_filename);
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "WritePrivateProfileString return %u..", ret);
+
+	if (ret != 1)
+	{
+		printf("Error: guet-judge disable failed.\r\n");
+		return OS_ERR;
+	}
+
+	guet_vjudge_enable = OS_NO;
+
+}
+
+/* BEGIN: Added by weizengke, 2014/3/3 reset */
+DEFUN(cmd_reboot_st, (char*)"reboot", (char*)"reboot", reboot_st)
+{
+	extern void Judge_destroy();
+	Judge_destroy();
+
+	extern int OJ_InitData();
+	OJ_InitData();
+
+	printf("Info: reboot ok.\r\n");
+}
 
 void cmd_install()
 {
@@ -563,6 +718,7 @@ void cmd_install()
 	cmd_reg_newcmdelement(CMD_ELEM_ID_SET,			CMD_ELEM_TYPE_KEY,			"set",				"Set value");
 	cmd_reg_newcmdelement(CMD_ELEM_ID_CONFIG,		CMD_ELEM_TYPE_KEY,			"config",			"Set Config section name value");
 
+	cmd_reg_newcmdelement(CMD_ELEM_ID_REBOOT,		CMD_ELEM_TYPE_KEY,			"reboot",			"Reboot Judge kernel");
 
 	// install command
 	// ---------------------------------------------------
@@ -615,6 +771,15 @@ void cmd_install()
 	install_element(&cmd_display_hdu_judge_problem_by_pid_st);
 
 	install_element(&cmd_set_config_section_name_value_st);
+
+	install_element(&cmd_virtual_judge_enable_st);
+	install_element(&cmd_undo_virtual_judge_enable_st);
+	install_element(&cmd_guet_judge_enable_st);
+	install_element(&cmd_undo_guet_judge_enable_st);
+	install_element(&cmd_hdu_judge_enable_st);
+	install_element(&cmd_undo_hdu_judge_enable_st);
+
+	install_element(&cmd_reboot_st);
 	// ---------------------------------------------------
 
 }

@@ -41,6 +41,7 @@ char guet_password[1000]="********";
 char guet_judgerIP[20]="127.0.0.1";
 int guet_sockport = 7706;
 int guet_remote_enable=OS_NO;
+int guet_vjudge_enable=OS_NO;
 
 ULONG GUET_getLanguageNameByID(ULONG id, UCHAR *ucLanguageName)
 {

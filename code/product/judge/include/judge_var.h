@@ -48,6 +48,7 @@ extern int g_oj_debug_switch;
 
 extern int GL_vjudge;
 extern int GL_vpid;
+extern int GL_vjudge_enable;
 extern char g_Vjudgetfilename[MAX_PATH];
 
 

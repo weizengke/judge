@@ -169,6 +169,10 @@ int InitSocket()
 }
 //////////////////////////////////////////////////////////////end socket
 
+void Judge_destroy()
+{
+	closesocket(sListen);
+}
 
 void InitConfig()
 {
@@ -177,6 +181,7 @@ void InitConfig()
 	limitJudge=GetPrivateProfileInt("Tool","LimitJudge",20,INI_filename);
 	OutputLimit=GetPrivateProfileInt("Tool","OutputLimit",10000,INI_filename);
 	JUDGE_LOG_BUF_SIZE=GetPrivateProfileInt("Tool","JUDGE_LOG_BUF_SIZE",500,INI_filename);
+	GL_vjudge_enable=GetPrivateProfileInt("Tool","vjudge_enable",OS_NO,INI_filename);
 
 	isRestrictedFunction=GetPrivateProfileInt("Tool","isRestrictedFunction",0,INI_filename);
 	GetPrivateProfileString("Tool","WorkingPath","",workPath,sizeof(workPath),INI_filename);
@@ -196,6 +201,7 @@ void InitConfig()
 	GetPrivateProfileString("HDU","judgerIP","127.0.0.1",hdu_judgerIP,sizeof(hdu_judgerIP),INI_filename);
 	hdu_sockport=GetPrivateProfileInt("HDU","socketport",6606,INI_filename);
 	hdu_remote_enable=GetPrivateProfileInt("HDU","remote_enable",OS_NO,INI_filename);
+	hdu_vjudge_enable=GetPrivateProfileInt("HDU","vjudge_enable",OS_NO,INI_filename);
 
 	/* BEGIN: Added by weizengke, for guet-dept3-vjudge */
 	GetPrivateProfileString("GUET_DEPT3","username","NULL",guet_username,sizeof(guet_username),INI_filename);
@@ -203,6 +209,7 @@ void InitConfig()
 	GetPrivateProfileString("GUET_DEPT3","judgerIP","127.0.0.1",guet_judgerIP,sizeof(guet_judgerIP),INI_filename);
 	guet_sockport=GetPrivateProfileInt("GUET_DEPT3","socketport",7706,INI_filename);
 	guet_remote_enable=GetPrivateProfileInt("GUET_DEPT3","remote_enable",OS_NO,INI_filename);
+	guet_vjudge_enable=GetPrivateProfileInt("HDU","guet_vjudge_enable",OS_NO,INI_filename);
 
 	write_log(JUDGE_INFO,"Socketport:%d, Data:%s, Workpath:%s",port,dataPath,workPath);
 	write_log(JUDGE_INFO,"MySQL:%s %s %s %s %d",Mysql_url,Mysql_username,Mysql_password,Mysql_table,Mysql_port);
@@ -895,13 +902,27 @@ int Judge_SendToJudger(int port,char *ip)
 
 int Judge_Remote()
 {
+	int ret = OS_OK;
+
 	do
 	{
+		if (GL_vjudge_enable == OS_NO)
+		{
+			pdt_debug_print("Error: virtual-judge is not enable.");
+			return OS_ERR;
+		}
+
 		if (0 == strcmp(GL_ojname.c_str(),"HDU"))
 		{
-			int ret = OS_OK;
+			pdt_debug_print("virtual-judge HDU.(vjudge_enable=%u, remote_anable=%d,port=%d,ip=%s)",
+							hdu_vjudge_enable, hdu_remote_enable, hdu_sockport,hdu_judgerIP);
 
-			pdt_debug_print("virtua-judge HDU.(remote_anable=%d,port=%d,ip=%s)",hdu_remote_enable, hdu_sockport,hdu_judgerIP);
+			if (hdu_vjudge_enable == OS_NO)
+			{
+				pdt_debug_print("Error: hdu-judge is not enable.");
+				return OS_ERR;
+			}
+
 			if (OS_YES == hdu_remote_enable)
 			{
 				ret = Judge_SendToJudger(hdu_sockport, hdu_judgerIP);
@@ -921,8 +942,13 @@ int Judge_Remote()
 
 		if (0 == strcmp(GL_ojname.c_str(),"GUET_DEPT3"))
 		{
-			int ret = OS_OK;
-			pdt_debug_print("virtua-judge GUET_DEPT3.(remote_anable=%d,port=%d,ip=%s)",guet_remote_enable, guet_sockport,guet_judgerIP);
+			pdt_debug_print("virtual-judge GUET_DEPT3.(vjudge_enable=%u,remote_anable=%d,port=%d,ip=%s)",guet_vjudge_enable, guet_remote_enable, guet_sockport,guet_judgerIP);
+
+			if (guet_vjudge_enable == OS_NO)
+			{
+				pdt_debug_print("Error: guet-judge is not enable.");
+				return OS_ERR;
+			}
 
 			if (OS_YES == guet_remote_enable)
 			{
@@ -943,7 +969,7 @@ int Judge_Remote()
 
 	}while(0);
 
-	return OS_OK;
+	return ret;
 }
 
 int Judge_Proc(int solutionId)
@@ -998,16 +1024,17 @@ int Judge_Proc(int solutionId)
 		#if(JUDGE_VIRTUAL == VOS_YES)
 		if (OS_OK != Judge_Remote())
 		{
+			GL_verdictId = V_SK;
 			pdt_debug_print("virtua-judge is fail...");
-			return OS_ERR;
 		}
 		#else
+		GL_verdictId = V_SK;
 		pdt_debug_print("virtua-judge is not support.");
-		return OS_ERR;
 		#endif
 
 		g_dwCode = 0;
 		GL_testcase = 0;
+
 	}
 	else
 	{
@@ -1214,10 +1241,8 @@ int OJ_Init()
 	return OS_OK;
 }
 
-void OJ_TaskEntry(void *pEntry)
+int OJ_InitData()
 {
-	write_log(JUDGE_INFO,"Running Judge Core...");
-
 	InitConfig();
 
 	if(InitMySQL()==0)
@@ -1231,6 +1256,14 @@ void OJ_TaskEntry(void *pEntry)
 		write_log(JUDGE_ERROR,"Init Socket JUDGE_ERROR...");
 		pdt_debug_print("Error: Judge task killed itself...[code:%u]", GetLastError());
 	}
+
+}
+
+void OJ_TaskEntry(void *pEntry)
+{
+	write_log(JUDGE_INFO,"Running Judge Core...");
+
+	(void)OJ_InitData();
 
 	HANDLE hThreadD=CreateThread(NULL,NULL,Judge_DispatchThread,0,0,0);
 	HANDLE hThreadR=CreateThread(NULL,NULL,Judge_ListenThread,0,0,0);

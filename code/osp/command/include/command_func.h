@@ -13,4 +13,8 @@ extern int cmd_reg_newcmdelement(int cmd_elem_id, CMD_ELEM_TYPE_EM cmd_elem_type
 extern void install_element(struct cmd_elem_st *elem);
 
 
+
+extern char INI_filename[];
+
+
 #endif

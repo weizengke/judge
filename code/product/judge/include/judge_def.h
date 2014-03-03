@@ -27,11 +27,12 @@
 #define V_RF 12
 #define V_OOC 13
 #define V_SE 14
+#define V_SK 15
 
 static const char* VERDICT_NAME[] = {"ALL", "Queuing", "Compiling", "Compilation Error", "Running","Accepted",
 									"Wrong Answer","Runtime Error","Time Limit Exceeded",
 									"Memory Limit Exceeded","Presentation Error","Output Limit Exceeded",
-									"Restricted Function","Out Of Comtest","System Error"};
+									"Restricted Function","Out Of Comtest","System Error", "Skipped"};
 
 #define JUDGE_SYSTEM_ERROR 0
 #define JUDGE_WARNING 1
