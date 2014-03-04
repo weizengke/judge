@@ -654,6 +654,181 @@ DEFUN(cmd_undo_guet_judge_enable_st, (char*)"undo guet-judge enable", (char*)"un
 	guet_vjudge_enable = OS_NO;
 
 }
+/* BEGIN: Added by weizengke, 2014/3/5 for 全局去使能guet-vjudge remote judge*/
+DEFUN(cmd_guet_judge_remote_judge_enable_st, (char*)"guet-judge remote-judge enable",
+		 (char*)"guet-judge remote-judge enable", guet_judge_enable_remote_judge_st)
+{
+	extern int guet_remote_enable;
+
+	if (OS_YES == guet_remote_enable)
+	{
+		printf("Info: guet-remote-judge is already enable.\r\n");
+		return OS_ERR;
+	}
+
+	int ret = WritePrivateProfileString("GUET_DEPT3","remote_enable","1",INI_filename);
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "WritePrivateProfileString return %u..", ret);
+
+	if (ret != 1)
+	{
+		printf("Error: guet-remote-judge enable failed.\r\n");
+		return OS_ERR;
+	}
+
+	guet_remote_enable = OS_YES;
+}
+
+/* BEGIN: Added by weizengke, 2014/3/5 for 全局去使能guet-vjudge remote judge*/
+DEFUN(cmd_undo_guet_judge_remote_judge_enable_st, (char*)"undo guet-judge remote-judge enable",
+		 (char*)"undo guet-judge remote-judge enable", undo_guet_judge_enable_remote_judge_st)
+{
+	extern int guet_remote_enable;
+
+	if (OS_NO == guet_remote_enable)
+	{
+		printf("Info: guet-remote-judge is already disable.\r\n");
+		return OS_ERR;
+	}
+
+	int ret = WritePrivateProfileString("GUET_DEPT3","remote_enable","0",INI_filename);
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "WritePrivateProfileString return %u..", ret);
+
+	if (ret != 1)
+	{
+		printf("Error: guet-remote-judge disable failed.\r\n");
+		return OS_ERR;
+	}
+
+	guet_remote_enable = OS_NO;
+}
+
+/* BEGIN: Added by weizengke, 2014/3/5 for 全局去使能hdu-vjudge remote judge*/
+DEFUN(cmd_hdu_judge_remote_judge_enable_st, (char*)"hdu-judge remote-judge enable",
+		 (char*)"hdu-judge remote-judge enable", hdu_judge_enable_remote_judge_st)
+{
+	extern int hdu_remote_enable;
+
+	if (OS_YES == hdu_remote_enable)
+	{
+		printf("Info: hdu-remote-judge is already enable.\r\n");
+		return OS_ERR;
+	}
+
+	int ret = WritePrivateProfileString("HDU","remote_enable","1",INI_filename);
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "WritePrivateProfileString return %u..", ret);
+
+	if (ret != 1)
+	{
+		printf("Error: hdu-remote-judge enable failed.\r\n");
+		return OS_ERR;
+	}
+
+	hdu_remote_enable = OS_YES;
+}
+
+/* BEGIN: Added by weizengke, 2014/3/5 for 全局去使能guet-vjudge remote judge*/
+DEFUN(cmd_undo_hdu_judge_remote_judge_enable_st, (char*)"undo hdu-judge remote-judge enable",
+		 (char*)"undo hdu-judge remote-judge enable", undo_hdu_judge_enable_remote_judge_st)
+{
+	extern int hdu_remote_enable;
+
+	if (OS_NO == hdu_remote_enable)
+	{
+		printf("Info: hdu-remote-judge is already disable.\r\n");
+		return OS_ERR;
+	}
+
+	int ret = WritePrivateProfileString("HDU","remote_enable","0",INI_filename);
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "WritePrivateProfileString return %u..", ret);
+
+	if (ret != 1)
+	{
+		printf("Error: hdu-remote-judge disable failed.\r\n");
+		return OS_ERR;
+	}
+
+	hdu_remote_enable = OS_NO;
+}
+
+/* BEGIN: Added by weizengke, 2014/3/5 judge account config*/
+DEFUN(cmd_hdu_judge_username_password_st, (char*)"hdu-judge username STRING<1-24> password STRING<1-24>",
+		(char*)"hdu-judge username and password", hdu_judge_username_password_st)
+{
+	char name[25] = {0};
+	char psw[25]={0};
+	extern char hdu_username[];
+	extern char hdu_password[];
+
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "%d %s %s %s %s %s.\n", argc, argv[0], argv[1], argv[2], argv[3], argv[4]);
+
+	strcpy(name, argv[2]);
+	strcpy(psw, argv[4]);
+
+	int ret = WritePrivateProfileString("HDU","username",name,INI_filename);
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "WritePrivateProfileString return %u..", ret);
+
+	if (ret != 1)
+	{
+		printf("Error: set hdu-judge username failed.\r\n");
+		return OS_ERR;
+	}
+
+	ret = WritePrivateProfileString("HDU","password",psw,INI_filename);
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "WritePrivateProfileString return %u..", ret);
+
+	if (ret != 1)
+	{
+		printf("Error: set hdu-judge password failed.\r\n");
+		/* 回滚 */
+		(void)WritePrivateProfileString("HDU","username",hdu_username,INI_filename);
+
+		return OS_ERR;
+	}
+
+	strcpy(hdu_username, name);
+	strcpy(hdu_password, psw);
+
+}
+/* BEGIN: Added by weizengke, 2014/3/5 judge account config*/
+DEFUN(cmd_guet_judge_username_password_st, (char*)"guet-judge username STRING<1-24> password STRING<1-24>",
+		(char*)"guet-judge username and password", guet_judge_username_password_st)
+{
+	char name[25] = {0};
+	char psw[25]={0};
+
+	extern char guet_username[];
+	extern char guet_password[];
+
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "%d %s %s %s %s %s.\n", argc, argv[0], argv[1], argv[2], argv[3], argv[4]);
+
+	strcpy(name, argv[2]);
+	strcpy(psw, argv[4]);
+
+	int ret = WritePrivateProfileString("GUET_DEPT3","username",name,INI_filename);
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "WritePrivateProfileString return %u..", ret);
+
+	if (ret != 1)
+	{
+		printf("Error: set guet-judge username failed.\r\n");
+		return OS_ERR;
+	}
+
+	ret = WritePrivateProfileString("GUET_DEPT3","password",psw,INI_filename);
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "WritePrivateProfileString return %u..", ret);
+
+	if (ret != 1)
+	{
+		printf("Error: set hdu-judge password failed.\r\n");
+		/* 回滚 */
+		(void)WritePrivateProfileString("GUET_DEPT3","username",guet_username,INI_filename);
+
+		return OS_ERR;
+	}
+
+	strcpy(guet_username, name);
+	strcpy(guet_password, psw);
+
+}
 
 /* BEGIN: Added by weizengke, 2014/3/3 reset */
 DEFUN(cmd_reboot_st, (char*)"reboot", (char*)"reboot", reboot_st)
@@ -707,6 +882,10 @@ void cmd_install()
 
 	cmd_reg_newcmdelement(CMD_ELEM_ID_HDUJUDGE,		CMD_ELEM_TYPE_KEY,			"hdu-judge",		"HDU-Judge");
 	cmd_reg_newcmdelement(CMD_ELEM_ID_GUETJUDGE,		CMD_ELEM_TYPE_KEY,			"guet-judge",		"GUET-Judge");
+	cmd_reg_newcmdelement(CMD_ELEM_ID_REMOTE_JUDGE,	CMD_ELEM_TYPE_KEY,			"remote-judge",		"Remote-Judge");
+	cmd_reg_newcmdelement(CMD_ELEM_ID_USERNAME, 		CMD_ELEM_TYPE_KEY,			"username", 		"Username");
+	cmd_reg_newcmdelement(CMD_ELEM_ID_PASSWORD,		CMD_ELEM_TYPE_KEY,			"password",			"Password");
+
 
 	cmd_reg_newcmdelement(CMD_ELEM_ID_STATUS,		CMD_ELEM_TYPE_KEY,			"status",			"Status");
 
@@ -778,6 +957,14 @@ void cmd_install()
 	install_element(&cmd_undo_guet_judge_enable_st);
 	install_element(&cmd_hdu_judge_enable_st);
 	install_element(&cmd_undo_hdu_judge_enable_st);
+
+	install_element(&cmd_guet_judge_remote_judge_enable_st);
+	install_element(&cmd_undo_guet_judge_remote_judge_enable_st);
+	install_element(&cmd_hdu_judge_remote_judge_enable_st);
+	install_element(&cmd_undo_hdu_judge_remote_judge_enable_st);
+
+	install_element(&cmd_guet_judge_username_password_st);
+	install_element(&cmd_hdu_judge_username_password_st);
 
 	install_element(&cmd_reboot_st);
 	// ---------------------------------------------------

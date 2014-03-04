@@ -918,8 +918,8 @@ int Judge_Remote()
 	{
 		if (0 == strcmp(GL_ojname.c_str(),"HDU"))
 		{
-			pdt_debug_print("virtual-judge HDU.(vjudge_enable=%u, remote_anable=%d,port=%d,ip=%s)",
-							hdu_vjudge_enable, hdu_remote_enable, hdu_sockport,hdu_judgerIP);
+			pdt_debug_print("virtual-judge HDU.(vjudge_enable=%u,remote_enable=%d)",
+							hdu_vjudge_enable, hdu_remote_enable);
 
 			if (hdu_vjudge_enable == OS_NO)
 			{
@@ -929,6 +929,8 @@ int Judge_Remote()
 
 			if (OS_YES == hdu_remote_enable)
 			{
+				pdt_debug_print("Send to remote judger(%s:%d).", hdu_judgerIP, hdu_sockport);
+
 				ret = Judge_SendToJudger(hdu_sockport, hdu_judgerIP);
 				if (OS_OK == ret)
 				{
@@ -946,7 +948,8 @@ int Judge_Remote()
 
 		if (0 == strcmp(GL_ojname.c_str(),"GUET_DEPT3"))
 		{
-			pdt_debug_print("virtual-judge GUET_DEPT3.(vjudge_enable=%u,remote_anable=%d,port=%d,ip=%s)",guet_vjudge_enable, guet_remote_enable, guet_sockport,guet_judgerIP);
+			pdt_debug_print("virtual-judge GUET_DEPT3.(vjudge_enable=%u,remote_anable=%d)",
+							guet_vjudge_enable, guet_remote_enable);
 
 			if (guet_vjudge_enable == OS_NO)
 			{
@@ -956,6 +959,8 @@ int Judge_Remote()
 
 			if (OS_YES == guet_remote_enable)
 			{
+				pdt_debug_print("Send to remote judger(%s:%d).", guet_judgerIP, guet_sockport);
+
 				ret = Judge_SendToJudger(guet_sockport, guet_judgerIP);
 				if (OS_OK == ret)
 				{
@@ -985,7 +990,7 @@ int Judge_Proc(int solutionId)
 
 	write_log(JUDGE_INFO,"Enter Judge_Proc. (solutionId=%d)", solutionId);
 
-	resetVal();//ÖØÖÃ
+	resetVal();
 
 	ret = SQL_getSolutionInfo(&isExist);
 	if (OS_ERR == ret || OS_NO == isExist)
