@@ -209,7 +209,7 @@ void InitConfig()
 	GetPrivateProfileString("GUET_DEPT3","judgerIP","127.0.0.1",guet_judgerIP,sizeof(guet_judgerIP),INI_filename);
 	guet_sockport=GetPrivateProfileInt("GUET_DEPT3","socketport",7706,INI_filename);
 	guet_remote_enable=GetPrivateProfileInt("GUET_DEPT3","remote_enable",OS_NO,INI_filename);
-	guet_vjudge_enable=GetPrivateProfileInt("HDU","guet_vjudge_enable",OS_NO,INI_filename);
+	guet_vjudge_enable=GetPrivateProfileInt("GUET_DEPT3","vjudge_enable",OS_NO,INI_filename);
 
 	write_log(JUDGE_INFO,"Socketport:%d, Data:%s, Workpath:%s",port,dataPath,workPath);
 	write_log(JUDGE_INFO,"MySQL:%s %s %s %s %d",Mysql_url,Mysql_username,Mysql_password,Mysql_table,Mysql_port);
@@ -900,18 +900,22 @@ int Judge_SendToJudger(int port,char *ip)
 	return OS_OK;
 }
 
+int Judge_IsVirtualJudgeEnable()
+{
+	if (GL_vjudge_enable == OS_YES)
+	{
+		return OS_YES;
+	}
+
+	return OS_NO;
+}
+
 int Judge_Remote()
 {
 	int ret = OS_OK;
 
 	do
 	{
-		if (GL_vjudge_enable == OS_NO)
-		{
-			pdt_debug_print("Error: virtual-judge is not enable.");
-			return OS_ERR;
-		}
-
 		if (0 == strcmp(GL_ojname.c_str(),"HDU"))
 		{
 			pdt_debug_print("virtual-judge HDU.(vjudge_enable=%u, remote_anable=%d,port=%d,ip=%s)",
@@ -928,8 +932,8 @@ int Judge_Remote()
 				ret = Judge_SendToJudger(hdu_sockport, hdu_judgerIP);
 				if (OS_OK == ret)
 				{
-					/* 这里返回ERR, 由远程judger继续执行 */
-					return OS_ERR;
+					/* virdict置quieue , 由远程judger继续执行 */
+					GL_verdictId = V_Q;
 				}
 
 				return ret;
@@ -955,8 +959,8 @@ int Judge_Remote()
 				ret = Judge_SendToJudger(guet_sockport, guet_judgerIP);
 				if (OS_OK == ret)
 				{
-					/* 这里返回ERR, 由远程judger继续执行 */
-					return OS_ERR;
+					/* virdict置quieue , 由远程judger继续执行 */
+					GL_verdictId = V_Q;
 				}
 
 				return ret;
@@ -1022,18 +1026,28 @@ int Judge_Proc(int solutionId)
 	if (OS_YES == GL_vjudge)
 	{
 		#if(JUDGE_VIRTUAL == VOS_YES)
-		if (OS_OK != Judge_Remote())
+
+		if (OS_YES == Judge_IsVirtualJudgeEnable())
 		{
-			GL_verdictId = V_SK;
-			pdt_debug_print("virtua-judge is fail...");
+			if (OS_OK != Judge_Remote())
+			{
+				GL_verdictId = V_SK;
+				pdt_debug_print("virtua-judge is fail...");
+			}
 		}
+		else
+		{
+			pdt_debug_print("Error: virtual-judge is not enable.");
+			GL_verdictId = V_SK;
+		}
+
 		#else
 		GL_verdictId = V_SK;
 		pdt_debug_print("virtua-judge is not support.");
 		#endif
 
 		g_dwCode = 0;
-		GL_testcase = 0;
+		GL_testcase = 0;  /* 后续可能不填0 */
 
 	}
 	else
