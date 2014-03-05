@@ -819,7 +819,7 @@ DEFUN(cmd_guet_judge_username_password_st, (char*)"guet-judge username STRING<1-
 
 	if (ret != 1)
 	{
-		printf("Error: set hdu-judge password failed.\r\n");
+		printf("Error: set guet-judge password failed.\r\n");
 		/* »Ø¹ö */
 		(void)WritePrivateProfileString("GUET_DEPT3","username",guet_username,INI_filename);
 
@@ -828,6 +828,87 @@ DEFUN(cmd_guet_judge_username_password_st, (char*)"guet-judge username STRING<1-
 
 	strcpy(guet_username, name);
 	strcpy(guet_password, psw);
+
+}
+/* BEGIN: Added by weizengke, 2014/3/5 judge judger config*/
+DEFUN(cmd_hdu_judge_ip_port_st, (char*)"hdu-judge ip STRING<1-24> port INTEGER<1-65535>",
+		(char*)"hdu-judge ip and port", hdu_judge_ip_port_st)
+{
+	char ip[25] = {0};
+	char port[20] = {0};
+
+	extern char hdu_judgerIP[];
+	extern int hdu_sockport;
+
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "%d %s %s %s %s %s.\n", argc, argv[0], argv[1], argv[2], argv[3], argv[4]);
+
+	strcpy(ip, argv[2]);
+	strcpy(port, argv[4]);
+
+	int ret = WritePrivateProfileString("HDU","judgerIP",ip,INI_filename);
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "WritePrivateProfileString return %u..", ret);
+
+	if (ret != 1)
+	{
+		printf("Error: set hdu-judge judgerIP failed.\r\n");
+		return OS_ERR;
+	}
+
+	ret = WritePrivateProfileString("HDU","socketport",port,INI_filename);
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "WritePrivateProfileString return %u..", ret);
+
+	if (ret != 1)
+	{
+		printf("Error: set hdu-judge socketport failed.\r\n");
+		/* »Ø¹ö */
+		(void)WritePrivateProfileString("HDU","judgerIP",hdu_judgerIP,INI_filename);
+
+		return OS_ERR;
+	}
+
+	strcpy(hdu_judgerIP, ip);
+	hdu_sockport = atoi(port);
+
+}
+
+/* BEGIN: Added by weizengke, 2014/3/5 judge judger config*/
+DEFUN(cmd_guet_judge_ip_port_st, (char*)"guet-judge ip STRING<1-24> port INTEGER<1-65535>",
+		(char*)"guet-judge ip and port", guet_judge_ip_port_st)
+{
+	char ip[25] = {0};
+	char port[20] = {0};
+
+	extern char guet_judgerIP[];
+	extern int guet_sockport;
+
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "%d %s %s %s %s %s.\n", argc, argv[0], argv[1], argv[2], argv[3], argv[4]);
+
+	strcpy(ip, argv[2]);
+	strcpy(port, argv[4]);
+
+	int ret = WritePrivateProfileString("GUET_DEPT3","judgerIP",ip,INI_filename);
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "WritePrivateProfileString return %u..", ret);
+
+	if (ret != 1)
+	{
+		printf("Error: set guet-judge judgerIP failed.\r\n");
+		return OS_ERR;
+	}
+
+	ret = WritePrivateProfileString("GUET_DEPT3","socketport",port,INI_filename);
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "WritePrivateProfileString return %u..", ret);
+
+	if (ret != 1)
+	{
+		printf("Error: set guet-judge socketport failed.\r\n");
+		/* »Ø¹ö */
+		(void)WritePrivateProfileString("GUET_DEPT3","judgerIP",guet_judgerIP,INI_filename);
+
+		return OS_ERR;
+	}
+
+	strcpy(guet_judgerIP, ip);
+	guet_sockport = atoi(port);
 
 }
 
@@ -868,17 +949,17 @@ DEFUN(cmd_display_judge_brief_st, (char*)"display judge brief",
 	printf("  Global Virtual Judge Is %s\r\n",
 		  (GL_vjudge_enable==OS_YES)?"Enable":"Disable");
 	printf("  Judger | Account | Password | Status | Remote |"
-		   " Judger-IP | J-Port\r\n");
+		   "   Judger-IP   | J-Port\r\n");
 	printf("  -------------------------------------------------"
 		   "------------------------\r\n");
 
-	printf(" %-8s %-10s %-10s %-8s %-8s %-10s %-8d\r\n",
+	printf(" %-8s %-10s %-10s %-8s %-8s %-15s %-8d\r\n",
 		  " HDU ", hdu_username, hdu_password,
 		   (hdu_vjudge_enable==OS_YES)?"Enable":"Disable",
 		   (hdu_remote_enable==OS_YES)?"Enable":"Disable",
 		   hdu_judgerIP, hdu_sockport);
 
-	printf(" %-8s %-10s %-10s %-8s %-8s %-10s %-8d\r\n",
+	printf(" %-8s %-10s %-10s %-8s %-8s %-15s %-8d\r\n",
 		  " GUET3", guet_username, guet_password,
 		   (guet_vjudge_enable==OS_YES)?"Enable":"Disable",
 		   (guet_remote_enable==OS_YES)?"Enable":"Disable",
@@ -968,6 +1049,8 @@ void cmd_install()
 
 	cmd_reg_newcmdelement(CMD_ELEM_ID_REBOOT,		CMD_ELEM_TYPE_KEY,			"reboot",			"Reboot Judge kernel");
 	cmd_reg_newcmdelement(CMD_ELEM_ID_BRIEF,			CMD_ELEM_TYPE_KEY,			"brief",			"Brief Information");
+	cmd_reg_newcmdelement(CMD_ELEM_ID_IP,			CMD_ELEM_TYPE_KEY,			"ip",			    "IP");
+	cmd_reg_newcmdelement(CMD_ELEM_ID_PORT,			CMD_ELEM_TYPE_KEY,			"port",			    "Port");
 
 	// install command
 	// ---------------------------------------------------
@@ -1037,6 +1120,9 @@ void cmd_install()
 	install_element(&cmd_hdu_judge_username_password_st);
 
 	install_element(&cmd_display_judge_brief_st);
+
+	install_element(&cmd_guet_judge_ip_port_st);
+	install_element(&cmd_hdu_judge_ip_port_st);
 
 	install_element(&cmd_reboot_st);
 	// ---------------------------------------------------
