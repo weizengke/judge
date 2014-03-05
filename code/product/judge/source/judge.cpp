@@ -139,7 +139,7 @@ int InitSocket()
 		}
 	}
 
-	pdt_debug_print("Info: Socket Bind port(%u) ok.", port);
+	pdt_debug_print("Info: Socket bind port(%u) ok.", port);
 
 	write_log(JUDGE_INFO,"Bind success...");
 
@@ -162,7 +162,7 @@ int InitSocket()
 		return 0;
 	}
 
-	pdt_debug_print("Info: Socket Listen ok.");
+	pdt_debug_print("Info: Socket listen ok.");
 	write_log(JUDGE_INFO,"Listen success...");
 
 	return 1;
@@ -877,7 +877,7 @@ int Judge_SendToJudger(int port,char *ip)
     sClient_hdu = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if(sClient_hdu == INVALID_SOCKET)
 	{
-		pdt_debug_print("Judge_SendToJudger socket error\n");
+		pdt_debug_print("Judge_SendToJudger socket error");
 		return OS_ERR;
 	}
 
@@ -888,7 +888,7 @@ int Judge_SendToJudger(int port,char *ip)
 
 	if(connect(sClient_hdu,(sockaddr*)&servAddr,sizeof(servAddr))==SOCKET_ERROR)
 	{
-		pdt_debug_print("Judge_SendToJudger connect error\n");
+		pdt_debug_print("Judge_SendToJudger connect error");
 		closesocket(sClient_hdu);
 		return OS_ERR;
 	}

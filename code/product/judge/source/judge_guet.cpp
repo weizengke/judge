@@ -43,6 +43,7 @@ int guet_sockport = 7706;
 int guet_remote_enable=OS_NO;
 int guet_vjudge_enable=OS_NO;
 
+
 ULONG GUET_getLanguageNameByID(ULONG id, UCHAR *ucLanguageName)
 {
 	if (id < 0 || id >= sizeof(g_aucGUETLanguageName)/VJUDGE_MAX_LANG_SIZE)

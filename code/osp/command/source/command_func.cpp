@@ -63,7 +63,7 @@ DEFUN(cmd_display_computer_st, (char*)"display computer", (char*)"Display comput
 
 DEFUN(cmd_display_version_st, (char*)"display version", (char*)"Display device version", display_version)
 {
-	printf("Version: 1.0.1\n");
+	printf("Version: 1.0.2\n");
 	return 0;
 }
 
@@ -789,6 +789,7 @@ DEFUN(cmd_hdu_judge_username_password_st, (char*)"hdu-judge username STRING<1-24
 	strcpy(hdu_password, psw);
 
 }
+
 /* BEGIN: Added by weizengke, 2014/3/5 judge account config*/
 DEFUN(cmd_guet_judge_username_password_st, (char*)"guet-judge username STRING<1-24> password STRING<1-24>",
 		(char*)"guet-judge username and password", guet_judge_username_password_st)
@@ -830,6 +831,74 @@ DEFUN(cmd_guet_judge_username_password_st, (char*)"guet-judge username STRING<1-
 
 }
 
+/* BEGIN: Added by weizengke, 2014/3/5 judge config brief*/
+DEFUN(cmd_display_judge_brief_st, (char*)"display judge brief",
+		(char*)"display judge brief", display_judge_brief_st)
+{
+	extern int GL_vjudge_enable;
+
+	extern char hdu_username[];
+	extern char hdu_password[];
+	extern int hdu_vjudge_enable;
+	extern int hdu_remote_enable;
+	extern int hdu_sockport;
+	extern char hdu_judgerIP[];
+
+	extern char guet_username[];
+	extern char guet_password[];
+	extern int guet_vjudge_enable;
+	extern int guet_remote_enable;
+	extern int guet_sockport;
+	extern char guet_judgerIP[];
+
+	extern int port;
+	extern char Mysql_url[];
+	extern char Mysql_username[];
+	extern char Mysql_password[];
+	extern char Mysql_table[];
+	extern int	Mysql_port;
+
+	printf("#Local Judger Info\r\n");
+	printf("  Port: %d\r\n", port);
+
+	printf(" =================================================="
+		   "========================\r\n");
+
+	printf("#Virtual Judger Info\r\n");
+	printf("  Global Virtual Judge Is %s\r\n",
+		  (GL_vjudge_enable==OS_YES)?"Enable":"Disable");
+	printf("  Judger | Account | Password | Status | Remote |"
+		   " Judger-IP | J-Port\r\n");
+	printf("  -------------------------------------------------"
+		   "------------------------\r\n");
+
+	printf(" %-8s %-10s %-10s %-8s %-8s %-10s %-8d\r\n",
+		  " HDU ", hdu_username, hdu_password,
+		   (hdu_vjudge_enable==OS_YES)?"Enable":"Disable",
+		   (hdu_remote_enable==OS_YES)?"Enable":"Disable",
+		   hdu_judgerIP, hdu_sockport);
+
+	printf(" %-8s %-10s %-10s %-8s %-8s %-10s %-8d\r\n",
+		  " GUET3", guet_username, guet_password,
+		   (guet_vjudge_enable==OS_YES)?"Enable":"Disable",
+		   (guet_remote_enable==OS_YES)?"Enable":"Disable",
+		   guet_judgerIP, guet_sockport);
+
+	printf(" =================================================="
+		   "========================\r\n");
+
+	printf("#MySQL Info\r\n"
+		  "  URL       : %s\r\n"
+		  "  Username  : %s\r\n"
+		  "  Password  : %s\r\n"
+		  "  Table-Name: %s\r\n"
+		  "  Port      : %d\r\n",
+		Mysql_url,Mysql_username,Mysql_password,Mysql_table,Mysql_port);
+
+	printf(" =================================================="
+		   "========================\r\n");
+
+}
 /* BEGIN: Added by weizengke, 2014/3/3 reset */
 DEFUN(cmd_reboot_st, (char*)"reboot", (char*)"reboot", reboot_st)
 {
@@ -847,9 +916,9 @@ void cmd_install()
 	/* reg cmd-element */
 	cmd_reg_newcmdelement(CMD_ELEM_ID_CR, 			CMD_ELEM_TYPE_END,			CMD_END,			    ""               );
 	cmd_reg_newcmdelement(CMD_ELEM_ID_STRING1TO24,  CMD_ELEM_TYPE_STRING,       "STRING<1-24>",     "String lenth range form 1 to 24");
-	cmd_reg_newcmdelement(CMD_ELEM_ID_STRING1TO65535,  CMD_ELEM_TYPE_STRING,    "STRING<1-65535>",     "String lenth range form 1 to 65535");
+	cmd_reg_newcmdelement(CMD_ELEM_ID_STRING1TO65535,  CMD_ELEM_TYPE_STRING,    "STRING<1-65535>",  "String lenth range form 1 to 65535");
 	cmd_reg_newcmdelement(CMD_ELEM_ID_INTEGER1TO24, CMD_ELEM_TYPE_INTEGER,      "INTEGER<1-100>",   "Integer range form 1 to 100");
-	cmd_reg_newcmdelement(CMD_ELEM_ID_INTEGER1TO65535, CMD_ELEM_TYPE_INTEGER,   "INTEGER<1-65535>",   "Integer range form 1 to 65535");
+	cmd_reg_newcmdelement(CMD_ELEM_ID_INTEGER1TO65535, CMD_ELEM_TYPE_INTEGER,   "INTEGER<1-65535>", "Integer range form 1 to 65535");
 	cmd_reg_newcmdelement(CMD_ELEM_ID_COMMAND_TREE, CMD_ELEM_TYPE_KEY,          "command-tree",     "Command tree");
 
 	cmd_reg_newcmdelement(CMD_ELEM_ID_CURRENT_CFG,  CMD_ELEM_TYPE_KEY,          "current-configuration",     "Current Configuration");
@@ -898,6 +967,7 @@ void cmd_install()
 	cmd_reg_newcmdelement(CMD_ELEM_ID_CONFIG,		CMD_ELEM_TYPE_KEY,			"config",			"Set Config section name value");
 
 	cmd_reg_newcmdelement(CMD_ELEM_ID_REBOOT,		CMD_ELEM_TYPE_KEY,			"reboot",			"Reboot Judge kernel");
+	cmd_reg_newcmdelement(CMD_ELEM_ID_BRIEF,			CMD_ELEM_TYPE_KEY,			"brief",			"Brief Information");
 
 	// install command
 	// ---------------------------------------------------
@@ -965,6 +1035,8 @@ void cmd_install()
 
 	install_element(&cmd_guet_judge_username_password_st);
 	install_element(&cmd_hdu_judge_username_password_st);
+
+	install_element(&cmd_display_judge_brief_st);
 
 	install_element(&cmd_reboot_st);
 	// ---------------------------------------------------
