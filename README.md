@@ -17,8 +17,11 @@ http://acm.hdu.edu.cn 以及http://onlinejudge.guet.edu.cn/guetoj。
 
 
 Releases Dashboard: 
+
 2011-10-30：Judge Kernel v1.0.0  （Online Judge）   
+
 2014-02-09：Judge Kernel v1.0.1  （GUET_DEPT3 Virtual Judge） 
+
 2014-03-03：Judge Kernel v1.0.2  （Judger Configuration Management &  Distributed  Virtual Judger）
 
 
