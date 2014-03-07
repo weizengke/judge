@@ -1,4 +1,4 @@
-JungleOS
+Jungle
 ========
 
 just for func:
