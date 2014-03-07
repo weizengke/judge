@@ -1,34 +1,14 @@
-Jungle
+Jungle: The best online judge kernel on windows platform.
 ========
 
-just for func:
+支持如下功能：
+(1) Online Judge Kernel理论上支持所有可命令行编译和运行的程序语言；支持分布式部署；支持动态添加Online Jungle平台程序语言；
+(2) Online Judge Kernel当前版本支持两个OJ平台的Virtual Judge：
+http://acm.hdu.edu.cn 以及http://onlinejudge.guet.edu.cn/guetoj。
+(3) Online Judge Kernel支持命令行管理，命令行特性支持命令联想、自动补全等功能，极大方便了系统的管理。
 
-Function:
-
-① Common Command-Line System
-
-② Online Judge Platform System , work with  GDOJ Project(https://github.com/weizengke/gdoj)
-
-③  Virtual Judge For HDUOJ  , GUET_DEPT3 OJ
-
-Project site:   http://weizengke.com/archives/143
-
-Environment：Windows， MinGW , VS2010
-
-
-usefull site:
-
-pexports:
-http://202.97.199.19/1/ishare.down.sina.com.cn/21841154.zip?ssig=Cm3GzOiS6u&Expires=1384531200&KID=sina,ishare&fn=Pexports-0.43.zip
-
-pcre:
-http://www.airesoft.co.uk/pcre
-
-http://www.airesoft.co.uk/files/pcre/pcre-8.33.zip
-
-curl:
-http://curl.haxx.se/gknw.net/7.33.0/dist-w64/curl-7.33.0-devel-mingw64.7z
-
-MinGW:
-http://jaist.dl.sourceforge.net/project/mingwbuilds/mingw-builds-install/mingw-builds-install.exe
+Releases Dashboard:：
+2011-10-30: Judge Kernel v1.0.0  （Online Judge）  
+2014-02-09：Judge Kernel v1.0.1  （GUET_DEPT3 Virtual Judge）
+2014-03-03：Judge Kernel v1.0.2  （Judger Configuration Management &  Distributed  Virtual Judger）
 
