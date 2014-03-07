@@ -13,12 +13,12 @@ http://acm.hdu.edu.cn 以及http://onlinejudge.guet.edu.cn/guetoj。
 (3) Online Judge Kernel支持命令行管理，命令行特性支持命令联想、自动补全等功能，极大方便了系统的管理。
 
 
-Releases Dashboard:：
+具体配置和部署方法参见doc文档
 
-2011-10-30: Judge Kernel v1.0.0  （Online Judge）  
 
-2014-02-09：Judge Kernel v1.0.1  （GUET_DEPT3 Virtual Judge）
-
+Releases Dashboard: 
+2011-10-30：Judge Kernel v1.0.0  （Online Judge）   
+2014-02-09：Judge Kernel v1.0.1  （GUET_DEPT3 Virtual Judge） 
 2014-03-03：Judge Kernel v1.0.2  （Judger Configuration Management &  Distributed  Virtual Judger）
 
 
