@@ -12,7 +12,7 @@ extern int  Mysql_port;
 extern char Mysql_Character[255];  //±àÂë
 
 
-extern int InitMySQL();
+extern int SQL_InitMySQL();
 extern int SQL_getSolutionSource();
 extern int SQL_getSolutionInfo(int *pIsExist);
 extern int SQL_getProblemInfo();

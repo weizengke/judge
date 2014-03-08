@@ -436,9 +436,8 @@ static int match_unique_string(struct para_desc **match, char *str, int size)
 
 int cmd_get_nth_elem_pos(char *string, int n, int *pos)
 {
-	int str_len;
 	int m = 0;
-	char *cur, *start;
+	char *cur, *pre, *start;
 
 	*pos = 0;
 
@@ -447,9 +446,15 @@ int cmd_get_nth_elem_pos(char *string, int n, int *pos)
 		return CMD_ERR;
 
 	cur = string;
+	pre = NULL;
+
 	// skip white spaces
 	while (isspace((int) *cur) && *cur != '\0')
+	{
+		pre = cur;
 		cur++;
+	}
+
 	// only white spaces
 	if (*cur == '\0')
 		return CMD_ERR;
@@ -462,14 +467,15 @@ int cmd_get_nth_elem_pos(char *string, int n, int *pos)
 		start = cur;
 		while (!(isspace((int) *cur) || *cur == '\r' || *cur == '\n') &&
 			*cur != '\0')
+		{
+			pre = cur;
 			cur++;
-
-		str_len = cur - start;
+		}
 
 		if (n == m)
 		{
 			*pos = (int)(start - string);
-			return CMD_OK;
+			break;
 		}
 		else
 		{
@@ -478,12 +484,27 @@ int cmd_get_nth_elem_pos(char *string, int n, int *pos)
 
 		while((isspace ((int) *cur) || *cur == '\n' || *cur == '\r') &&
 			*cur != '\0')
+		{
+			pre = cur;
 			cur++;
+		}
 
 		if (*cur == '\0')
-			return CMD_ERR;
+		{
+			/* BEGIN: Added by weizengke, 2014/3/9 修复命令行不完全时，错误位置提示不准确的问题 */
+			*pos = (int)(cur - string);
+
+			if (!isspace ((int) *pre))
+			{
+				*pos += 1;
+			}
+
+			break;
+		}
 
 	}
+
+	return CMD_OK;
 }
 
 /*****************************************************************************
@@ -1136,7 +1157,7 @@ int cmd_complete_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty,
 	return 0;
 }
 
-int cmd_execute_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct para_desc **match, int *match_size, int *match_pos)
+int cmd_execute_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct para_desc **match, int *match_size, int *nomatch_pos)
 {
 	int i;
 	cmd_vector_t *cmd_vec_copy = cmd_vector_copy(cmd_vec);
@@ -1151,7 +1172,7 @@ int cmd_execute_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct para
 	 2. check last matching command parameter in cmd_vec match cmd_vec
 	*/
 
-	*match_pos = -1;
+	*nomatch_pos = -1;
 
 	/* Step 1 */
 	for (i = 0; i < cmd_vector_max(icmd_vec); i++)
@@ -1160,47 +1181,54 @@ int cmd_execute_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct para
 		{
 			/* BEGIN: Added by weizengke, 2013/11/19 这里可以优化，不命中可以不需要再匹配了 */
 			/* 保存在第几个命令字无法匹配 */
-			*match_pos = (*match_pos == -1)?(i):(*match_pos);
+			*nomatch_pos = (*nomatch_pos == -1)?(i):(*nomatch_pos);
 		}
 	}
 
 	/* Step 2 */
 	/*  insert matched command word into match_vec, only insert the next word */
-	for(i = 0; i < cmd_vector_max(cmd_vec_copy); i++) {
-		char *str;
-		struct para_desc *desc;
-		struct cmd_elem_st *elem = NULL;
+	if (*nomatch_pos == -1)
+	{
+		/* BEGIN: Added by weizengke, 2014/3/9 修复命令行不完全时，错误位置提示不准确的问题 */
+		*nomatch_pos = cmd_vector_max(icmd_vec) - 1;
 
-		elem = (struct cmd_elem_st *)cmd_vector_slot(cmd_vec_copy, i);
-		if(elem != NULL) {
-			str = (char*)cmd_vector_slot(icmd_vec, cmd_vector_max(icmd_vec) - 1);
-			desc = (struct para_desc *)cmd_vector_slot(elem->para_vec, cmd_vector_max(icmd_vec) - 1);
+		for(i = 0; i < cmd_vector_max(cmd_vec_copy); i++)
+		{
+			char *str;
+			struct para_desc *desc;
+			struct cmd_elem_st *elem = NULL;
 
-			debug_print_ex(CMD_DEBUG_TYPE_FUNC, "In cmd_execute_command, loop->%d. (str=%s, para=%s, desc=%s)", i, str, desc->para, desc->desc);
+			elem = (struct cmd_elem_st *)cmd_vector_slot(cmd_vec_copy, i);
+			if(elem != NULL) {
+				str = (char*)cmd_vector_slot(icmd_vec, cmd_vector_max(icmd_vec) - 1);
+				desc = (struct para_desc *)cmd_vector_slot(elem->para_vec, cmd_vector_max(icmd_vec) - 1);
 
-			/* modified for command without argv */
-			if (cmd_vector_max(icmd_vec) == cmd_vector_max(elem->para_vec))
-			{
-				/* BEGIN: Added by weizengke, 2013/10/5   PN:for support STRING<a-b> & INTEGER<a-b> */
-				if (CMD_OK == cmd_match_special_string(str, desc->para) ||
-					str != NULL && strncmp(str, desc->para, strlen(str)) == 0)
+				debug_print_ex(CMD_DEBUG_TYPE_FUNC, "In cmd_execute_command, loop->%d. (str=%s, para=%s, desc=%s)", i, str, desc->para, desc->desc);
+
+				/* modified for command without argv */
+				if (cmd_vector_max(icmd_vec) == cmd_vector_max(elem->para_vec))
 				{
-					/* BEGIN: Added by weizengke, 2013/10/6   PN:command exec ambigous, return the last elem (not the <CR>) */
-					match[match_num] = (struct para_desc *)cmd_vector_slot(elem->para_vec, cmd_vector_max(icmd_vec) - 2);
-					/* END:   Added by weizengke, 2013/10/6   PN:None */
+					/* BEGIN: Added by weizengke, 2013/10/5   PN:for support STRING<a-b> & INTEGER<a-b> */
+					if (CMD_OK == cmd_match_special_string(str, desc->para) ||
+						str != NULL && strncmp(str, desc->para, strlen(str)) == 0)
+					{
+						/* BEGIN: Added by weizengke, 2013/10/6   PN:command exec ambigous, return the last elem (not the <CR>) */
+						match[match_num] = (struct para_desc *)cmd_vector_slot(elem->para_vec, cmd_vector_max(icmd_vec) - 2);
+						/* END:   Added by weizengke, 2013/10/6   PN:None */
 
-					debug_print_ex(CMD_DEBUG_TYPE_INFO, "***** In cmd_execute_command, match one **** (match_string=%s)", str, match[match_num]->para);
+						debug_print_ex(CMD_DEBUG_TYPE_INFO, "***** In cmd_execute_command, match one **** (match_string=%s)", str, match[match_num]->para);
 
-					match_num++;
-					match_elem = elem;
+						match_num++;
+						match_elem = elem;
 
+					}
 				}
 			}
 		}
+
 	}
 
 	*match_size = match_num;
-
 
 	cmd_vector_deinit(cmd_vec_copy, 0);
 

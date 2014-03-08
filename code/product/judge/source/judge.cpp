@@ -1,10 +1,17 @@
-//#define   _WIN32_WINNT     0x0500
-
 /*
-For Online Judge Core
 
-Author:Jungle Wei
-Create Date:2011-08
+	Author     : Jungle Wei
+	Create Date: 2011-08
+	Description: For Online Judge Core
+
+	江南春．眉间心上
+
+		夜静寂，
+		枕头欹。
+		念此事都来，
+		无力相回避。
+		谙尽唏嘘尤生泪，
+		眉间心上皆似醉。
 
 */
 
@@ -32,13 +39,13 @@ char INI_filename[] = STARTUP_CFG;
 
 int isDeleteTemp=0;
 int isRestrictedFunction=0;
-int  limitJudge=50;  //裁判队列最大等待数量
-DWORD OutputLimit=10000; //最大输出
-char workPath[MAX_PATH];  //临时工作目录
+int  limitJudge=50;
+DWORD OutputLimit=10000;
+char workPath[MAX_PATH];
 char judgeLogPath[MAX_PATH];
 int JUDGE_LOG_BUF_SIZE = 200;
-char dataPath[MAX_PATH];  //数据
-char logPath[MAX_PATH]="log\\";  //log
+char dataPath[MAX_PATH];
+char logPath[MAX_PATH]="log\\";
 char judgePath[MAX_PATH];
 
 char judge_log_filename[MAX_PATH] = {0};
@@ -53,7 +60,7 @@ typedef struct
 	int solutionId;
 }JUDGE_DATA;
 
-queue <JUDGE_DATA> Q;//全局队列
+queue <JUDGE_DATA> Q; /* 全局队列 */
 
 SOCKET sListen;
 
@@ -61,16 +68,18 @@ char compileCmd_str[BUFFER]={0};
 char runCmd_str[BUFFER]={0};
 
 
-clock_t startt,endt ; //每次run的时间点
+clock_t startt,endt ;  /* 每次run的时间点 */
 
 STARTUPINFO si;
 PROCESS_INFORMATION G_pi = {0};
 PROCESS_INFORMATION G_pi_com = {0};
 
 HANDLE G_job=NULL;
-HANDLE InputFile ;  //父进程输入文件句柄
-HANDLE OutputFile;  //子进程标准输出句柄
-DWORD g_dwCode;	//定义进程状态
+HANDLE InputFile ;  /* 父进程输入文件句柄 */
+HANDLE OutputFile;  /* 子进程标准输出句柄 */
+DWORD g_dwCode;  	/* 定义进程状态 */
+
+extern void pdt_debug_print(const char *format, ...);
 
 ULONG Judge_DebugSwitch(ULONG st)
 {
@@ -80,36 +89,32 @@ ULONG Judge_DebugSwitch(ULONG st)
 }
 /* END HDU VJUDGE */
 
-extern void pdt_debug_print(const char *format, ...);
+/* #pragma comment(linker, "/subsystem:windows /ENTRY:mainCRTStartup") */
 
-
-//#pragma comment(linker, "/subsystem:windows /ENTRY:mainCRTStartup") // 设置连接器选项
-
-int InitSocket()
+int Judge_InitSocket()
 {
 	write_log(JUDGE_INFO,"Start initialization of Socket...");
 
 	WSADATA wsaData;
     WORD sockVersion = MAKEWORD(2, 2);
-	//加载winsock库
+
 	if(WSAStartup(sockVersion, &wsaData) != 0)
 		return 0;
-	// 创建套节字
+
 	sListen = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if(sListen == INVALID_SOCKET)
 	{
 		write_log(JUDGE_SYSTEM_ERROR,"create socket error");
 		return 0;
 	}
-	// 在sockaddr_in结构中装入地址信息
+
 	sockaddr_in sin;
 	sin.sin_family = AF_INET;
-	sin.sin_port = htons(port);	// htons函数 将主机的无符号短整形数转换成网络
-	//字节顺序
+	sin.sin_port = htons(port);
 	sin.sin_addr.S_un.S_addr = INADDR_ANY;
 
 
-	int trybind=50;  //重试bind次数
+	int trybind=50;
 	int ret=0;
 
 	ret = bind(sListen,(LPSOCKADDR)&sin,sizeof(sin));
@@ -169,12 +174,12 @@ int InitSocket()
 }
 //////////////////////////////////////////////////////////////end socket
 
-void Judge_destroy()
+void Judge_Destroy()
 {
 	closesocket(sListen);
 }
 
-void InitConfig()
+void Judge_InitConfigData()
 {
 	port=GetPrivateProfileInt("Tool","Port",PORT,INI_filename);
 	isDeleteTemp=GetPrivateProfileInt("Tool","DeleteTemp",0,INI_filename);
@@ -216,7 +221,7 @@ void InitConfig()
 
 }
 
-void resetVal(){
+void Judge_ResetJudgeStatus(){
 	GL_verdictId=V_AC;
 	GL_contestId=0;
 	GL_time=0;
@@ -227,25 +232,17 @@ void resetVal(){
 	GL_testcase=0;
 }
 
-
-
-
-void InitPath()
+void Judge_InitJudgePath()
 {
 	if( (_access(workPath, 0 )) == -1 )
 	{
 		CreateDirectory(workPath,NULL);
 	}
 
-	//GetPrivateProfileString(lpAppName,lpKeyName,lpDefault,lpReturnedString,nSize,lpFileName);
-	//GetPrivateProfileInt(lpAppName,lpKeyName,nDefault,lpFileName);
-
 	char keyname[100]={0};
 	sprintf(keyname,"Language%d",GL_languageId);
 
 	GetPrivateProfileString("Language",keyname,"",GL_languageName,100,INI_filename);
-
-	//sprintf(keyname,"%s",GL_languageName);
 
 	GetPrivateProfileString("LanguageExt",GL_languageName,"",GL_languageExt,10,INI_filename);
 
@@ -274,33 +271,29 @@ void InitPath()
 	replace_all_distinct(compile_string,"%NAME%",name);
 	replace_all_distinct(compile_string,"%EXT%",GL_languageExt);
 	replace_all_distinct(compile_string,"%EXE%",GL_languageExe);
-	strcpy(compileCmd_str,compile_string.c_str());      //编译命令行
-	//	cout<<CompileCmd_str<<endl;
+	strcpy(compileCmd_str,compile_string.c_str());       /* 编译命令行 */
 
 	string runcmd_string=runCmd_str;
 	replace_all_distinct(runcmd_string,"%PATH%",workPath);
 	replace_all_distinct(runcmd_string,"%NAME%",name);
 	replace_all_distinct(runcmd_string,"%EXT%",GL_languageExt);
 	replace_all_distinct(runcmd_string,"%EXE%",GL_languageExe);
-	strcpy(runCmd_str,runcmd_string.c_str());			//运行命令行
-	//	cout<<RunCmd_str<<endl;
+	strcpy(runCmd_str,runcmd_string.c_str());			 /* 运行命令行*/
 
 	string sourcepath_string=sourcePath;
 	replace_all_distinct(sourcepath_string,"%PATH%",workPath);
 	replace_all_distinct(sourcepath_string,"%NAME%",name);
 	replace_all_distinct(sourcepath_string,"%EXT%",GL_languageExt);
-	strcpy(sourcePath,sourcepath_string.c_str());		//源程序路径
-	//  cout<<SourcePath<<endl;
+	strcpy(sourcePath,sourcepath_string.c_str());		 /* 源程序路径*/
 
 	string exepath_string=exePath;
 	replace_all_distinct(exepath_string,"%PATH%",workPath);
 	replace_all_distinct(exepath_string,"%NAME%",name);
 	replace_all_distinct(exepath_string,"%EXE%",GL_languageExe);
-	strcpy(exePath,exepath_string.c_str());				//可执行文件路径
-	//	cout<<ExePath<<endl;
+	strcpy(exePath,exepath_string.c_str());				 /* 可执行文件路径*/
 
-	sprintf(DebugFile,"%s%s.txt",workPath,name.c_str()); //debug文件路径
-	sprintf(ErrorFile,"%s%s_re.txt",workPath,name.c_str()); //re文件路径
+	sprintf(DebugFile,"%s%s.txt",workPath,name.c_str());  /* debug文件路径*/
+	sprintf(ErrorFile,"%s%s_re.txt",workPath,name.c_str());  /* re文件路径*/
 
 	if( (_access(judgeLogPath, 0 )) == -1 )
 	{
@@ -309,7 +302,6 @@ void InitPath()
 
 	sprintf(judge_log_filename,"%sjudge-log-%d.log",judgeLogPath,GL_solutionId);
 
-	//	cout<<DebugFile<<endl;
 }
 
 void Judge_ShowCfgContent()
@@ -338,7 +330,7 @@ void Judge_ShowCfgContent()
 
 }
 
-HANDLE CreateSandBox()
+HANDLE Judge_CreateSandBox()
 {
 	HANDLE hjob =CreateJobObject(NULL,NULL);
 	if(hjob!=NULL)
@@ -382,11 +374,11 @@ HANDLE CreateSandBox()
 	return NULL;
 }
 
-bool ProcessToSandbox(HANDLE job,PROCESS_INFORMATION p)
+bool Judge_ProcessToSandbox(HANDLE job,PROCESS_INFORMATION p)
 {
 	if(AssignProcessToJobObject(job,p.hProcess))
 	{
-		//顺便调整本进程优先级为高
+		/* 顺便调整本进程优先级为高 */
 		/*
 		HANDLE   hPS   =   OpenProcess(PROCESS_ALL_ACCESS,   false,  p.dwProcessId);
 		if(!SetPriorityClass(hPS,   HIGH_PRIORITY_CLASS))
@@ -405,13 +397,13 @@ bool ProcessToSandbox(HANDLE job,PROCESS_INFORMATION p)
 	return false;
 }
 
-DWORD WINAPI Judge_CompileThread(LPVOID lp) //ac
+DWORD WINAPI Judge_CompileThread(LPVOID lp)
 {
 	STARTUPINFO StartupInfo = {0};
 
 	write_log(JUDGE_INFO,"Enter Judge_CompileThread...");
 
-	SQL_updateSolution(GL_solutionId,V_C,0,0,0); //V_C Compiling
+	SQL_updateSolution(GL_solutionId,V_C,0,0,0);
 
 	system(compileCmd_str);
 
@@ -419,7 +411,7 @@ DWORD WINAPI Judge_CompileThread(LPVOID lp) //ac
 
 	return 0;
 }
-//编译,是否应该防止编译器假死造成的卡死
+
 int Judge_CompileProc()
 {
 
@@ -436,7 +428,7 @@ int Judge_CompileProc()
 
 	write_log(JUDGE_INFO,"Create Judge_CompileThread ok...");
 
-	DWORD status_ = WaitForSingleObject(hThread_com,30000);   //30S 编译时间,返回值大于零说明超时
+	DWORD status_ = WaitForSingleObject(hThread_com,30000);
 	if(status_>0)
 	{
 		write_log(JUDGE_WARNING,"Compile over time_limit");
@@ -445,8 +437,6 @@ int Judge_CompileProc()
 
 	write_log(JUDGE_INFO,"WaitForSingleObject wait time ok...");
 
-
-	//是否正常生成用户的可执行程序
 	if( (_access(exePath, 0 )) != -1 )
 	{
 		/* ok */
@@ -458,7 +448,6 @@ int Judge_CompileProc()
 	}
 }
 
-//是否存在异常
 BOOL Judge_ExistException(DWORD dw)
 {
 	switch(dw)
@@ -514,10 +503,10 @@ BOOL Judge_ExistException(DWORD dw)
 
 DWORD WINAPI Judge_RunProgramThread(LPVOID lp) //ac
 {
-	/// cmd/c solution.exe <data.in >data.out 2>error.txt
-	//ChildIn_Write是子进程的输入句柄，ChildIn_Read是父进程用于写入子进程输入的句柄
+	/* cmd/c solution.exe <data.in >data.out 2>error.txt */
+	/* ChildIn_Write是子进程的输入句柄，ChildIn_Read是父进程用于写入子进程输入的句柄 */
 	HANDLE ChildIn_Read, ChildIn_Write;
-	//ChildOut_Write是子进程的输出句柄，ChildOut_Read是父进程用于读取子进程输出的句柄
+	/*ChildOut_Write是子进程的输出句柄，ChildOut_Read是父进程用于读取子进程输出的句柄*/
 	HANDLE ChildOut_Read, ChildOut_Write;
 
 	SECURITY_ATTRIBUTES saAttr = {0};
@@ -546,14 +535,14 @@ DWORD WINAPI Judge_RunProgramThread(LPVOID lp) //ac
 	{
 		write_log(JUDGE_INFO,"CreateProcess ok...");
 
-		G_job = CreateSandBox();
+		G_job = Judge_CreateSandBox();
 		if(G_job!=NULL)
 		{
-			write_log(JUDGE_INFO,"CreateSandBox ok...");
+			write_log(JUDGE_INFO,"Judge_CreateSandBox ok...");
 
-			if(ProcessToSandbox(G_job,G_pi))
+			if(Judge_ProcessToSandbox(G_job,G_pi))
 			{
-				write_log(JUDGE_INFO,"ProcessToSandbox ok...");
+				write_log(JUDGE_INFO,"Judge_ProcessToSandbox ok...");
 
 				ResumeThread(G_pi.hThread);
 				CloseHandle(G_pi.hThread);
@@ -582,7 +571,7 @@ DWORD WINAPI Judge_RunProgramThread(LPVOID lp) //ac
 				CloseHandle(ChildIn_Write);ChildIn_Write=NULL;
 				CloseHandle(ChildOut_Write);ChildOut_Write=NULL;
 
-				//读取子进程的标准输出，并将其传递给文件输出
+				/* 读取子进程的标准输出，并将其传递给文件输出 */
 				OutputFile= CreateFile(outFileName, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 				if (NULL == OutputFile)
 				{
@@ -622,7 +611,7 @@ DWORD WINAPI Judge_RunProgramThread(LPVOID lp) //ac
 			}
 		}
 		else{
-			write_log(JUDGE_SYSTEM_ERROR,"CreateSandBox Error:%s",GetLastError());
+			write_log(JUDGE_SYSTEM_ERROR,"Judge_CreateSandBox Error:%s",GetLastError());
 		}
 	}
 	else
@@ -635,7 +624,7 @@ DWORD WINAPI Judge_RunProgramThread(LPVOID lp) //ac
 
 int Judge_SpecialJudge(const char *inFile,const char *uOutFile)
 {
-	//return 0 ====Error,return 1 ====Accepted
+	/* return 0 ====Error,return 1 ====Accepted */
 	int judge ;
 	char spj_path[MAX_PATH];
 	sprintf(spj_path,"%s%d\\spj_%d.exe %s %s",dataPath,GL_problemId,GL_problemId,inFile,uOutFile);
@@ -643,12 +632,11 @@ int Judge_SpecialJudge(const char *inFile,const char *uOutFile)
 
 	if (judge == -1)
 	{
-		//printf("system error!") ;
 		return 0;
 	}
 
 	if(judge == 1)
-	{  //spj返回1,表示程序正确
+	{
 		return 1;
 	}
 
@@ -990,7 +978,7 @@ int Judge_Proc(int solutionId)
 
 	write_log(JUDGE_INFO,"Enter Judge_Proc. (solutionId=%d)", solutionId);
 
-	resetVal();
+	Judge_ResetJudgeStatus();
 
 	ret = SQL_getSolutionInfo(&isExist);
 	if (OS_ERR == ret || OS_NO == isExist)
@@ -1001,12 +989,10 @@ int Judge_Proc(int solutionId)
 
 	write_log(JUDGE_INFO,"Do SQL_getSolutionInfo ok. (solutionId=%d)", solutionId);
 
-	//包含sourcePath,所以在SQL_getSolutionSource之前
-	InitPath();
+	Judge_InitJudgePath();
 
-	write_log(JUDGE_INFO,"Do InitPath ok. (solutionId=%d)", solutionId);
+	write_log(JUDGE_INFO,"Do Judge_InitJudgePath ok. (solutionId=%d)", solutionId);
 
-	//取出source，并保存到sourcePath
 	ret = SQL_getSolutionSource();
 	if (OS_OK != ret)
 	{
@@ -1064,18 +1050,14 @@ int Judge_Proc(int solutionId)
 
 	write_log(JUDGE_INFO,"Do Judge finish. (solutionId=%d)", solutionId);
 
-
-	//update MySQL............
-	//write_log(JUDGE_INFO,"ID:%d ->Rusult:%s Case:%d %dms %dkb ,Return code:%u at %s by %s",GL_solutionId,VERDICT_NAME[GL_verdictId],GL_testcase,GL_time-GL_time%10,GL_memory,g_dwCode,time_string_.c_str(),GL_username);
-
 	SQL_updateSolution(GL_solutionId,GL_verdictId,GL_testcase,GL_time-GL_time%10,GL_memory);
 	SQL_updateProblem(GL_problemId);
 	SQL_updateUser(GL_username);
 
-	//contest or not
+	/* contest or not */
 	if(GL_contestId > 0)
 	{
-		//contest judge
+		/* contest judge */
 		time_t contest_s_time,contest_e_time;
 		char num[10]={0};
 
@@ -1166,12 +1148,11 @@ DWORD WINAPI Judge_DispatchThread(LPVOID lpParam)
 
 DWORD WINAPI Judge_ListenThread(LPVOID lpParam)
 {
-	// 循环接受客户的连接请求
 	sockaddr_in remoteAddr;
 	SOCKET sClient;
-	//初始化客户地址长度
 	int nAddrLen = sizeof(remoteAddr);
 	JUDGE_DATA j;
+
 	while(TRUE)
 	{
 		sClient = accept(sListen, (SOCKADDR*)&remoteAddr, &nAddrLen);
@@ -1196,12 +1177,13 @@ DWORD WINAPI Judge_ListenThread(LPVOID lpParam)
 	return 0;
 }
 
-long WINAPI ExceptionFilter(EXCEPTION_POINTERS * lParam)
+long WINAPI Judge_ExceptionFilter(EXCEPTION_POINTERS * lParam)
 {
 	pdt_debug_print("Judge Thread Exit...[code:%u]", GetLastError());
 	write_log(JUDGE_ERROR,"Judge Thread Exit after 10 second...(GetLastError=%u)",GetLastError());
 	Sleep(1);
-	//ShellExecuteA(NULL,"open",judgePath,NULL,NULL,SW_SHOWNORMAL);
+
+	/* ShellExecuteA(NULL,"open",judgePath,NULL,NULL,SW_SHOWNORMAL); */
 
 	closesocket(sListen);
 	WSACleanup();
@@ -1235,7 +1217,7 @@ int GetProcessThreadList()
 	{
 		if (th32.th32OwnerProcessID == th32ProcessID)
 		{
-			printf(" ThreadID: %ld\n", th32.th32ThreadID); //显示找到的线程的ID
+			printf(" ThreadID: %ld\n", th32.th32ThreadID);
 
 		}
 	}while(Thread32Next(hThreadSnap, &th32));
@@ -1246,7 +1228,7 @@ int GetProcessThreadList()
 
 int OJ_Init()
 {
-	SetUnhandledExceptionFilter(ExceptionFilter);
+	SetUnhandledExceptionFilter(Judge_ExceptionFilter);
  	SetErrorMode(SEM_NOGPFAULTERRORBOX );
 
 	if( (_access(logPath, 0 )) == -1 )
@@ -1254,7 +1236,6 @@ int OJ_Init()
 		CreateDirectory(logPath,NULL);
 	}
 
-	//关闭调试开关
 	Judge_DebugSwitch(JUDGE_DEBUG_OFF);
 
 	return OS_OK;
@@ -1262,15 +1243,15 @@ int OJ_Init()
 
 int OJ_InitData()
 {
-	InitConfig();
+	Judge_InitConfigData();
 
-	if(InitMySQL()==0)
+	if(SQL_InitMySQL()==0)
 	{
 		write_log(JUDGE_ERROR,"Init MySQL JUDGE_ERROR...");
 		pdt_debug_print("Error: Judge can not connect to MySQL.");
 	}
 
-	if(InitSocket()==0)
+	if(Judge_InitSocket()==0)
 	{
 		write_log(JUDGE_ERROR,"Init Socket JUDGE_ERROR...");
 		pdt_debug_print("Error: Judge task killed itself...[code:%u]", GetLastError());

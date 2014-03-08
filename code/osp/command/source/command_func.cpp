@@ -983,8 +983,8 @@ DEFUN(cmd_display_judge_brief_st, (char*)"display judge brief",
 /* BEGIN: Added by weizengke, 2014/3/3 reset */
 DEFUN(cmd_reboot_st, (char*)"reboot", (char*)"reboot", reboot_st)
 {
-	extern void Judge_destroy();
-	Judge_destroy();
+	extern void Judge_Destroy();
+	Judge_Destroy();
 
 	extern int OJ_InitData();
 	OJ_InitData();

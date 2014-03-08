@@ -26,7 +26,7 @@ int  Mysql_port;
 char Mysql_Character[255];  //编码
 
 /* 初始化mysql，并设置字符集 */
-int InitMySQL()
+int SQL_InitMySQL()
 {
 	mysql=mysql_init((MYSQL*)0);
 	if(mysql!=0 && !mysql_real_connect(mysql,Mysql_url, Mysql_username, Mysql_password, Mysql_table,Mysql_port,NULL,CLIENT_MULTI_STATEMENTS )){
