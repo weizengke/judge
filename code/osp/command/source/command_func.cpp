@@ -72,7 +72,6 @@ DEFUN(cmd_sysname_st, (char*)"sysname STRING<1-24>", (char*)"set system name", s
 {
 	CMD_DBGASSERT(argv[1] != 0);
 
-	memset(g_sysname, 0 sizeof(g_sysname));
 	strcpy(g_sysname, argv[1]);
 
 	::SetConsoleTitle(g_sysname);
