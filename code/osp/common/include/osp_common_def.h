@@ -4,6 +4,8 @@
 #include "product\include\pdt_common_inc.h"
 
 
+#define M_DES(x,y) y
+
 
 extern void RunDelay(int t);
 extern void pdt_debug_print(const char *format, ...);

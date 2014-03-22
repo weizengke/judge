@@ -2,6 +2,7 @@
 #include "osp\command\include\command_inc.h"
 
 
+#if M_DES("cmd_debugging_enable_st",1)
 DEFUN(cmd_debugging_enable_st, (char*)"debugging enable", (char*)"Debugging switch on", Debugging_enable)
 {
 	if (g_debug_switch == DEBUG_ENABLE)
@@ -19,8 +20,9 @@ DEFUN(cmd_debugging_enable_st, (char*)"debugging enable", (char*)"Debugging swit
 
 	return 0;
 }
+#endif
 
-
+#if M_DES("cmd_undo_debugging_enable_st",1)
 DEFUN(cmd_undo_debugging_enable_st, (char*)"undo debugging enable", (char*)"Debugging switch off", undo_debugging_enable)
 {
 
@@ -39,8 +41,9 @@ DEFUN(cmd_undo_debugging_enable_st, (char*)"undo debugging enable", (char*)"Debu
 
 	return 0;
 }
+#endif
 
-
+#if M_DES("cmd_display_clock_st",1)
 DEFUN(cmd_display_clock_st, (char*)"display clock", (char*)"Display clock of device", display_clock)
 {
 	time_t	timep = time(NULL);
@@ -54,20 +57,25 @@ DEFUN(cmd_display_clock_st, (char*)"display clock", (char*)"Display clock of dev
 
 	return 0;
 }
+#endif
 
+#if M_DES("cmd_display_computer_st",1)
 DEFUN(cmd_display_computer_st, (char*)"display computer", (char*)"Display computer information", display_computer)
 {
 	printf("This is Jungle Wei's computer.\n");
 	return 0;
 }
+#endif
 
+#if M_DES("cmd_display_version_st",1)
 DEFUN(cmd_display_version_st, (char*)"display version", (char*)"Display device version", display_version)
 {
 	printf("Version: 1.0.2\n");
 	return 0;
 }
+#endif
 
-
+#if M_DES("cmd_sysname_st",1)
 DEFUN(cmd_sysname_st, (char*)"sysname STRING<1-24>", (char*)"set system name", sysname)
 {
 	CMD_DBGASSERT(argv[1] != 0);
@@ -80,7 +88,9 @@ DEFUN(cmd_sysname_st, (char*)"sysname STRING<1-24>", (char*)"set system name", s
 
 	return 0;
 }
+#endif
 
+#if M_DES("cmd_display_history_st",1)
 DEFUN(cmd_display_history_st, (char*)"display history", (char*)"Display history command", display_history)
 {
 	int try_idx = 0;
@@ -102,8 +112,9 @@ DEFUN(cmd_display_history_st, (char*)"display history", (char*)"Display history 
 
 	return 0;
 }
+#endif
 
-
+#if M_DES("cmd_display_history_n_st",1)
 DEFUN(cmd_display_history_n_st, (char*)"display history INTEGER<1-100>", (char*)"Display history command", display_history_n)
 {
 	int n = 0;
@@ -136,6 +147,9 @@ DEFUN(cmd_display_history_n_st, (char*)"display history INTEGER<1-100>", (char*)
 	return 0;
 }
 
+#endif
+
+#if M_DES("cmd_debugging_error_st",1)
 
 DEFUN(cmd_debugging_error_st, (char*)"debugging error", (char*)"open debugging error switch", debugging_error)
 {
@@ -143,6 +157,9 @@ DEFUN(cmd_debugging_error_st, (char*)"debugging error", (char*)"open debugging e
 	printf("Info: debugging error switch is on.\r\n");
 	return 0;
 }
+#endif
+
+#if M_DES("cmd_undo_debugging_error_st",1)
 
 DEFUN(cmd_undo_debugging_error_st, (char*)"undo debugging error", (char*)"close debugging error switch", undo_debugging_error)
 {
@@ -150,6 +167,9 @@ DEFUN(cmd_undo_debugging_error_st, (char*)"undo debugging error", (char*)"close 
 	printf("Info: debugging error switch is off.\r\n");
 	return 0;
 }
+#endif
+
+#if M_DES("cmd_debugging_function_st",1)
 
 DEFUN(cmd_debugging_function_st, (char*)"debugging function", (char*)"open debugging function switch", debugging_function)
 {
@@ -157,6 +177,9 @@ DEFUN(cmd_debugging_function_st, (char*)"debugging function", (char*)"open debug
 	printf("Info: debugging function switch is on.\r\n");
 	return 0;
 }
+#endif
+
+#if M_DES("cmd_undo_debugging_function_st",1)
 
 DEFUN(cmd_undo_debugging_function_st, (char*)"undo debugging function", (char*)"Close debugging function switch", undo_debugging_function)
 {
@@ -164,6 +187,9 @@ DEFUN(cmd_undo_debugging_function_st, (char*)"undo debugging function", (char*)"
 	printf("Info: debugging function switch is off.\r\n");
 	return 0;
 }
+#endif
+
+#if M_DES("cmd_debugging_info_st",1)
 
 DEFUN(cmd_debugging_info_st, (char*)"debugging info", (char*)"Open debugging info switch", debugging_info)
 {
@@ -171,6 +197,9 @@ DEFUN(cmd_debugging_info_st, (char*)"debugging info", (char*)"Open debugging inf
 	printf("Info: debugging info switch is on.\r\n");
 	return 0;
 }
+#endif
+
+#if M_DES("cmd_undo_debugging_info_st",1)
 
 DEFUN(cmd_undo_debugging_info_st, (char*)"undo debugging info", (char*)"close debugging info switch", undo_debugging_info)
 {
@@ -178,6 +207,9 @@ DEFUN(cmd_undo_debugging_info_st, (char*)"undo debugging info", (char*)"close de
 	printf("Info: debug info switch is off.\r\n");
 	return 0;
 }
+#endif
+
+#if M_DES("cmd_debugging_message_st",1)
 
 DEFUN(cmd_debugging_message_st, (char*)"debugging message", (char*)"Open debugging message switch", debugging_message)
 {
@@ -185,6 +217,9 @@ DEFUN(cmd_debugging_message_st, (char*)"debugging message", (char*)"Open debuggi
 	printf("Info: debug message switch is on.\r\n");
 	return 0;
 }
+#endif
+
+#if M_DES("cmd_undo_debugging_message_st",1)
 
 DEFUN(cmd_undo_debugging_message_st, (char*)"undo debugging message", (char*)"close debugging message switch", undo_debugging_message)
 {
@@ -192,6 +227,9 @@ DEFUN(cmd_undo_debugging_message_st, (char*)"undo debugging message", (char*)"cl
 	printf("Info: debugging message switch is off.\r\n");
 	return 0;
 }
+#endif
+
+#if M_DES("cmd_debugging_fsm_st",1)
 
 DEFUN(cmd_debugging_fsm_st, (char*)"debugging fsm", (char*)"open debugging fsm switch", debugging_fsm)
 {
@@ -199,6 +237,9 @@ DEFUN(cmd_debugging_fsm_st, (char*)"debugging fsm", (char*)"open debugging fsm s
 	printf("Info: debugging fsm switch is on.\r\n");
 	return 0;
 }
+#endif
+
+#if M_DES("cmd_undo_debugging_fsm_st",1)
 
 DEFUN(cmd_undo_debugging_fsm_st, (char*)"undo debugging fsm", (char*)"close debugging fsm switch", undo_debugging_fsm)
 {
@@ -206,6 +247,9 @@ DEFUN(cmd_undo_debugging_fsm_st, (char*)"undo debugging fsm", (char*)"close debu
 	printf("Info: debugging message switch is off.\r\n");
 	return 0;
 }
+#endif
+
+#if M_DES("cmd_debugging_all_st",1)
 
 DEFUN(cmd_debugging_all_st, (char*)"debugging all", (char*)"open debugging all switch", debugging_all)
 {
@@ -218,6 +262,9 @@ DEFUN(cmd_debugging_all_st, (char*)"debugging all", (char*)"open debugging all s
 	printf("Info: debugging all switch is on.\r\n");
 	return 0;
 }
+#endif
+
+#if M_DES("cmd_undo_debugging_all_st",1)
 
 DEFUN(cmd_undo_debugging_all_st, (char*)"undo debugging all", (char*)"close debugging all switch", undo_debugging_all)
 {
@@ -231,6 +278,9 @@ DEFUN(cmd_undo_debugging_all_st, (char*)"undo debugging all", (char*)"close debu
 	return 0;
 
 }
+#endif
+
+#if M_DES("cmd_display_debugging_st",1)
 
 DEFUN(cmd_display_debugging_st, (char*)"display debugging", (char*)"display debugging switch", display_debugging)
 {
@@ -261,7 +311,9 @@ DEFUN(cmd_display_debugging_st, (char*)"display debugging", (char*)"display debu
 
 	return 0;
 }
+#endif
 
+#if M_DES("cmd_hdujudge_login_st",1)
 /*
 version    : r90
 description: 带参数命令，错误在参数时，无法定位错误位置
@@ -290,6 +342,9 @@ DEFUN(cmd_hdujudge_login_st, (char*)"hdu-judge login STRING<1-24> STRING<1-24>",
 
 	return 0;
 }
+#endif
+
+#if M_DES("cmd_display_hdujudge_status_st",1)
 
 DEFUN(cmd_display_hdujudge_status_st, (char*)"display hdu-judge status STRING<1-24>", (char*)"display hdujudge status <username>", display_hdujudge_status)
 {
@@ -304,6 +359,9 @@ DEFUN(cmd_display_hdujudge_status_st, (char*)"display hdu-judge status STRING<1-
 
 	return 0;
 }
+#endif
+
+#if M_DES("cmd_judge_solution_st",1)
 
 DEFUN(cmd_judge_solution_st, (char*)"judge solution INTEGER<1-65535>", (char*)"judge solution <ID>", judge_solution)
 {
@@ -320,6 +378,9 @@ DEFUN(cmd_judge_solution_st, (char*)"judge solution INTEGER<1-65535>", (char*)"j
 
 	return 0;
 }
+#endif
+
+#if M_DES("cmd_display_guetjudge_status_st",1)
 
 DEFUN(cmd_display_guetjudge_status_st, (char*)"display guet-judge status STRING<1-24>", (char*)"display guetjudge status <username>", display_guetjudge_status)
 {
@@ -334,6 +395,9 @@ DEFUN(cmd_display_guetjudge_status_st, (char*)"display guet-judge status STRING<
 
 	return 0;
 }
+#endif
+
+#if M_DES("cmd_guetjudge_login_st",1)
 DEFUN(cmd_guetjudge_login_st, (char*)"guet-judge login STRING<1-24> STRING<1-24>", (char*)"guet-judge login <username> <password>", guetjudge_login_st)
 {
 	char username_[25] = {0};
@@ -349,6 +413,9 @@ DEFUN(cmd_guetjudge_login_st, (char*)"guet-judge login STRING<1-24> STRING<1-24>
 
 	return 0;
 }
+#endif
+
+#if M_DES("cmd_display_command_tree_st",1)
 
 DEFUN(cmd_display_command_tree_st, (char*)"display command-tree", (char*)"display command tree", display_command_tree)
 {
@@ -357,6 +424,9 @@ DEFUN(cmd_display_command_tree_st, (char*)"display command-tree", (char*)"displa
 
 	return 0;
 }
+#endif
+
+#if M_DES("cmd_display_current_configuration_st",1)
 
 DEFUN(cmd_display_current_configuration_st, (char*)"display current-configuration", (char*)"display current-configuration", display_current_configuration)
 {
@@ -365,6 +435,9 @@ DEFUN(cmd_display_current_configuration_st, (char*)"display current-configuratio
 
 	return 0;
 }
+#endif
+
+#if M_DES("cmd_display_hdu_judge_problem_by_pid_st",1)
 
 DEFUN(cmd_display_hdu_judge_problem_by_pid_st, (char*)"display hdu-judge problem INTEGER<1-65535>", (char*)"display hdu-judge problem by problem ID", display_hdu_judge_problem_by_pid)
 {
@@ -476,6 +549,9 @@ void Test()
 	TestColor();
 
 }
+#endif
+
+#if M_DES("cmd_display_st",1)
 
 DEFUN(cmd_display_st, (char*)"display", (char*)"display", display)
 {
@@ -491,6 +567,9 @@ DEFUN(cmd_display_st, (char*)"display", (char*)"display", display)
 
 	return 0;
 }
+#endif
+
+#if M_DES("cmd_set_config_section_name_value_st",1)
 
 DEFUN(cmd_set_config_section_name_value_st, (char*)"set config STRING<1-24> STRING<1-24> STRING<1-65535>",
 		(char*)"Set Config section name value", set_config_section_name_value_st)
@@ -511,6 +590,9 @@ DEFUN(cmd_set_config_section_name_value_st, (char*)"set config STRING<1-24> STRI
 	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "WritePrivateProfileString return %u..", ret);
 
 }
+#endif
+
+#if M_DES("cmd_virtual_judge_enable_st",1)
 
 /* BEGIN: Added by weizengke, 2014/3/3 for 全局使能vjudge */
 DEFUN(cmd_virtual_judge_enable_st, (char*)"virtual-judge enable", (char*)"virtual-judge enable", virtual_judge_enable_st)
@@ -535,6 +617,9 @@ DEFUN(cmd_virtual_judge_enable_st, (char*)"virtual-judge enable", (char*)"virtua
 	GL_vjudge_enable = OS_YES;
 
 }
+#endif
+
+#if M_DES("cmd_undo_virtual_judge_enable_st",1)
 
 /* BEGIN: Added by weizengke, 2014/3/3 for 全局去使能vjudge */
 DEFUN(cmd_undo_virtual_judge_enable_st, (char*)"undo virtual-judge enable", (char*)"undo virtual-judge enable", undo_virtual_judge_enable_st)
@@ -559,6 +644,9 @@ DEFUN(cmd_undo_virtual_judge_enable_st, (char*)"undo virtual-judge enable", (cha
 	GL_vjudge_enable = OS_NO;
 
 }
+#endif
+
+#if M_DES("cmd_hdu_judge_enable_st",1)
 
 /* BEGIN: Added by weizengke, 2014/3/3 for 全局使能hdu-vjudge */
 DEFUN(cmd_hdu_judge_enable_st, (char*)"hdu-judge enable", (char*)"hdu-judge enable", hdu_judge_enable_st)
@@ -583,6 +671,9 @@ DEFUN(cmd_hdu_judge_enable_st, (char*)"hdu-judge enable", (char*)"hdu-judge enab
 	hdu_vjudge_enable = OS_YES;
 
 }
+#endif
+
+#if M_DES("cmd_undo_hdu_judge_enable_st",1)
 
 /* BEGIN: Added by weizengke, 2014/3/3 for 全局去使能hdu-vjudge */
 DEFUN(cmd_undo_hdu_judge_enable_st, (char*)"undo hdu-judge enable", (char*)"undo hdu-judge enable", undo_hdu_judge_enable_st)
@@ -608,6 +699,9 @@ DEFUN(cmd_undo_hdu_judge_enable_st, (char*)"undo hdu-judge enable", (char*)"undo
 
 
 }
+#endif
+
+#if M_DES("cmd_guet_judge_enable_st",1)
 
 /* BEGIN: Added by weizengke, 2014/3/3 for 全局使能guet-vjudge */
 DEFUN(cmd_guet_judge_enable_st, (char*)"guet-judge enable", (char*)"guet-judge enable", guet_judge_enable_st)
@@ -632,6 +726,9 @@ DEFUN(cmd_guet_judge_enable_st, (char*)"guet-judge enable", (char*)"guet-judge e
 	guet_vjudge_enable = OS_YES;
 
 }
+#endif
+
+#if M_DES("cmd_undo_guet_judge_enable_st",1)
 
 /* BEGIN: Added by weizengke, 2014/3/3 for 全局去使能guet-vjudge */
 DEFUN(cmd_undo_guet_judge_enable_st, (char*)"undo guet-judge enable", (char*)"undo guet-judge enable", undo_guet_judge_enable_st)
@@ -656,6 +753,10 @@ DEFUN(cmd_undo_guet_judge_enable_st, (char*)"undo guet-judge enable", (char*)"un
 	guet_vjudge_enable = OS_NO;
 
 }
+#endif
+
+#if M_DES("cmd_guet_judge_remote_judge_enable_st",1)
+
 /* BEGIN: Added by weizengke, 2014/3/5 for 全局去使能guet-vjudge remote judge*/
 DEFUN(cmd_guet_judge_remote_judge_enable_st, (char*)"guet-judge remote-judge enable",
 		 (char*)"guet-judge remote-judge enable", guet_judge_enable_remote_judge_st)
@@ -679,6 +780,9 @@ DEFUN(cmd_guet_judge_remote_judge_enable_st, (char*)"guet-judge remote-judge ena
 
 	guet_remote_enable = OS_YES;
 }
+#endif
+
+#if M_DES("cmd_undo_guet_judge_remote_judge_enable_st",1)
 
 /* BEGIN: Added by weizengke, 2014/3/5 for 全局去使能guet-vjudge remote judge*/
 DEFUN(cmd_undo_guet_judge_remote_judge_enable_st, (char*)"undo guet-judge remote-judge enable",
@@ -703,6 +807,9 @@ DEFUN(cmd_undo_guet_judge_remote_judge_enable_st, (char*)"undo guet-judge remote
 
 	guet_remote_enable = OS_NO;
 }
+#endif
+
+#if M_DES("cmd_hdu_judge_remote_judge_enable_st",1)
 
 /* BEGIN: Added by weizengke, 2014/3/5 for 全局去使能hdu-vjudge remote judge*/
 DEFUN(cmd_hdu_judge_remote_judge_enable_st, (char*)"hdu-judge remote-judge enable",
@@ -727,6 +834,9 @@ DEFUN(cmd_hdu_judge_remote_judge_enable_st, (char*)"hdu-judge remote-judge enabl
 
 	hdu_remote_enable = OS_YES;
 }
+#endif
+
+#if M_DES("cmd_undo_hdu_judge_remote_judge_enable_st",1)
 
 /* BEGIN: Added by weizengke, 2014/3/5 for 全局去使能guet-vjudge remote judge*/
 DEFUN(cmd_undo_hdu_judge_remote_judge_enable_st, (char*)"undo hdu-judge remote-judge enable",
@@ -751,6 +861,9 @@ DEFUN(cmd_undo_hdu_judge_remote_judge_enable_st, (char*)"undo hdu-judge remote-j
 
 	hdu_remote_enable = OS_NO;
 }
+#endif
+
+#if M_DES("cmd_hdu_judge_username_password_st",1)
 
 /* BEGIN: Added by weizengke, 2014/3/5 judge account config*/
 DEFUN(cmd_hdu_judge_username_password_st, (char*)"hdu-judge username STRING<1-24> password STRING<1-24>",
@@ -791,6 +904,9 @@ DEFUN(cmd_hdu_judge_username_password_st, (char*)"hdu-judge username STRING<1-24
 	strcpy(hdu_password, psw);
 
 }
+#endif
+
+#if M_DES("cmd_guet_judge_username_password_st",1)
 
 /* BEGIN: Added by weizengke, 2014/3/5 judge account config*/
 DEFUN(cmd_guet_judge_username_password_st, (char*)"guet-judge username STRING<1-24> password STRING<1-24>",
@@ -832,6 +948,10 @@ DEFUN(cmd_guet_judge_username_password_st, (char*)"guet-judge username STRING<1-
 	strcpy(guet_password, psw);
 
 }
+#endif
+
+#if M_DES("cmd_hdu_judge_ip_port_st",1)
+
 /* BEGIN: Added by weizengke, 2014/3/5 judge judger config*/
 DEFUN(cmd_hdu_judge_ip_port_st, (char*)"hdu-judge ip STRING<1-24> port INTEGER<1-65535>",
 		(char*)"hdu-judge ip and port", hdu_judge_ip_port_st)
@@ -872,6 +992,9 @@ DEFUN(cmd_hdu_judge_ip_port_st, (char*)"hdu-judge ip STRING<1-24> port INTEGER<1
 	hdu_sockport = atoi(port);
 
 }
+#endif
+
+#if M_DES("cmd_guet_judge_ip_port_st",1)
 
 /* BEGIN: Added by weizengke, 2014/3/5 judge judger config*/
 DEFUN(cmd_guet_judge_ip_port_st, (char*)"guet-judge ip STRING<1-24> port INTEGER<1-65535>",
@@ -913,6 +1036,9 @@ DEFUN(cmd_guet_judge_ip_port_st, (char*)"guet-judge ip STRING<1-24> port INTEGER
 	guet_sockport = atoi(port);
 
 }
+#endif
+
+#if M_DES("cmd_display_judge_brief_st",1)
 
 /* BEGIN: Added by weizengke, 2014/3/5 judge config brief*/
 DEFUN(cmd_display_judge_brief_st, (char*)"display judge brief",
@@ -982,6 +1108,10 @@ DEFUN(cmd_display_judge_brief_st, (char*)"display judge brief",
 		   "========================\r\n");
 
 }
+#endif
+
+#if M_DES("cmd_reboot_st",1)
+
 /* BEGIN: Added by weizengke, 2014/3/3 reset */
 DEFUN(cmd_reboot_st, (char*)"reboot", (char*)"reboot", reboot_st)
 {
@@ -993,6 +1123,7 @@ DEFUN(cmd_reboot_st, (char*)"reboot", (char*)"reboot", reboot_st)
 
 	printf("Info: reboot ok.\r\n");
 }
+#endif
 
 void cmd_install()
 {
