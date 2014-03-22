@@ -1361,7 +1361,11 @@ void cmd_delete_word_ctrl_W(struct cmd_vty *vty)
 		pos--;
 	}
 
-	vty->buffer[pos] = '\0';
+	/* BEGIN: Modified by weizengke, 2014/3/23, for https://github.com/weizengke/jungle/issues/1 */
+	//vty->buffer[pos] = '\0';
+	memset(&vty->buffer[pos], 0, sizeof(vty->buffer) - pos);
+	/* END:   Modified by weizengke, 2014/3/23 */
+
 	vty->cur_pos = strlen(vty->buffer);
 	vty->used_len = strlen(vty->buffer);
 }

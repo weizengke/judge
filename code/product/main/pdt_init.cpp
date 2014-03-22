@@ -140,11 +140,11 @@ int main()
 {
 	HWND hw=NULL;
 
-	::SetConsoleTitle("Jungle");
+	extern char g_sysname[];
+	::SetConsoleTitle(g_sysname);
 
-	Sleep(500);
+	hw=::GetConsoleWindow();
 
-	hw=::FindWindow("ConsoleWindowClass","Jungle");
 	if (hw !=NULL)
 	{
 		HANDLE hIcon=NULL;
