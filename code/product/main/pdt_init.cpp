@@ -138,6 +138,29 @@ void init_telnet()
 
 int main()
 {
+	HWND hw=NULL;
+
+	::SetConsoleTitle("Jungle");
+
+	Sleep(500);
+
+	hw=::FindWindow("ConsoleWindowClass","Jungle");
+	if (hw !=NULL)
+	{
+		HANDLE hIcon=NULL;
+		hIcon=::LoadImage(GetModuleHandle(NULL),"beyond.ico",
+		IMAGE_ICON,32,32,LR_LOADFROMFILE);
+		if (hIcon!=NULL)
+		{
+			::SendMessage(hw,WM_SETICON,ICON_SMALL,(LPARAM)hIcon);
+		}
+	}
+	else
+	{
+		pdt_debug_print("Set judge kernel ico failed. ");
+	}
+
+
 	pdt_debug_print("OS Main-task Running...");
 
 	extern void Cmd_RegAppInfo();

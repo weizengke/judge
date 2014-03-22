@@ -939,13 +939,13 @@ DEFUN(cmd_display_judge_brief_st, (char*)"display judge brief",
 	extern char Mysql_table[];
 	extern int	Mysql_port;
 
-	printf("#Local Judger Info\r\n");
+	printf("# Local Judger Info\r\n");
 	printf("  Port: %d\r\n", port);
 
 	printf(" =================================================="
 		   "========================\r\n");
 
-	printf("#Virtual Judger Info\r\n");
+	printf("# Virtual Judger Info\r\n");
 	printf("  Global Virtual Judge Is %s\r\n",
 		  (GL_vjudge_enable==OS_YES)?"Enable":"Disable");
 	printf("  Judger | Account | Password | Status | Remote |"
@@ -968,7 +968,7 @@ DEFUN(cmd_display_judge_brief_st, (char*)"display judge brief",
 	printf(" =================================================="
 		   "========================\r\n");
 
-	printf("#MySQL Info\r\n"
+	printf("# MySQL Info\r\n"
 		  "  URL       : %s\r\n"
 		  "  Username  : %s\r\n"
 		  "  Password  : %s\r\n"
