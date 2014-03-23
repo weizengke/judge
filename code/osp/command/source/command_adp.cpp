@@ -811,11 +811,18 @@ void cmd_resolve_del_lastword(struct cmd_vty *vty)
 	if (vty->cur_pos <= 0)
 		return;
 
-	cmd_delete_word_ctrl_W(vty);
+	cmd_delete_word_ctrl_W_ex(vty);
 
 	cmd_outstring("%s", CMD_ENTER);
 	cmd_outprompt(vty->prompt);
 	cmd_outstring("%s", vty->buffer);
+
+	/* BEGIN: Added by weizengke, 2014/3/23 support delete word form cur_pos*/
+	for (i = 0; i < strlen(vty->buffer) - vty->cur_pos; i++)
+	{
+		cmd_back_one();
+	}
+	/* END:   Added by weizengke, 2014/3/23 */
 
 }
 

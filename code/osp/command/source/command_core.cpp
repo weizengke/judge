@@ -1366,7 +1366,7 @@ void cmd_delete_word_ctrl_W(struct cmd_vty *vty)
 	vty->used_len = strlen(vty->buffer);
 }
 
-// delete the last word from input buffer
+// delete the last word from current pos
 void cmd_delete_word_ctrl_W_ex(struct cmd_vty *vty)
 {
 	/* 删除光标所在当前或之前elem */
@@ -1381,7 +1381,7 @@ void cmd_delete_word_ctrl_W_ex(struct cmd_vty *vty)
 	}
 
 	/* ignore suffix-space */
-	if (vty->buffer[pos] == ' ')
+	if (vty->buffer[pos] == ' ' || vty->buffer[pos] == '\0')
 	{
 		end_pos = pos;
 
@@ -1415,7 +1415,7 @@ void cmd_delete_word_ctrl_W_ex(struct cmd_vty *vty)
 			pos++;
 		}
 
-		end_pos = pos - 1;
+		end_pos = pos + 1;
 
 		pos = vty->cur_pos;
 		while (vty->buffer[pos] != ' ')
@@ -1426,29 +1426,13 @@ void cmd_delete_word_ctrl_W_ex(struct cmd_vty *vty)
 		start_pos = pos + 1;
 	}
 
-	//printf ("\r\ns_p = %d, e_p = %d\r\n", start_pos, end_pos);
-
-	/* back the cur_pos */
-	int i = 0;
-	int size = 0;
-
-	size = vty->cur_pos - start_pos;
-	for (i = 0; i < size; i++)
-		cmd_back_one();
-
-	/* output the right chars */
-	for (i = 0; i < len - start_pos; i ++)
-		cmd_put_one(vty->buffer[end_pos + i]);
-
-	size = len - start_pos;
-
-	for (i = 0; i < size; i++)
-		cmd_back_one();
+	int len_last = strlen(&vty->buffer[end_pos]);
 
 	memcpy(&vty->buffer[start_pos], &vty->buffer[end_pos], strlen(&vty->buffer[end_pos]));
-	vty->buffer[len - (vty->cur_pos - start_pos)]= '\0';
+	memset(&vty->buffer[start_pos + len_last], 0, sizeof(vty->buffer)-(start_pos + len_last));
+
 	vty->cur_pos -= (vty->cur_pos - start_pos);
-	vty->used_len -= (vty->cur_pos - start_pos);
+	vty->used_len -= (end_pos - start_pos);
 
 }
 
@@ -1522,6 +1506,8 @@ void cmd_clear_line(struct cmd_vty *vty)
 
 void cmd_outcurrent()
 {
+	int i;
+
 	if (NULL == vty)
 	{
 		return ;
@@ -1530,6 +1516,14 @@ void cmd_outcurrent()
 	cmd_outstring("%s", CMD_ENTER);
 	cmd_outprompt(vty->prompt);
 	cmd_outstring("%s", vty->buffer);
+
+	/* BEGIN: Added by weizengke, 2014/3/23 support delete word form cur_pos */
+	for (i = 0; i < strlen(vty->buffer) - vty->cur_pos; i++)
+	{
+		cmd_back_one();
+	}
+	/* END:   Added by weizengke, 2014/3/23 */
+
 }
 
 int cmd_init()
