@@ -528,13 +528,9 @@ void cmd_output_missmatch(cmd_vty *vty, int nomath_pos)
 {
 	int i = 0;
 	int n = 0;
-	char buf[CMD_BUFFER_SIZE] = {0};
 
-	/* 输出箭头位置 3 is < - >*/
-	//int pos_arrow = 3 + strlen(g_sysname) + strlen(vty->prompt);
-	int pos_arrow = 2 + strlen(g_sysname);
-
-	strcpy(buf, vty->buffer);
+	/* 输出箭头位置 1 is > */
+	int pos_arrow = 1 + strlen(g_sysname);
 
 	(void)cmd_get_nth_elem_pos(vty->buffer, nomath_pos, &n);
 	pos_arrow += n;
