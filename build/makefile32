@@ -12,8 +12,6 @@ CCFLAGS = -w -c -m32 -O3 -D_WIN32_ -I$(MY_ROOT)/code/
 CFLAGS=-o
 LDFLAGS =
 
-BIN=cmd-sys
-
 #################
 include $(OSP_ROOT)/osp.mk
 include $(PRODUCT_ROOT)/product.mk

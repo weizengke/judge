@@ -1,7 +1,9 @@
 /*
 	Author: Jungle Wei
 	Date  : 2013-10
-	Description: A mini common command line system
+	Description: A common command line module
+
+	支持特性: TAB自动补全, '?'联想 , CTRL+W 快速删除, 错误位置提示, 命令行带参数
 
 */
 
@@ -1175,7 +1177,7 @@ int cmd_execute_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct para
 	{
 		if (CMD_OK != cmd_filter_command((char*)cmd_vector_slot(icmd_vec, i), cmd_vec_copy, i))
 		{
-			/* BEGIN: Added by weizengke, 2013/11/19 这里可以优化，不命中可以不需要再匹配了 */
+			/* BEGIN: Added by weizengke, 2013/11/19 不命中可以不需要再匹配了 */
 			/* 保存在第几个命令字无法匹配 */
 			*nomatch_pos = (*nomatch_pos == -1)?(i):(*nomatch_pos);
 		}
@@ -1195,7 +1197,8 @@ int cmd_execute_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct para
 			struct cmd_elem_st *elem = NULL;
 
 			elem = (struct cmd_elem_st *)cmd_vector_slot(cmd_vec_copy, i);
-			if(elem != NULL) {
+			if(elem != NULL)
+			{
 				str = (char*)cmd_vector_slot(icmd_vec, cmd_vector_max(icmd_vec) - 1);
 				desc = (struct para_desc *)cmd_vector_slot(elem->para_vec, cmd_vector_max(icmd_vec) - 1);
 

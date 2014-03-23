@@ -70,7 +70,7 @@ DEFUN(cmd_display_computer_st, (char*)"display computer", (char*)"Display comput
 #if M_DES("cmd_display_version_st",1)
 DEFUN(cmd_display_version_st, (char*)"display version", (char*)"Display device version", display_version)
 {
-	printf("Version: 1.0.2\n");
+	printf("Judge Kernel Version: 1.0.3 , released at 2014-03-23.\n");
 	return 0;
 }
 #endif
