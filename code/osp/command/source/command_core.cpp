@@ -5,6 +5,17 @@
 
 	支持特性: TAB自动补全, '?'联想 , CTRL+W 快速删除, 错误位置提示, 命令行带参数
 
+
+				 如梦令·听
+
+				枕头微冷微倾，
+				两眼半张半醒。
+				侧卧怎难寝，
+				声轻太过安静？
+				你听，
+				你听，
+				雨打风吹未停。
+
 */
 
 #include "osp\command\include\command_inc.h"
@@ -221,13 +232,12 @@ void cmd_vty_deinit(struct cmd_vty *vty)
 	if (!vty)
 		return;
 
-	// free history
-	for (i = 0; i < HISTORY_MAX_SIZE; i++) {
+	for (i = 0; i < HISTORY_MAX_SIZE; i++)
+	{
 		if (vty->history[i] != NULL)
 			free(vty->history[i]);
 	}
 
-	// free vty
 	free(vty);
 }
 
@@ -235,36 +245,32 @@ void cmd_vty_add_history(struct cmd_vty *vty)
 {
 	int idx =  vty->hindex ? vty->hindex - 1 : HISTORY_MAX_SIZE - 1;
 
-	// if same as previous command, then ignore
+	/* if same as previous command, then ignore */
 	if (vty->history[idx] &&
 		!strcmp(vty->buffer, vty->history[idx])) {
 		vty->hpos = vty->hindex;
 		return;
 	}
 
-	// insert into history tail
+	/* insert into history tail */
 	if (vty->history[vty->hindex])
 		free(vty->history[vty->hindex]);
 	vty->history[vty->hindex] = strdup(vty->buffer);
 
-	// History index rotation
 	vty->hindex = (vty->hindex + 1) == HISTORY_MAX_SIZE ? 0 : vty->hindex + 1;
 	vty->hpos = vty->hindex;
 }
 
 /* vector */
-// get an usable vector slot, if there is not, then allocate
-// a new slot
 int cmd_vector_fetch(cmd_vector_t *v)
 {
 	int fetch_idx;
 
-	// find next empty slot
 	for (fetch_idx = 0; fetch_idx < v->used_size; fetch_idx++)
 		if (v->data[fetch_idx] == NULL)
 			break;
+		*/
 
-	// allocate new memory if not enough slot
 	while (v->size < fetch_idx + 1) {
 		debug_print_ex(CMD_DEBUG_TYPE_FUNC, "In cmd_vector_fetch, realloc memory for data.");
 		v->data = (void**)realloc(v->data, sizeof(void *) * v->size * 2);
@@ -287,7 +293,6 @@ cmd_vector_t *cmd_vector_init(int size)
 		return NULL;
 	}
 
-	/// allocate at least one slot
 	if (size == 0)
 		size = 1;
 	v->data = (void**)calloc(1, sizeof(void *) * size);
@@ -420,10 +425,6 @@ cmd_vector_t *str2vec(char *string)
 
 
 /* cmd */
-
-/*** ---------------- Auxiliary Function ------------------ ***/
-// check if 'str' is unique in matchvec, matchvec->data point to
-// a double array char array like char **
 static int match_unique_string(struct para_desc **match, char *str, int size)
 {
 	int i;
@@ -549,13 +550,12 @@ void cmd_output_missmatch(cmd_vty *vty, int nomath_pos)
 }
 
 
-// turn a command into vector
 cmd_vector_t *cmd2vec(char *string, char *doc)
 {
-	char *sp=NULL, *d_sp=NULL;	// parameter start point
-	char *cp = string;	// parameter current point
-	char *d_cp = doc;	// doc point
-	char *token=NULL, *d_token=NULL;	// paramter token
+	char *sp=NULL, *d_sp=NULL;
+	char *cp = string;
+	char *d_cp = doc;
+	char *token=NULL, *d_token=NULL;
 	int len, d_len;
 	cmd_vector_t *allvec=NULL;
 	struct para_desc *desc = NULL;
@@ -564,12 +564,9 @@ cmd_vector_t *cmd2vec(char *string, char *doc)
 	if(cp == NULL)
 		return NULL;
 
-	// split command string into paramters, and turn these paramters
-	// into vector form
 	allvec = cmd_vector_init(1);
 	while (1)
 	{
-		// get next parameter from 'string'
 		while(isspace((int) *cp) && *cp != '\0')
 			cp++;
 		if(*cp == '\0')
@@ -590,7 +587,6 @@ cmd_vector_t *cmd2vec(char *string, char *doc)
 		memcpy(token, sp, len);
 		*(token + len) = '\0';
 
-		// get next paramter info from 'doc'
 		while(isspace((int)*d_cp) && *d_cp != '\0')
 			d_cp++;
 		if (*d_cp == '\0')
@@ -612,7 +608,6 @@ cmd_vector_t *cmd2vec(char *string, char *doc)
 			*(d_token + d_len) = '\0';
 		}
 
-		// add new para_vector into command vector
 		desc = (struct para_desc *)calloc(1, sizeof(struct para_desc));
 		if (desc == NULL)
 		{
@@ -638,7 +633,7 @@ cmd_vector_t *cmd2vec(char *string, char *doc)
 		cmd_vector_insert(allvec, (void *)desc);
 	}
 
-	// add <CR> into command vector
+	/* add <CR> into command vector */
 	desc_cr = (struct para_desc *)calloc(1, sizeof(struct para_desc));
 	if (desc_cr == NULL)
 	{
@@ -805,7 +800,6 @@ int cmd_match_special_string(char *icmd, char *dest)
 	return CMD_ERR;
 }
 
-// get LCD of matched command
 int match_lcd(struct para_desc **match, int size)
 {
 	int i, j;
