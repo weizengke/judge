@@ -3,7 +3,7 @@
 	Date  : 2013-10
 	Description: A common command line module
 
-	支持特性: TAB自动补全, '?'联想 , CTRL+W 快速删除, 错误位置提示, 命令行带参数
+	支持特性: TAB自动选择性补全, '?'联想 , CTRL+W 快速删除, 错误位置提示, 命令行带参数
 
 
 				 如梦令·听
@@ -20,6 +20,7 @@
 
 #include "osp\command\include\command_inc.h"
 
+/* BEGIN: Added by weizengke, 2013/12/12 for display command-tree*/
 void cmd_show_command_tree()
 {
 	int i;
@@ -894,7 +895,6 @@ static int cmd_filter_command(char *cmd, cmd_vector_t *v, int index)
 }
 
 
-/*** ---------------- Interface Function ------------------ ***/
 int cmd_match_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty,
 		struct para_desc **match, int *match_size, char *lcd_str)
 {
@@ -1299,16 +1299,11 @@ void install_element(struct cmd_elem_st *elem)
 	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "install_element ok, string(%s), generate para_num(%d). ", elem->string, elem->para_num);
 
 }
-
-
 /* end cmd */
-
 
 /* resolve */
 
-
-
-// insert a word into the tail of input buffer
+/* Note: Added by weizengke, 2013/10/04 insert a word into the tail of input buffer */
 void cmd_insert_word(struct cmd_vty *vty, const char *str)
 {
 	strcat(vty->buffer, str);
@@ -1316,7 +1311,7 @@ void cmd_insert_word(struct cmd_vty *vty, const char *str)
 	vty->used_len += (int)strlen(str);
 }
 
-// delete the last word from input buffer
+/* Note: Added by weizengke, 2013/10/04 delete the last word from input buffer */
 void cmd_delete_word(struct cmd_vty *vty)
 {
 	int pos = strlen(vty->buffer);
@@ -1330,7 +1325,7 @@ void cmd_delete_word(struct cmd_vty *vty)
 	vty->used_len = strlen(vty->buffer);
 }
 
-// delete the last word from input buffer
+/* Note: Added by weizengke, 2013/10/04 delete the last word from input buffer*/
 void cmd_delete_word_ctrl_W(struct cmd_vty *vty)
 {
 	/* 删除最后一个elem */
@@ -1362,7 +1357,7 @@ void cmd_delete_word_ctrl_W(struct cmd_vty *vty)
 	vty->used_len = strlen(vty->buffer);
 }
 
-// delete the last word from current pos
+/* Note: Added by weizengke, 2014/3/23 delete the last word at current pos from input buffer*/
 void cmd_delete_word_ctrl_W_ex(struct cmd_vty *vty)
 {
 	/* 删除光标所在当前或之前elem */
@@ -1452,21 +1447,20 @@ void cmd_read(struct cmd_vty *vty)
 	g_InputMachine_prev = CMD_KEY_CODE_NOTCARE;
 	g_InputMachine_now = CMD_KEY_CODE_NOTCARE;
 
-	while ((vty->c = cmd_getch()) != EOF) {
-
-		//printf("c=%d\r\n",vty->c);
-
-		// step 1: get input key type
+	while ((vty->c = cmd_getch()) != EOF)
+	{
+		/* step 1: get input key type */
 		key_type = cmd_resolve(vty->c);
 
 		g_InputMachine_now = key_type;
 
-		if (key_type <= CMD_KEY_CODE_NONE || key_type > CMD_KEY_CODE_NOTCARE) {
+		if (key_type <= CMD_KEY_CODE_NONE || key_type > CMD_KEY_CODE_NOTCARE)
+		{
 			debug_print_ex(CMD_DEBUG_TYPE_ERROR, "Unidentify Key Type, c = %c, key_type = %d\n", vty->c, key_type);
 			continue;
 		}
 
-		// step 2: take actions according to input key
+		/* step 2: take actions according to input key */
 		key_resolver[key_type].key_func(vty);
 		g_InputMachine_prev = g_InputMachine_now;
 
@@ -1480,8 +1474,7 @@ void cmd_read(struct cmd_vty *vty)
 	}
 }
 
-
-
+/* Note: Added by weizengke, 2013/10 clear current line by cur-pos */
 void cmd_clear_line(struct cmd_vty *vty)
 {
 	int size = vty->used_len - vty->cur_pos;
@@ -1500,6 +1493,7 @@ void cmd_clear_line(struct cmd_vty *vty)
 	memset(vty->buffer, 0, HISTORY_MAX_SIZE);
 }
 
+/* Note: Added by weizengke, 2013/10 output current command-buf  */
 void cmd_outcurrent()
 {
 	int i;
@@ -1527,8 +1521,10 @@ int cmd_init()
 	/* initial cmd vector */
 	cmd_vec = cmd_vector_init(1);
 
+	/* install cmd */
 	cmd_install();
 
+	/* initial vty */
 	vty = cmd_vty_init();
 	if (vty == NULL)
 	{
