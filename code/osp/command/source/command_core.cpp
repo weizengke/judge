@@ -269,7 +269,6 @@ int cmd_vector_fetch(cmd_vector_t *v)
 	for (fetch_idx = 0; fetch_idx < v->used_size; fetch_idx++)
 		if (v->data[fetch_idx] == NULL)
 			break;
-		*/
 
 	while (v->size < fetch_idx + 1) {
 		debug_print_ex(CMD_DEBUG_TYPE_FUNC, "In cmd_vector_fetch, realloc memory for data.");

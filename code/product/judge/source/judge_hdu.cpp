@@ -172,7 +172,6 @@ size_t process_data(void *buffer, size_t size, size_t nmemb, void *user_p)
 {
 	FILE *fp = (FILE *)user_p;
 	size_t return_size = fwrite(buffer, size, nmemb, fp);
-	//cout << (char *)buffer << endl;
 	return return_size;
 }
 
@@ -431,13 +430,11 @@ ULONG getSubmitError(char *filename, string &res)
 				begin_ = ts.find("<span>");
                 if (begin_!=string::npos)
 				{
-					//cout<<"Sorry! FOUND SUBMIT_INFO"<<endl;
 					end_ = ts.find("</span>");
 					if (end_ !=string::npos)
 					{
 						begin_ += 6;
 						res = ts.substr(begin_,end_ - begin_);
-						//cout<<res<<endl;
 						fclose(fp);
 						return OS_TRUE;
 					}
@@ -450,7 +447,6 @@ ULONG getSubmitError(char *filename, string &res)
 						{
 							begin_ += 6;
 							res = ts.substr(begin_,end_ - begin_);
-							//cout<<res<<endl;
 							fclose(fp);
 							return OS_TRUE;
 						}
