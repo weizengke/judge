@@ -1366,6 +1366,9 @@ void cmd_delete_word_ctrl_W_ex(struct cmd_vty *vty)
 	int len = strlen(vty->buffer);
 	int pos = vty->cur_pos;
 
+
+	debug_print_ex(CMD_DEBUG_TYPE_INFO, "\r\n cur_poscur_pos = %d buffer_len = %d \r\n", pos, len);
+
 	if (pos == 0)
 	{
 		return;
@@ -1403,10 +1406,16 @@ void cmd_delete_word_ctrl_W_ex(struct cmd_vty *vty)
 		pos++;
 		while (vty->buffer[pos] != ' ')
 		{
+			/* BEGIN: Added by weizengke, 2014/4/5 当光标位于命令行最后一个元素中间，再执行CTRL+W，出现异常显示 https://github.com/weizengke/jungle/issues/2 */
+			if (vty->buffer[pos] == '\0') break;
+			/* END:   Added by weizengke, 2014/4/5 */
+
 			pos++;
 		}
 
-		end_pos = pos + 1;
+		/* BEGIN: Modified by weizengke, 2014/4/5 https://github.com/weizengke/jungle/issues/2 */
+		end_pos = pos;
+		/* END:   Modified by weizengke, 2014/4/5 */
 
 		pos = vty->cur_pos;
 		while (vty->buffer[pos] != ' ')
@@ -1424,6 +1433,9 @@ void cmd_delete_word_ctrl_W_ex(struct cmd_vty *vty)
 
 	vty->cur_pos -= (vty->cur_pos - start_pos);
 	vty->used_len -= (end_pos - start_pos);
+
+	debug_print_ex(CMD_DEBUG_TYPE_INFO, "\r\nstart_pos=%d end_pos=%d len_last=%d cur_pos=%d used_len=%d\r\n",
+		start_pos,end_pos,len_last,vty->cur_pos, vty->used_len);
 
 }
 
