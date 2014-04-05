@@ -19,6 +19,7 @@
 #if M_DES("cmd_debugging_enable_st",1)
 DEFUN(cmd_debugging_enable_st, (char*)"debugging enable", (char*)"Debugging switch on", Debugging_enable)
 {
+	extern int g_oj_debug_switch;
 	if (g_debug_switch == DEBUG_ENABLE)
 	{
 		printf("Info: debugging switch is already enable.\n");
@@ -26,6 +27,7 @@ DEFUN(cmd_debugging_enable_st, (char*)"debugging enable", (char*)"Debugging swit
 	}
 
 	g_debug_switch = DEBUG_ENABLE;
+	g_oj_debug_switch = DEBUG_ENABLE;
 
 	extern ULONG Judge_DebugSwitch(ULONG st);
 	Judge_DebugSwitch(DEBUG_ENABLE);
@@ -39,6 +41,7 @@ DEFUN(cmd_debugging_enable_st, (char*)"debugging enable", (char*)"Debugging swit
 #if M_DES("cmd_undo_debugging_enable_st",1)
 DEFUN(cmd_undo_debugging_enable_st, (char*)"undo debugging enable", (char*)"Debugging switch off", undo_debugging_enable)
 {
+	extern int g_oj_debug_switch;
 
 	if (g_debug_switch == DEBUG_DISABLE)
 	{
@@ -47,6 +50,7 @@ DEFUN(cmd_undo_debugging_enable_st, (char*)"undo debugging enable", (char*)"Debu
 	}
 
 	g_debug_switch = DEBUG_DISABLE;
+	g_oj_debug_switch = DEBUG_DISABLE;
 
 	extern ULONG Judge_DebugSwitch(ULONG st);
 	Judge_DebugSwitch(DEBUG_DISABLE);
@@ -92,9 +96,11 @@ DEFUN(cmd_display_version_st, (char*)"display version", (char*)"Display device v
 #if M_DES("cmd_sysname_st",1)
 DEFUN(cmd_sysname_st, (char*)"sysname STRING<1-24>", (char*)"set system name", sysname)
 {
-	CMD_DBGASSERT(argv[1] != 0);
+	CMD_DBGASSERT(argv[1] != 0, "sysname");
 
 	strcpy(g_sysname, argv[1]);
+
+	WritePrivateProfileString("System","sysname",g_sysname,INI_filename);
 
 	::SetConsoleTitle(g_sysname);
 
@@ -136,7 +142,7 @@ DEFUN(cmd_display_history_n_st, (char*)"display history INTEGER<1-100>", (char*)
 
 	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "%d %s %s %s\n", argc, argv[0], argv[1], argv[2]);
 
-	CMD_DBGASSERT(argv[2]);
+	CMD_DBGASSERT(argv[2], "display_history_n");
 
 	n = atoi(argv[2]);
 
@@ -990,7 +996,7 @@ DEFUN(cmd_hdu_judge_ip_port_st, (char*)"hdu-judge ip STRING<1-24> port INTEGER<1
 		return OS_ERR;
 	}
 
-	ret = WritePrivateProfileString("HDU","socketport",port,INI_filename);
+	ret = WritePrivateProfileString("HDU","sock_port",port,INI_filename);
 	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "WritePrivateProfileString return %u..", ret);
 
 	if (ret != 1)
@@ -1034,7 +1040,7 @@ DEFUN(cmd_guet_judge_ip_port_st, (char*)"guet-judge ip STRING<1-24> port INTEGER
 		return OS_ERR;
 	}
 
-	ret = WritePrivateProfileString("GUET_DEPT3","socketport",port,INI_filename);
+	ret = WritePrivateProfileString("GUET_DEPT3","sock_port",port,INI_filename);
 	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "WritePrivateProfileString return %u..", ret);
 
 	if (ret != 1)
@@ -1074,7 +1080,8 @@ DEFUN(cmd_display_judge_brief_st, (char*)"display judge brief",
 	extern int guet_sockport;
 	extern char guet_judgerIP[];
 
-	extern int port;
+	extern int g_sock_port;
+	extern char dataPath[];
 	extern char Mysql_url[];
 	extern char Mysql_username[];
 	extern char Mysql_password[];
@@ -1082,7 +1089,9 @@ DEFUN(cmd_display_judge_brief_st, (char*)"display judge brief",
 	extern int	Mysql_port;
 
 	printf("# Local Judger Info\r\n");
-	printf("  Port: %d\r\n", port);
+	printf("  Sysname  : %s\r\n", g_sysname);
+	printf("  Sock Port: %d\r\n", g_sock_port);
+	printf("  Data Path: %s\r\n", dataPath);
 
 	printf(" =================================================="
 		   "========================\r\n");

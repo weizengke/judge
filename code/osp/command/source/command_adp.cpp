@@ -285,11 +285,8 @@ void cmd_resolve_tab(struct cmd_vty *vty)
 	vty->used_len = strlen(vty->buffer);
 	/* END:   Added by weizengke, 2013/11/17 */
 
-	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "TAB for completing command. (buf=%s)", vty->buffer);
-
 	if (g_InputMachine_prev == CMD_KEY_CODE_TAB)
 	{
-		debug_print_ex(CMD_DEBUG_TYPE_FUNC, "TAB for completing command. continue tabMachine. (g_tabbingString=%s)", g_tabbingString);
 		cmd_delete_word(vty);
 		cmd_insert_word(vty, g_tabbingString);
 	}
@@ -302,7 +299,6 @@ void cmd_resolve_tab(struct cmd_vty *vty)
 	v = str2vec(vty->buffer);
 	if (v == NULL)
 	{
-		debug_print_ex(CMD_DEBUG_TYPE_INFO, "TAB for completing command. str2vec return is null. (buf=%s)", vty->buffer);
 		/*
 		v = cmd_vector_init(1);
 		cmd_vector_insert(v, '\0');
@@ -312,7 +308,6 @@ void cmd_resolve_tab(struct cmd_vty *vty)
 
 	if (isspace((int)vty->buffer[vty->used_len - 1]))
 	{
-		debug_print_ex(CMD_DEBUG_TYPE_INFO, "TAB for completing command. the last one is space (buf=%s)", vty->buffer);
 		isNeedMatch = 0;
 	}
 
@@ -327,12 +322,8 @@ void cmd_resolve_tab(struct cmd_vty *vty)
 			strcpy(g_tabbingString, last_word);
 		}
 
-		debug_print_ex(CMD_DEBUG_TYPE_INFO, "TAB for completing command. the last word is (last_word=%s, vector_size=%d)", last_word, cmd_vector_max(v) - 1);
-
 		cmd_vector_deinit(v, 1);
 	}
-
-	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "TAB for completing command. after cmd_match_command. (match_type=%d)", match_type);
 
 	cmd_outstring("%s", CMD_ENTER);
 	switch (match_type) {
@@ -376,7 +367,6 @@ void cmd_resolve_tab(struct cmd_vty *vty)
 
 			if (g_InputMachine_prev != CMD_KEY_CODE_TAB)
 			{
-				debug_print_ex(CMD_DEBUG_TYPE_FSM, "TAB for completing command. enter tabMachine. (g_tabString=%s)", g_tabString);
 				memset(g_tabString,0,sizeof(g_tabString));
 				strcpy(g_tabString, match[0]->para);
 				g_tabStringLenth = strlen(g_tabString);
@@ -385,8 +375,6 @@ void cmd_resolve_tab(struct cmd_vty *vty)
 			}
 			else
 			{
-				debug_print_ex(CMD_DEBUG_TYPE_FSM, "TAB for completing command. continue tabMachine. (g_tabString=%s)", g_tabString);
-
 				for (i = 0; i < match_size; i++)
 				{
 					if (0 == strcmp(g_tabString, match[i]->para))
@@ -394,8 +382,6 @@ void cmd_resolve_tab(struct cmd_vty *vty)
 						break;
 					}
 				}
-
-				debug_print_ex(CMD_DEBUG_TYPE_FSM, "TAB for completing command. continue tabMachine. (i=%d, match_size=%d)", i, match_size);
 
 				if (i == match_size)
 				{
@@ -412,8 +398,6 @@ void cmd_resolve_tab(struct cmd_vty *vty)
 				memset(g_tabString,0,sizeof(g_tabString));
 				strcpy(g_tabString, match[i]->para);
 				g_tabStringLenth = strlen(g_tabString);
-
-				debug_print_ex(CMD_DEBUG_TYPE_FSM, "TAB for completing command. continue tabMachine. (match[i]->para=%s, g_tabStringLenth=%d)", match[i]->para, g_tabStringLenth);
 
 			}
 
@@ -580,35 +564,19 @@ void cmd_resolve_quest(struct cmd_vty *vty)
 	vty->used_len = strlen(vty->buffer);
 	/* END:   Added by weizengke, 2013/11/17 */
 
-
-	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "'?' for associating command. (buf=%s)", vty->buffer);
-
 	v = str2vec(vty->buffer);
 	if (v == NULL)
 	{
-		debug_print_ex(CMD_DEBUG_TYPE_INFO, "'?' for associating command. after str2vec, v is null (buf=%s)", vty->buffer);
-
 		v = cmd_vector_init(1);
 		cmd_vector_insert_cr(v);
 	}
 	else if (isspace((int)vty->buffer[vty->used_len - 1]))
 	{
-		debug_print_ex(CMD_DEBUG_TYPE_INFO, "'?' for associating command. the last one is space (buf=%s)", vty->buffer);
 		cmd_vector_insert_cr(v);
 	}
 
-	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "In cmd_resolve_quest, after str2vec, get %d vector.", v->size);
-
-	for (i = 0; i < cmd_vector_max(v); i++)
-	{
-		debug_print_ex(CMD_DEBUG_TYPE_INFO, "In cmd_resolve_quest, str=%s.", (char*)cmd_vector_slot(v, i));
-	}
 
 	cmd_complete_command(v, vty, match, &match_size, &nomath_pos);
-
-	debug_print_ex(CMD_DEBUG_TYPE_FUNC,
-		"In cmd_resolve_quest, after cmd_complete_command, get %d matched. (nomath_pos=%u)",
-		match_size, nomath_pos);
 
 	cmd_outstring("%s", CMD_ENTER);
 
@@ -711,7 +679,7 @@ void cmd_resolve_delete(struct cmd_vty *vty)
 	printf(" \b");
 
 	size = vty->used_len - vty->cur_pos;
-	CMD_DBGASSERT(size >= 0);
+	CMD_DBGASSERT(size >= 0, "cmd_resolve_delete");
 
 	memcpy(&vty->buffer[vty->cur_pos], &vty->buffer[vty->cur_pos + 1], size);
 	vty->buffer[vty->used_len - 1] = '\0';
@@ -737,7 +705,7 @@ void cmd_resolve_backspace(struct cmd_vty *vty)
 	if (vty->cur_pos <= 0)
 		return;
 	size = vty->used_len - vty->cur_pos;
-	CMD_DBGASSERT(size >= 0);
+	CMD_DBGASSERT(size >= 0, "cmd_resolve_backspace");
 
 	// delete char
 	vty->cur_pos--;
@@ -763,7 +731,10 @@ void cmd_resolve_insert(struct cmd_vty *vty)
 	if (vty->used_len >= vty->buf_len)
 		return;
 	size = vty->used_len - vty->cur_pos;
-	CMD_DBGASSERT(size >= 0);
+
+	debug_print_ex(CMD_DEBUG_TYPE_INFO,"\r\nused_len=%d, pos=%d\r\n",vty->used_len, vty->cur_pos);
+
+	CMD_DBGASSERT(size >= 0, "cmd_resolve_insert");
 
 	memcpy(&vty->buffer[vty->cur_pos + 1], &vty->buffer[vty->cur_pos], size);
 	vty->buffer[vty->cur_pos] = vty->c;

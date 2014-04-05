@@ -21,7 +21,6 @@
 
 #define CMD_MAX_CMD_ELEM_SIZE 24
 
-#define CMD_MAX_SYSNAME_SIZE 24
 
 #define CMD_ELEM_SPACE_SIZE  CMD_MAX_CMD_ELEM_SIZE + 1
 
@@ -55,7 +54,7 @@
 #define DEBUG_ENABLE  1
 
 /* assert(0) */
-#define CMD_DBGASSERT(x) if (0 == x) printf("Assert!!!!!!!!!!!!!! Is that a bug?");
+#define CMD_DBGASSERT(x,y) if (0 == x) printf("Assert at %s", y);
 
 #define CMD_NOUSED(x) ((x) = (x))
 

@@ -53,14 +53,43 @@ char judge_log_filename[MAX_PATH] = {0};
 #define PORT 5000
 #define BUFFER 1024
 
-int port=PORT;
+int g_sock_port=PORT;
 
-typedef struct
+typedef struct tagJudge_Data_S
 {
 	int solutionId;
-}JUDGE_DATA;
 
-queue <JUDGE_DATA> Q; /* 全局队列 */
+}JUDGE_DATA_S;
+
+#if 0
+typedef enum tagMsg_Type_E
+{
+	MSG_TYPE_NULL = 0,
+	MSG_TYPE_JUDGE_REQUEST,
+	MSG_TYPE_JUDGE_DATA,
+
+	MSG_TYPE_MAX
+}MSG_TYPE_E;
+
+typedef struct tagMBuff_S
+{
+	sockaddr_in  sock_addr_des;
+	sockaddr_in  sock_addr_src;
+
+	int priority;
+
+	int module_id_des;
+	int module_id_src;
+
+	int msg_type;
+
+	int data_length;
+	char * pszData;
+
+}MBUF_S;
+#endif
+
+queue <JUDGE_DATA_S> Q; /* 全局队列 */
 
 SOCKET sListen;
 
@@ -110,7 +139,7 @@ int Judge_InitSocket()
 
 	sockaddr_in sin;
 	sin.sin_family = AF_INET;
-	sin.sin_port = htons(port);
+	sin.sin_port = htons(g_sock_port);
 	sin.sin_addr.S_un.S_addr = INADDR_ANY;
 
 
@@ -131,20 +160,20 @@ int Judge_InitSocket()
 	{
 		while (ret == SOCKET_ERROR)
 		{
-			port++;
-			sin.sin_port = htons(port);
+			g_sock_port++;
+			sin.sin_port = htons(g_sock_port);
 			ret =  bind(sListen,(LPSOCKADDR)&sin,sizeof(sin));
 			if (ret != SOCKET_ERROR)
 			{
 				char szPort[10] = {0};
-				(void)itoa(port, szPort ,10);
-				WritePrivateProfileString("Tool","Port",szPort,INI_filename);
+				(void)itoa(g_sock_port, szPort ,10);
+				WritePrivateProfileString("System","Port",szPort,INI_filename);
 			}
 			Sleep(10);
 		}
 	}
 
-	pdt_debug_print("Info: Socket bind port(%u) ok.", port);
+	pdt_debug_print("Info: Socket bind port(%u) ok.", g_sock_port);
 
 	write_log(JUDGE_INFO,"Bind success...");
 
@@ -160,7 +189,7 @@ int Judge_InitSocket()
 	if(ret<0)
 	{
 		write_log(JUDGE_SYSTEM_ERROR,"Listen failed...");
-		pdt_debug_print("Error: Listen port(%u) failed......[code:%u]", port, GetLastError());
+		pdt_debug_print("Error: Listen port(%u) failed......[code:%u]", g_sock_port, GetLastError());
 
 		closesocket(sListen);
 		WSACleanup();
@@ -181,18 +210,19 @@ void Judge_Destroy()
 
 void Judge_InitConfigData()
 {
-	port=GetPrivateProfileInt("Tool","Port",PORT,INI_filename);
-	isDeleteTemp=GetPrivateProfileInt("Tool","DeleteTemp",0,INI_filename);
-	limitJudge=GetPrivateProfileInt("Tool","LimitJudge",20,INI_filename);
-	OutputLimit=GetPrivateProfileInt("Tool","OutputLimit",10000,INI_filename);
-	JUDGE_LOG_BUF_SIZE=GetPrivateProfileInt("Tool","JUDGE_LOG_BUF_SIZE",500,INI_filename);
-	GL_vjudge_enable=GetPrivateProfileInt("Tool","vjudge_enable",OS_NO,INI_filename);
+	g_sock_port=GetPrivateProfileInt("System","sock_port",PORT,INI_filename);
+	GetPrivateProfileString("System","JudgePath","",judgePath,sizeof(judgePath),INI_filename);
 
-	isRestrictedFunction=GetPrivateProfileInt("Tool","isRestrictedFunction",0,INI_filename);
-	GetPrivateProfileString("Tool","WorkingPath","",workPath,sizeof(workPath),INI_filename);
-	GetPrivateProfileString("Tool","DataPath","",dataPath,sizeof(dataPath),INI_filename);
-	GetPrivateProfileString("Tool","JudgePath","",judgePath,sizeof(judgePath),INI_filename);
-	GetPrivateProfileString("Tool","JudgeLogPath","",judgeLogPath,sizeof(judgeLogPath),INI_filename);
+	isDeleteTemp=GetPrivateProfileInt("Judge","DeleteTemp",0,INI_filename);
+	limitJudge=GetPrivateProfileInt("Judge","LimitJudge",20,INI_filename);
+	OutputLimit=GetPrivateProfileInt("Judge","OutputLimit",10000,INI_filename);
+	JUDGE_LOG_BUF_SIZE=GetPrivateProfileInt("Judge","judge_logbuf_size",500,INI_filename);
+	GL_vjudge_enable=GetPrivateProfileInt("Judge","vjudge_enable",OS_NO,INI_filename);
+	isRestrictedFunction=GetPrivateProfileInt("Judge","isRestrictedFunction",0,INI_filename);
+	GetPrivateProfileString("Judge","WorkingPath","",workPath,sizeof(workPath),INI_filename);
+	GetPrivateProfileString("Judge","DataPath","",dataPath,sizeof(dataPath),INI_filename);
+
+	GetPrivateProfileString("Judge","JudgeLogPath","",judgeLogPath,sizeof(judgeLogPath),INI_filename);
 
 	GetPrivateProfileString("MySQL","url","",Mysql_url,sizeof(Mysql_url),INI_filename);
 	GetPrivateProfileString("MySQL","username","NULL",Mysql_username,sizeof(Mysql_username),INI_filename);
@@ -204,7 +234,7 @@ void Judge_InitConfigData()
 	GetPrivateProfileString("HDU","username","NULL",hdu_username,sizeof(hdu_username),INI_filename);
 	GetPrivateProfileString("HDU","password","NULL",hdu_password,sizeof(hdu_password),INI_filename);
 	GetPrivateProfileString("HDU","judgerIP","127.0.0.1",hdu_judgerIP,sizeof(hdu_judgerIP),INI_filename);
-	hdu_sockport=GetPrivateProfileInt("HDU","socketport",6606,INI_filename);
+	hdu_sockport=GetPrivateProfileInt("HDU","sock_port",6606,INI_filename);
 	hdu_remote_enable=GetPrivateProfileInt("HDU","remote_enable",OS_NO,INI_filename);
 	hdu_vjudge_enable=GetPrivateProfileInt("HDU","vjudge_enable",OS_NO,INI_filename);
 
@@ -212,11 +242,11 @@ void Judge_InitConfigData()
 	GetPrivateProfileString("GUET_DEPT3","username","NULL",guet_username,sizeof(guet_username),INI_filename);
 	GetPrivateProfileString("GUET_DEPT3","password","NULL",guet_password,sizeof(guet_password),INI_filename);
 	GetPrivateProfileString("GUET_DEPT3","judgerIP","127.0.0.1",guet_judgerIP,sizeof(guet_judgerIP),INI_filename);
-	guet_sockport=GetPrivateProfileInt("GUET_DEPT3","socketport",7706,INI_filename);
+	guet_sockport=GetPrivateProfileInt("GUET_DEPT3","sock_port",7706,INI_filename);
 	guet_remote_enable=GetPrivateProfileInt("GUET_DEPT3","remote_enable",OS_NO,INI_filename);
 	guet_vjudge_enable=GetPrivateProfileInt("GUET_DEPT3","vjudge_enable",OS_NO,INI_filename);
 
-	write_log(JUDGE_INFO,"Socketport:%d, Data:%s, Workpath:%s",port,dataPath,workPath);
+	write_log(JUDGE_INFO,"Socketport:%d, Data:%s, Workpath:%s",g_sock_port,dataPath,workPath);
 	write_log(JUDGE_INFO,"MySQL:%s %s %s %s %d",Mysql_url,Mysql_username,Mysql_password,Mysql_table,Mysql_port);
 
 }
@@ -1083,7 +1113,7 @@ int Judge_Proc(int solutionId)
 
 void Judge_PushQueue(int solutionId)
 {
-	JUDGE_DATA jd = {0};
+	JUDGE_DATA_S jd = {0};
 
 	jd.solutionId = solutionId;
 	Q.push(jd);
@@ -1092,7 +1122,7 @@ void Judge_PushQueue(int solutionId)
 DWORD WINAPI Judge_DispatchThread(LPVOID lpParam)
 {
 	int ret = OS_OK;
-	JUDGE_DATA jd;
+	JUDGE_DATA_S jd;
 	time_t first_t,second_t;
 	string str_time;
     time(&first_t);
@@ -1151,7 +1181,7 @@ DWORD WINAPI Judge_ListenThread(LPVOID lpParam)
 	sockaddr_in remoteAddr;
 	SOCKET sClient;
 	int nAddrLen = sizeof(remoteAddr);
-	JUDGE_DATA j;
+	JUDGE_DATA_S j;
 
 	while(TRUE)
 	{
@@ -1236,6 +1266,8 @@ int OJ_Init()
 		CreateDirectory(logPath,NULL);
 	}
 
+	Judge_InitConfigData();
+
 	Judge_DebugSwitch(JUDGE_DEBUG_OFF);
 
 	return OS_OK;
@@ -1243,7 +1275,6 @@ int OJ_Init()
 
 int OJ_InitData()
 {
-	Judge_InitConfigData();
 
 	if(SQL_InitMySQL()==0)
 	{

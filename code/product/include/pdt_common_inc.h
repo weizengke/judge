@@ -39,5 +39,9 @@ extern void pdt_debug_print_ex(int level, const char *format, ...);
 extern void MSG_StartDot();
 extern void MSG_StopDot();
 
+
+extern char INI_filename[];
+
+
 #endif _PDT_COMMON_INC_
 

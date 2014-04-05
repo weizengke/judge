@@ -30,10 +30,6 @@ unsigned long g_aulDebugMask[CMD_DEBUG_TYPE_MAX/32 + 1] = {0};
 
 int g_debug_switch = DEBUG_DISABLE;
 
-
-char g_sysname[CMD_MAX_SYSNAME_SIZE] = "Jungle";
-
-
 struct cmd_vty *vty;
 // Global command vector, to store user installed commands
 cmd_vector_t *cmd_vec;
