@@ -207,7 +207,8 @@ struct cmd_vty *cmd_vty_init()
 	struct cmd_vty *vty;
 
 	vty = (struct cmd_vty *)calloc(1, sizeof(struct cmd_vty));
-	if(vty == NULL) {
+	if(vty == NULL)
+	{
 		debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd_vty_init, Not Enough Memory For vty%s", CMD_ENTER);
 		return NULL;
 	}
@@ -226,7 +227,9 @@ void cmd_vty_deinit(struct cmd_vty *vty)
 	int i;
 
 	if (!vty)
+	{
 		return;
+	}
 
 	for (i = 0; i < HISTORY_MAX_SIZE; i++)
 	{
@@ -243,18 +246,22 @@ void cmd_vty_add_history(struct cmd_vty *vty)
 
 	/* if same as previous command, then ignore */
 	if (vty->history[idx] &&
-		!strcmp(vty->buffer, vty->history[idx])) {
+		!strcmp(vty->buffer, vty->history[idx]))
+	{
 		vty->hpos = vty->hindex;
 		return;
 	}
 
 	/* insert into history tail */
 	if (vty->history[vty->hindex])
+	{
 		free(vty->history[vty->hindex]);
-	vty->history[vty->hindex] = strdup(vty->buffer);
+	}
 
+	vty->history[vty->hindex] = strdup(vty->buffer);
 	vty->hindex = (vty->hindex + 1) == HISTORY_MAX_SIZE ? 0 : vty->hindex + 1;
 	vty->hpos = vty->hindex;
+
 }
 
 /* vector */
@@ -263,15 +270,22 @@ int cmd_vector_fetch(cmd_vector_t *v)
 	int fetch_idx;
 
 	for (fetch_idx = 0; fetch_idx < v->used_size; fetch_idx++)
+	{
 		if (v->data[fetch_idx] == NULL)
+		{
 			break;
+		}
+	}
 
-	while (v->size < fetch_idx + 1) {
+	while (v->size < fetch_idx + 1)
+	{
 		v->data = (void**)realloc(v->data, sizeof(void *) * v->size * 2);
-		if (!v->data) {
+		if (!v->data)
+		{
 			debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd_vector_fetch, Not Enough Memory For data");
 			return -1;
 		}
+
 		memset(&v->data[v->size], 0, sizeof(void *) * v->size);
 		v->size *= 2;
 	}
@@ -282,14 +296,19 @@ int cmd_vector_fetch(cmd_vector_t *v)
 cmd_vector_t *cmd_vector_init(int size)
 {
 	cmd_vector_t *v = (cmd_vector_t *)calloc(1, sizeof(struct cmd_vector));
-	if (v == NULL) {
+	if (v == NULL)
+	{
 		return NULL;
 	}
 
 	if (size == 0)
+	{
 		size = 1;
+	}
+
 	v->data = (void**)calloc(1, sizeof(void *) * size);
-	if (v->data == NULL) {
+	if (v->data == NULL)
+	{
 		debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd_vector_init, Not Enough Memory For data");
 		free(v);
 		return NULL;
@@ -303,18 +322,27 @@ cmd_vector_t *cmd_vector_init(int size)
 void cmd_vector_deinit(cmd_vector_t *v, int freeall)
 {
 	if (v == NULL)
+	{
 		return;
+	}
 
-	if (v->data) {
-		if (freeall) {
+	if (v->data)
+	{
+		if (freeall)
+		{
 			int i;
-			for (i = 0; i < cmd_vector_max(v); i++) {
+			for (i = 0; i < cmd_vector_max(v); i++)
+			{
 				if (cmd_vector_slot(v, i))
+				{
 					free(cmd_vector_slot(v, i));
+				}
 			}
 		}
+
 		free(v->data);
 	}
+
 	free(v);
 }
 
@@ -345,7 +373,9 @@ void cmd_vector_insert(cmd_vector_t *v, void *val)
 	idx = cmd_vector_fetch(v);
 	v->data[idx] = val;
 	if (v->used_size <= idx)
+	{
 		v->used_size = idx + 1;
+	}
 }
 
 /*
@@ -373,15 +403,22 @@ cmd_vector_t *str2vec(char *string)
 
 	// empty string
 	if (string == NULL)
+	{
 		return NULL;
+	}
 
 	cur = string;
 	// skip white spaces
 	while (isspace((int) *cur) && *cur != '\0')
+	{
 		cur++;
+	}
+
 	// only white spaces
 	if (*cur == '\0')
+	{
 		return NULL;
+	}
 
 	// copy each command pieces into vector
 	vec = cmd_vector_init(1);
@@ -389,8 +426,11 @@ cmd_vector_t *str2vec(char *string)
 	{
 		start = cur;
 		while (!(isspace((int) *cur) || *cur == '\r' || *cur == '\n') &&
-			*cur != '\0')
+				*cur != '\0')
+		{
 			cur++;
+		}
+
 		str_len = cur - start;
 		token = (char *)malloc(sizeof(char) * (str_len + 1));
 		if (NULL == token)
@@ -405,9 +445,15 @@ cmd_vector_t *str2vec(char *string)
 
 		while((isspace ((int) *cur) || *cur == '\n' || *cur == '\r') &&
 			*cur != '\0')
+		{
 			cur++;
+		}
+
 		if (*cur == '\0')
+		{
 			return vec;
+		}
+
 	}
 }
 
@@ -419,10 +465,14 @@ static int match_unique_string(struct para_desc **match, char *str, int size)
 {
 	int i;
 
-	for (i = 0; i < size; i++) {
+	for (i = 0; i < size; i++)
+	{
 		if (match[i]->para != NULL && strcmp(match[i]->para, str) == 0)
+		{
 			return 0;
+		}
 	}
+
 	return 1;
 }
 
@@ -436,7 +486,9 @@ int cmd_get_nth_elem_pos(char *string, int n, int *pos)
 
 	// empty string
 	if (string == NULL)
+	{
 		return CMD_ERR;
+	}
 
 	cur = string;
 	pre = NULL;
@@ -450,7 +502,9 @@ int cmd_get_nth_elem_pos(char *string, int n, int *pos)
 
 	// only white spaces
 	if (*cur == '\0')
+	{
 		return CMD_ERR;
+	}
 
 	while (1)
 	{
@@ -544,25 +598,37 @@ cmd_vector_t *cmd2vec(char *string, char *doc)
 	char *d_cp = doc;
 	char *token=NULL, *d_token=NULL;
 	int len, d_len;
+
 	cmd_vector_t *allvec=NULL;
 	struct para_desc *desc = NULL;
 	struct para_desc *desc_cr = NULL;
 
 	if(cp == NULL)
+	{
 		return NULL;
+	}
 
 	allvec = cmd_vector_init(1);
 	while (1)
 	{
 		while(isspace((int) *cp) && *cp != '\0')
+		{
 			cp++;
+		}
+
 		if(*cp == '\0')
+		{
 			break;
+		}
 
 		sp = cp;
+
 		while(!(isspace ((int) *cp) || *cp == '\r' || *cp == '\n')
-				&& *cp != '\0')
+			  && *cp != '\0')
+		{
 			cp++;
+		}
+
 		len = cp - sp;
 		token = (char*)malloc(len + 1);
 		if (NULL == token)
@@ -575,13 +641,23 @@ cmd_vector_t *cmd2vec(char *string, char *doc)
 		*(token + len) = '\0';
 
 		while(isspace((int)*d_cp) && *d_cp != '\0')
+		{
 			d_cp++;
+		}
+
 		if (*d_cp == '\0')
+		{
 			d_token = NULL;
-		else {
-				d_sp = d_cp;
+		}
+		else
+		{
+			d_sp = d_cp;
+
 			while(!(*d_cp == '\r' || *d_cp == '\n') && *d_cp != '\0')
+			{
 				d_cp++;
+			}
+
 			d_len = d_cp - d_sp;
 			d_token = (char*)malloc(d_len + 1);
 			if (NULL == d_token)
@@ -787,21 +863,33 @@ int match_lcd(struct para_desc **match, int size)
 	char c1, c2;
 
 	if (size < 2)
+	{
 		return 0;
+	}
 
-	for (i = 1; i < size; i++) {
+	for (i = 1; i < size; i++)
+	{
 		s1 = match[i - 1]->para;
 		s2 = match[i]->para;
 
 		for (j = 0; (c1 = s1[j]) && (c2 = s2[j]); j++)
+		{
 			if (c1 != c2)
+			{
 				break;
+			}
+		}
 
 		if (lcd < 0)
+		{
 			lcd = j;
-		else {
+		}
+		else
+		{
 			if (lcd > j)
+			{
 				lcd = j;
+			}
 		}
 	}
 
@@ -932,13 +1020,15 @@ int cmd_match_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty,
 
 	// Step 3
 	// No command matched
-	if (size == 0) {
+	if (size == 0)
+	{
 		*match_size = size;
 		return CMD_NO_MATCH;
 	}
 
 	// Only one command matched
-	if (size == 1) {
+	if (size == 1)
+	{
 		*match_size = size;
 		return CMD_FULL_MATCH;
 	}
@@ -1221,7 +1311,8 @@ int cmd_execute_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct para
 
 void install_element(struct cmd_elem_st *elem)
 {
-	if (cmd_vec == NULL) {
+	if (cmd_vec == NULL)
+	{
 		debug_print_ex(CMD_DEBUG_TYPE_ERROR, "Command Vector Not Exist");
 		exit(1);
 	}
@@ -1252,7 +1343,8 @@ void cmd_delete_word(struct cmd_vty *vty)
 {
 	int pos = strlen(vty->buffer);
 
-	while (pos > 0 && vty->buffer[pos - 1] != ' ') {
+	while (pos > 0 && vty->buffer[pos - 1] != ' ')
+	{
 		pos--;
 	}
 
@@ -1280,7 +1372,8 @@ void cmd_delete_word_ctrl_W(struct cmd_vty *vty)
 	}
 
 	/* del the last word */
-	while (pos > 0 && vty->buffer[pos - 1] != ' ') {
+	while (pos > 0 && vty->buffer[pos - 1] != ' ')
+	{
 		pos--;
 	}
 
@@ -1380,9 +1473,15 @@ static inline void free_matched(char **matched)
 	int i;
 
 	if (!matched)
+	{
 		return;
+	}
+
 	for (i = 0; matched[i] != NULL; i++)
+	{
 		free(matched[i]);
+	}
+
 	free(matched);
 }
 
@@ -1428,16 +1527,19 @@ void cmd_clear_line(struct cmd_vty *vty)
 	int size = vty->used_len - vty->cur_pos;
 
 	CMD_DBGASSERT(size >= 0, "cmd_clear_line");
-	while (size--) {
+	while (size--)
+	{
 		cmd_put_one(' ');
 	}
 
-	while (vty->used_len) {
+	while (vty->used_len)
+	{
 		vty->used_len--;
 		cmd_back_one();
 		cmd_put_one(' ');
 		cmd_back_one();
 	}
+
 	memset(vty->buffer, 0, HISTORY_MAX_SIZE);
 }
 

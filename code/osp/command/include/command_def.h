@@ -78,6 +78,10 @@
 #define CMD_KEY_DOWN 	0x42		 //0x50
 #define CMD_KEY_RIGHT 	0x43		 //0x4d
 #define CMD_KEY_LEFT 	0x44		 //0x4b
+#define CMD_KEY_HOME	0x47
+#define CMD_KEY_END		0x4f
+#define CMD_KEY_PGUP	0x49
+#define CMD_KEY_PHDN	0x51
 #define CMD_KEY_BACKSPACE  0x7e		 //0x08
 #define CMD_KEY_SPACE   0x20		 //0x8
 #define CMD_KEY_CTRL_H	(0x1f | 0x7f)
@@ -88,6 +92,11 @@
 #define CMD_KEY_DOWN 	0x50
 #define CMD_KEY_RIGHT 	0x4d
 #define CMD_KEY_LEFT 	0x4b
+#define CMD_KEY_HOME	0x47
+#define CMD_KEY_END		0x4f
+#define CMD_KEY_PGUP	0x49
+#define CMD_KEY_PHDN	0x51
+
 #define CMD_KEY_DELETE  0x53
 #define CMD_KEY_BACKSPACE  0x08
 #define CMD_KEY_SPACE   0x20

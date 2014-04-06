@@ -33,7 +33,7 @@ vector <APP_INFO_S*> g_vector_appInfo;
 #define APP_MAX_SYSNAME_SIZE 24
 
 char g_sysname[APP_MAX_SYSNAME_SIZE] = "Jungle";
-
+HWND g_hWnd = NULL;
 
 int RegistAppInfo(APP_INFO_S *pstAppInfo)
 {
@@ -62,23 +62,22 @@ int RegistAppInfo(APP_INFO_S *pstAppInfo)
 
 void pdt_init()
 {
-	HWND hw=NULL;
-
 	GetPrivateProfileString("System","sysname","Judge-Kernel",g_sysname,sizeof(g_sysname),INI_filename);
 
 	::SetConsoleTitle(g_sysname);
 
-	hw=::GetConsoleWindow();
+	g_hWnd=::GetConsoleWindow();
 
-	if (hw !=NULL)
+	if (g_hWnd !=NULL)
 	{
 		HANDLE hIcon=NULL;
 		hIcon=::LoadImage(GetModuleHandle(NULL),"beyond.ico",
 		IMAGE_ICON,32,32,LR_LOADFROMFILE);
 		if (hIcon!=NULL)
 		{
-			::SendMessage(hw,WM_SETICON,ICON_SMALL,(LPARAM)hIcon);
+			::SendMessage(g_hWnd,WM_SETICON,ICON_SMALL,(LPARAM)hIcon);
 		}
+
 	}
 	else
 	{

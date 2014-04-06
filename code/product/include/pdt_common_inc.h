@@ -41,6 +41,7 @@ extern void MSG_StopDot();
 
 
 extern char INI_filename[];
+extern HWND g_hWnd;
 
 
 #endif _PDT_COMMON_INC_

@@ -115,7 +115,6 @@ void cmd_resolve_enter_ex(char* buf)
 int cmd_resolve(char c)
 {
 	int key_type = CMD_KEY_CODE_NOTCARE;	// default is not special key
-
 	switch (c) {
 	case CMD_KEY_ARROW1:
 		c = cmd_getch();
@@ -124,24 +123,44 @@ int cmd_resolve(char c)
 		{
 			c = cmd_getch();
 		#endif
-			switch (c) {
-			case CMD_KEY_UP:
-				key_type = CMD_KEY_CODE_UP;
-				break;
-			case CMD_KEY_DOWN:
-				key_type = CMD_KEY_CODE_DOWN;
-				break;
-			case CMD_KEY_RIGHT:
-				key_type = CMD_KEY_CODE_RIGHT;
-				break;
-			case CMD_KEY_LEFT:
-				key_type = CMD_KEY_CODE_LEFT;
-				break;
-			case CMD_KEY_DELETE:
-				key_type = CMD_KEY_CODE_DELETE;
-				break;
-			default:
-				break;
+			switch (c)
+			{
+				case CMD_KEY_UP:
+					key_type = CMD_KEY_CODE_UP;
+					break;
+				case CMD_KEY_DOWN:
+					key_type = CMD_KEY_CODE_DOWN;
+					break;
+				case CMD_KEY_RIGHT:
+					key_type = CMD_KEY_CODE_RIGHT;
+					break;
+				case CMD_KEY_LEFT:
+					key_type = CMD_KEY_CODE_LEFT;
+					break;
+				case CMD_KEY_DELETE:
+					key_type = CMD_KEY_CODE_DELETE;
+					break;
+				/* BEGIN: Added by weizengke, 2014/4/6 support page up & down*/
+				case CMD_KEY_PGUP:
+					{
+						::SendMessage(g_hWnd,WM_VSCROLL,MAKEWPARAM(SB_PAGEUP, 0),NULL);
+						/*
+						int nVertSP = GetScrollPos(g_hWnd, SB_VERT);
+						SetScrollPos(g_hWnd, SB_VERT, nVertSP, 1);
+						*/
+						key_type = CMD_KEY_CODE_FILTER;
+					}
+					break;
+				case CMD_KEY_PHDN:
+					{
+						::SendMessage(g_hWnd,WM_VSCROLL,MAKEWPARAM(SB_PAGEDOWN, 0),NULL);
+						key_type = CMD_KEY_CODE_FILTER;
+					}
+					break;
+				/* END:   Added by weizengke, 2014/4/6 */
+				default:
+					key_type = CMD_KEY_CODE_FILTER;
+					break;
 			}
 		#ifdef _LINUX_
 		}
@@ -150,21 +169,23 @@ int cmd_resolve(char c)
 #ifndef _LINUX_  /* windwos */
 		case CMD_KEY_ARROW2:
 			c = cmd_getch();
-			switch (c) {
-			case CMD_KEY_UP:
-				key_type = CMD_KEY_CODE_UP;
-				break;
-			case CMD_KEY_DOWN:
-				key_type = CMD_KEY_CODE_DOWN;
-				break;
-			case CMD_KEY_RIGHT:
-				key_type = CMD_KEY_CODE_RIGHT;
-				break;
-			case CMD_KEY_LEFT:
-				key_type = CMD_KEY_CODE_LEFT;
-				break;
-			default:
-				break;
+			switch (c)
+			{
+				case CMD_KEY_UP:
+					key_type = CMD_KEY_CODE_UP;
+					break;
+				case CMD_KEY_DOWN:
+					key_type = CMD_KEY_CODE_DOWN;
+					break;
+				case CMD_KEY_RIGHT:
+					key_type = CMD_KEY_CODE_RIGHT;
+					break;
+				case CMD_KEY_LEFT:
+					key_type = CMD_KEY_CODE_LEFT;
+					break;
+				default:
+					key_type = CMD_KEY_CODE_FILTER;
+					break;
 			}
 		break;
 #endif
@@ -194,6 +215,12 @@ int cmd_resolve(char c)
 		key_type = CMD_KEY_CODE_QUEST;
 		break;
 	default:
+		/* BEGIN: Added by weizengke, 2014/4/6 filter CTRL+a ~ z */
+		if (c >= 0x1 && c <= 0x1d)
+		{
+			key_type = CMD_KEY_CODE_FILTER;
+		}
+		/* END:   Added by weizengke, 2014/4/6 */
 		break;
 	}
 
@@ -248,6 +275,12 @@ int cmd_resolve(char c)
 	return key_type;
 }
 */
+
+void cmd_resolve_filter(struct cmd_vty *vty)
+{
+	return;
+}
+
 
 /*****************************************************************************
  º¯ Êý Ãû  : cmd_resolve_tab
@@ -800,6 +833,7 @@ void cmd_resolve_del_lastword(struct cmd_vty *vty)
 
 key_handler_t key_resolver[] = {
 	// resolve a whole line
+	{ CMD_KEY_CODE_FILTER, 	cmd_resolve_filter },
 	{ CMD_KEY_CODE_TAB, 	cmd_resolve_tab },
 	{ CMD_KEY_CODE_ENTER, 	cmd_resolve_enter },
 	{ CMD_KEY_CODE_QUEST, 	cmd_resolve_quest },

@@ -127,7 +127,7 @@ DEFUN(cmd_display_history_st, (char*)"display history", (char*)"Display history 
 		if (vty->history[i] == NULL)
 			break;
 
-		cmd_outstring("%s\r\n", vty->history[i]);
+		cmd_outstring(" %s\r\n", vty->history[i]);
 	}
 
 	return 0;
@@ -146,8 +146,6 @@ DEFUN(cmd_display_history_n_st, (char*)"display history INTEGER<1-100>", (char*)
 
 	n = atoi(argv[2]);
 
-	debug_print_ex(CMD_DEBUG_TYPE_FUNC,"n = %d\n", n);
-
 	for (i = 0;  i < HISTORY_MAX_SIZE; i++)
 	{
 		if (vty->history[i] == NULL)
@@ -159,10 +157,8 @@ DEFUN(cmd_display_history_n_st, (char*)"display history INTEGER<1-100>", (char*)
 		if (vty->history[i] == NULL)
 			break;
 
-		cmd_outstring("%s\r\n", vty->history[i]);
+		cmd_outstring("%s \r\n", vty->history[i]);
 	}
-
-	debug_print_ex(CMD_DEBUG_TYPE_FUNC,"+");
 
 	return 0;
 }
