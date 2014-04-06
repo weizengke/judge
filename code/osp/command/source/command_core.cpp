@@ -382,9 +382,6 @@ cmd_vector_t *str2vec(char *string)
 	// only white spaces
 	if (*cur == '\0')
 		return NULL;
-	// not care ! and #
-	if (*cur == '!' || *cur == '#')
-		return NULL;
 
 	// copy each command pieces into vector
 	vec = cmd_vector_init(1);
@@ -453,9 +450,6 @@ int cmd_get_nth_elem_pos(char *string, int n, int *pos)
 
 	// only white spaces
 	if (*cur == '\0')
-		return CMD_ERR;
-	// not care ! and #
-	if (*cur == '!' || *cur == '#')
 		return CMD_ERR;
 
 	while (1)
