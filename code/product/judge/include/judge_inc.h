@@ -20,6 +20,7 @@
 
 
 #include "product\judge\include\judge_def.h"
+#include "product\judge\include\judge_type.h"
 #include "product\judge\include\judge_util.h"
 #include "product\judge\include\judge_var.h"
 #include "product\judge\include\judge_io.h"

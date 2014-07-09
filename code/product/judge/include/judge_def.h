@@ -1,4 +1,5 @@
-
+#ifndef _JUDGE_DEF_H_
+#define _JUDGE_DEF_H_
 
 
 #define JUDGE_VIRTUAL VOS_YES   /* VJUDGE switch */
@@ -52,7 +53,7 @@ static const char* LEVEL_NAME[] = {"JUDGE_SYSTEM_ERROR", "JUDGE_WARNING", "JUDGE
 
 #define BUFSIZE 4096
 
-const int MAX_NAME = 30;
+const int MAX_NAME = 32;
 const int MAX_CODE = 100000;
 const int MAX_TITLE = 200;
 const int MAX_CONTENT = 100000;
@@ -64,4 +65,4 @@ const int MAX_WAITTIME = 10000 ;
 #define VJUDGE_MAX_LANG_SIZE 255
 
 
-
+#endif

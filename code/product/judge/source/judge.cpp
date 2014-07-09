@@ -116,7 +116,16 @@ ULONG Judge_DebugSwitch(ULONG st)
 
 	return OS_TRUE;
 }
-/* END HDU VJUDGE */
+
+int Judge_IsVirtualJudgeEnable()
+{
+	if (GL_vjudge_enable == OS_YES)
+	{
+		return OS_YES;
+	}
+
+	return OS_NO;
+}
 
 /* #pragma comment(linker, "/subsystem:windows /ENTRY:mainCRTStartup") */
 
@@ -251,87 +260,100 @@ void Judge_InitConfigData()
 
 }
 
-void Judge_ResetJudgeStatus(){
-	GL_verdictId=V_AC;
-	GL_contestId=0;
-	GL_time=0;
-	GL_memory=0;
-	GL_time_limit=1000;
-	GL_memory_limit=65535;
-	GL_reJudge=0;
-	GL_testcase=0;
-}
-
-void Judge_InitJudgePath()
+void Judge_InitJudgePath(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 {
+	if (NULL == pstJudgeSubmission)
+	{
+		write_log(JUDGE_ERROR,"Judge_InitJudgePath ERROR, pstJudgeSubmission is NULL....");
+		return ;
+	}
+
 	if( (_access(workPath, 0 )) == -1 )
 	{
 		CreateDirectory(workPath,NULL);
 	}
 
 	char keyname[100]={0};
-	sprintf(keyname,"Language%d",GL_languageId);
+	sprintf(keyname,"Language%d", pstJudgeSubmission->stSolution.languageId);
 
-	GetPrivateProfileString("Language",keyname,"",GL_languageName,100,INI_filename);
+	GetPrivateProfileString("Language",keyname,"",pstJudgeSubmission->languageName,100,INI_filename);
 
-	GetPrivateProfileString("LanguageExt",GL_languageName,"",GL_languageExt,10,INI_filename);
+	GetPrivateProfileString("LanguageExt",pstJudgeSubmission->languageName,"",pstJudgeSubmission->languageExt,10,INI_filename);
 
-	GetPrivateProfileString("LanguageExe",GL_languageName,"",GL_languageExe,10,INI_filename);
+	GetPrivateProfileString("LanguageExe",pstJudgeSubmission->languageName,"",pstJudgeSubmission->languageExe,10,INI_filename);
 
-	GetPrivateProfileString("CompileCmd",GL_languageName,"",compileCmd_str,1024,INI_filename);
+	GetPrivateProfileString("CompileCmd",pstJudgeSubmission->languageName,"",pstJudgeSubmission->compileCmd,1024,INI_filename);
 
-	GetPrivateProfileString("RunCmd",GL_languageName,"",runCmd_str,1024,INI_filename);
+	GetPrivateProfileString("RunCmd",pstJudgeSubmission->languageName,"",pstJudgeSubmission->runCmd,1024,INI_filename);
 
-	GetPrivateProfileString("SourcePath",GL_languageName,"",sourcePath,1024,INI_filename);
+	GetPrivateProfileString("SourcePath",pstJudgeSubmission->languageName,"",pstJudgeSubmission->sourcePath,1024,INI_filename);
 
-	GetPrivateProfileString("ExePath",GL_languageName,"",exePath,1024,INI_filename);
+	GetPrivateProfileString("ExePath",pstJudgeSubmission->languageName,"",pstJudgeSubmission->exePath,1024,INI_filename);
 
-	isTranscoding=GetPrivateProfileInt("Transcoding",GL_languageName,0,INI_filename);
+	pstJudgeSubmission->isTranscoding=GetPrivateProfileInt("Transcoding",pstJudgeSubmission->languageName,0,INI_filename);
 
-	limitIndex=GetPrivateProfileInt("TimeLimit",GL_languageName,1,INI_filename);
+	pstJudgeSubmission->limitIndex=GetPrivateProfileInt("TimeLimit",pstJudgeSubmission->languageName,1,INI_filename);
 
-	nProcessLimit=GetPrivateProfileInt("ProcessLimit",GL_languageName,1,INI_filename);
+	pstJudgeSubmission->nProcessLimit=GetPrivateProfileInt("ProcessLimit",pstJudgeSubmission->languageName,1,INI_filename);
 
 
 	char buf[1024];
-	sprintf(buf, "%d", GL_solutionId);
+	sprintf(buf, "%d", pstJudgeSubmission->stSolution.solutionId);
 	string name = buf;
-	string compile_string=compileCmd_str;
+	string compile_string=pstJudgeSubmission->compileCmd;
 	replace_all_distinct(compile_string,"%PATH%",workPath);
 	replace_all_distinct(compile_string,"%NAME%",name);
-	replace_all_distinct(compile_string,"%EXT%",GL_languageExt);
-	replace_all_distinct(compile_string,"%EXE%",GL_languageExe);
-	strcpy(compileCmd_str,compile_string.c_str());       /* 编译命令行 */
+	replace_all_distinct(compile_string,"%EXT%",pstJudgeSubmission->languageExt);
+	replace_all_distinct(compile_string,"%EXE%",pstJudgeSubmission->languageExe);
+	strcpy(pstJudgeSubmission->compileCmd,compile_string.c_str());       /* 编译命令行 */
 
-	string runcmd_string=runCmd_str;
+	string runcmd_string=pstJudgeSubmission->runCmd;
 	replace_all_distinct(runcmd_string,"%PATH%",workPath);
 	replace_all_distinct(runcmd_string,"%NAME%",name);
-	replace_all_distinct(runcmd_string,"%EXT%",GL_languageExt);
-	replace_all_distinct(runcmd_string,"%EXE%",GL_languageExe);
-	strcpy(runCmd_str,runcmd_string.c_str());			 /* 运行命令行*/
+	replace_all_distinct(runcmd_string,"%EXT%",pstJudgeSubmission->languageExt);
+	replace_all_distinct(runcmd_string,"%EXE%",pstJudgeSubmission->languageExe);
+	strcpy(pstJudgeSubmission->runCmd,runcmd_string.c_str());			 /* 运行命令行*/
 
-	string sourcepath_string=sourcePath;
+	string sourcepath_string=pstJudgeSubmission->sourcePath;
 	replace_all_distinct(sourcepath_string,"%PATH%",workPath);
 	replace_all_distinct(sourcepath_string,"%NAME%",name);
-	replace_all_distinct(sourcepath_string,"%EXT%",GL_languageExt);
-	strcpy(sourcePath,sourcepath_string.c_str());		 /* 源程序路径*/
+	replace_all_distinct(sourcepath_string,"%EXT%",pstJudgeSubmission->languageExt);
+	strcpy(pstJudgeSubmission->sourcePath,sourcepath_string.c_str());		 /* 源程序路径*/
 
-	string exepath_string=exePath;
+	string exepath_string=pstJudgeSubmission->exePath;
 	replace_all_distinct(exepath_string,"%PATH%",workPath);
 	replace_all_distinct(exepath_string,"%NAME%",name);
-	replace_all_distinct(exepath_string,"%EXE%",GL_languageExe);
-	strcpy(exePath,exepath_string.c_str());				 /* 可执行文件路径*/
+	replace_all_distinct(exepath_string,"%EXE%",pstJudgeSubmission->languageExe);
+	strcpy(pstJudgeSubmission->exePath,exepath_string.c_str());				 /* 可执行文件路径*/
 
-	sprintf(DebugFile,"%s%s.txt",workPath,name.c_str());  /* debug文件路径*/
-	sprintf(ErrorFile,"%s%s_re.txt",workPath,name.c_str());  /* re文件路径*/
+	sprintf(pstJudgeSubmission->DebugFile,"%s%s.txt",workPath,name.c_str());  /* debug文件路径*/
+	sprintf(pstJudgeSubmission->ErrorFile,"%s%s_re.txt",workPath,name.c_str());  /* re文件路径*/
 
 	if( (_access(judgeLogPath, 0 )) == -1 )
 	{
 		CreateDirectory(judgeLogPath,NULL);
 	}
 
-	sprintf(judge_log_filename,"%sjudge-log-%d.log",judgeLogPath,GL_solutionId);
+	sprintf(pstJudgeSubmission->judge_log_filename,"%sjudge-log-%d.log",judgeLogPath,pstJudgeSubmission->stSolution.solutionId);
 
+}
+
+void Judge_InitSubmissionData(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
+{
+	pstJudgeSubmission->stSolution.solutionId = 0;
+	pstJudgeSubmission->stSolution.verdictId = V_AC;
+	pstJudgeSubmission->stSolution.contestId = 0;
+	pstJudgeSubmission->stSolution.time_used = 0;
+	pstJudgeSubmission->stSolution.memory_used = 0;
+	pstJudgeSubmission->stSolution.testcase = 0;
+	pstJudgeSubmission->stSolution.reJudge = 0;
+
+	pstJudgeSubmission->stProblem.time_limit = 1000;
+	pstJudgeSubmission->stProblem.memory_limit = 65535;
+
+	pstJudgeSubmission->isTranscoding = 0;
+	pstJudgeSubmission->limitIndex = 1;
+	pstJudgeSubmission->nProcessLimit = 1;
 }
 
 void Judge_ShowCfgContent()
@@ -360,7 +382,7 @@ void Judge_ShowCfgContent()
 
 }
 
-HANDLE Judge_CreateSandBox()
+HANDLE Judge_CreateSandBox(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 {
 	HANDLE hjob =CreateJobObject(NULL,NULL);
 	if(hjob!=NULL)
@@ -369,7 +391,7 @@ HANDLE Judge_CreateSandBox()
 		 memset(&jobli,0,sizeof(jobli));
 		jobli.LimitFlags=JOB_OBJECT_LIMIT_PRIORITY_CLASS|JOB_OBJECT_LIMIT_ACTIVE_PROCESS;
 		jobli.PriorityClass=IDLE_PRIORITY_CLASS;
-		jobli.ActiveProcessLimit=nProcessLimit; //Limit of processes
+		jobli.ActiveProcessLimit=pstJudgeSubmission->nProcessLimit;
 	//	jobli.MinimumWorkingSetSize= 1;
 	//	jobli.MaximumWorkingSetSize= 1024*GL_memory_limit;|JOB_OBJECT_LIMIT_WORKINGSET|JOB_OBJECT_LIMIT_PROCESS_TIME
 	//	jobli.PerProcessUserTimeLimit.QuadPart=10000*(GL_time_limit+2000);
@@ -427,47 +449,58 @@ bool Judge_ProcessToSandbox(HANDLE job,PROCESS_INFORMATION p)
 	return false;
 }
 
-DWORD WINAPI Judge_CompileThread(LPVOID lp)
+unsigned _stdcall Judge_CompileThread(void *pData)
 {
-	STARTUPINFO StartupInfo = {0};
+	JUDGE_SUBMISSION_ST *pstJudgeSubmission = (JUDGE_SUBMISSION_ST *)pData;
+
+	if (NULL == pstJudgeSubmission)
+	{
+		write_log(JUDGE_ERROR,"Judge_CompileThread ERROR, pstJudgeSubmission is NULL....");
+		return 0;
+	}
 
 	write_log(JUDGE_INFO,"Enter Judge_CompileThread...");
 
-	SQL_updateSolution(GL_solutionId,V_C,0,0,0);
+	SQL_updateSolution(pstJudgeSubmission->stSolution.solutionId, V_C, 0, 0, 0);
 
-	system(compileCmd_str);
+	system(pstJudgeSubmission->compileCmd);
 
 	write_log(JUDGE_INFO,"End Judge_CompileThread...");
 
 	return 0;
 }
 
-int Judge_CompileProc()
+int Judge_CompileProc(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 {
+	if (NULL == pstJudgeSubmission)
+	{
+		write_log(JUDGE_ERROR,"Judge_CompileProc ERROR, pstJudgeSubmission is NULL....");
+		return 0;
+	}
 
-	if(strcmp(compileCmd_str,"NULL")==0) return 1;
+	if(strcmp(pstJudgeSubmission->runCmd,"NULL")==0) return 1;
 
 	HANDLE hThread_com;
 
-	hThread_com=CreateThread(NULL,NULL,Judge_CompileThread,NULL,0,NULL);
-	if(hThread_com==NULL)
+	hThread_com = (HANDLE)_beginthreadex(NULL, NULL, Judge_CompileThread, (void*)pstJudgeSubmission, 0, NULL);
+	if(hThread_com == NULL)
 	{
 		write_log(JUDGE_ERROR,"Create Judge_CompileThread Error");
 		CloseHandle(hThread_com);
+		return 0;
 	}
 
 	write_log(JUDGE_INFO,"Create Judge_CompileThread ok...");
 
 	DWORD status_ = WaitForSingleObject(hThread_com,30000);
-	if(status_>0)
+	if(status_ > 0)
 	{
 		write_log(JUDGE_WARNING,"Compile over time_limit");
-		TerminateProcess(G_pi_com.hProcess, 0);
 	}
 
 	write_log(JUDGE_INFO,"WaitForSingleObject wait time ok...");
 
-	if( (_access(exePath, 0 )) != -1 )
+	if( (_access(pstJudgeSubmission->exePath, 0 )) != -1 )
 	{
 		/* ok */
 		return 1;
@@ -531,7 +564,7 @@ BOOL Judge_ExistException(DWORD dw)
 	}
 }
 
-DWORD WINAPI Judge_RunProgramThread(LPVOID lp) //ac
+unsigned _stdcall Judge_RunProgramThread(void *pData) //ac
 {
 	/* cmd/c solution.exe <data.in >data.out 2>error.txt */
 	/* ChildIn_Write是子进程的输入句柄，ChildIn_Read是父进程用于写入子进程输入的句柄 */
@@ -540,6 +573,14 @@ DWORD WINAPI Judge_RunProgramThread(LPVOID lp) //ac
 	HANDLE ChildOut_Read, ChildOut_Write;
 
 	SECURITY_ATTRIBUTES saAttr = {0};
+
+	JUDGE_SUBMISSION_ST *pstJudgeSubmission = (JUDGE_SUBMISSION_ST *)pData;
+	if (NULL == pstJudgeSubmission)
+	{
+		write_log(JUDGE_ERROR,"Judge_RunProgramThread ERROR, pstJudgeSubmission is NULL....");
+		return 0;
+	}
+
 	saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
 	saAttr.bInheritHandle = TRUE;
 	saAttr.lpSecurityDescriptor = NULL;
@@ -558,31 +599,35 @@ DWORD WINAPI Judge_RunProgramThread(LPVOID lp) //ac
 	StartupInfo.hStdInput = ChildIn_Read;
 	StartupInfo.dwFlags |= STARTF_USESTDHANDLES;
 
-	write_log(JUDGE_INFO,"CreateProcess(%s)", runCmd_str);
+	write_log(JUDGE_INFO,"CreateProcess(%s)", pstJudgeSubmission->runCmd);
 
 	/* |CREATE_NEW_CONSOLE */
-	if(CreateProcess(NULL,runCmd_str,NULL,NULL,TRUE,CREATE_SUSPENDED,NULL,NULL,&StartupInfo,&G_pi))
+	if(CreateProcess(NULL, pstJudgeSubmission->runCmd, NULL, NULL, TRUE,
+					 CREATE_SUSPENDED, NULL, NULL, &StartupInfo, &pstJudgeSubmission->pProRunInfo))
 	{
 		write_log(JUDGE_INFO,"CreateProcess ok...");
 
-		G_job = Judge_CreateSandBox();
-		if(G_job!=NULL)
+		pstJudgeSubmission->hJob = Judge_CreateSandBox(pstJudgeSubmission);
+		if(pstJudgeSubmission->hJob != NULL)
 		{
 			write_log(JUDGE_INFO,"Judge_CreateSandBox ok...");
 
-			if(Judge_ProcessToSandbox(G_job,G_pi))
+			if(Judge_ProcessToSandbox(pstJudgeSubmission->hJob, pstJudgeSubmission->pProRunInfo))
 			{
 				write_log(JUDGE_INFO,"Judge_ProcessToSandbox ok...");
 
-				ResumeThread(G_pi.hThread);
-				CloseHandle(G_pi.hThread);
+				ResumeThread(pstJudgeSubmission->pProRunInfo.hThread);
+				CloseHandle(pstJudgeSubmission->pProRunInfo.hThread);
 
-				write_log(JUDGE_INFO,"CreateFile inFileName(%s)", inFileName);
+				write_log(JUDGE_INFO,"CreateFile inFileName(%s)", pstJudgeSubmission->inFileName);
 
-				InputFile= CreateFile(inFileName, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_READONLY, NULL);
-				if (InputFile <= 0)
+				pstJudgeSubmission->hInputFile = CreateFile(pstJudgeSubmission->inFileName,
+												            GENERIC_READ, FILE_SHARE_READ, NULL,
+												            OPEN_ALWAYS, FILE_ATTRIBUTE_READONLY, NULL);
+				if (pstJudgeSubmission->hInputFile <= 0)
 				{
-					write_log(JUDGE_ERROR,"CreateFile inFileName(%s) Error:%s", inFileName, GetLastError());
+					write_log(JUDGE_ERROR,"CreateFile inFileName(%s) Error:%s",
+											pstJudgeSubmission->inFileName, GetLastError());
 				}
 
 				BOOL flag = FALSE;
@@ -590,25 +635,28 @@ DWORD WINAPI Judge_RunProgramThread(LPVOID lp) //ac
 				{
 					char buffer[BUFSIZE] = {0};
 					DWORD BytesRead, BytesWritten;
-					flag = ReadFile(InputFile, buffer, BUFSIZE, &BytesRead, NULL);
+					flag = ReadFile(pstJudgeSubmission->hInputFile, buffer, BUFSIZE, &BytesRead, NULL);
 					if (!flag || (BytesRead == 0)) break;
 					flag = WriteFile(ChildIn_Write, buffer, BytesRead, &BytesWritten, NULL);
 
 					if (!flag){ break;}
 				}
 
-				CloseHandle(InputFile);InputFile=NULL;
-				CloseHandle(ChildIn_Write);ChildIn_Write=NULL;
-				CloseHandle(ChildOut_Write);ChildOut_Write=NULL;
+				CloseHandle(pstJudgeSubmission->hInputFile);
+				pstJudgeSubmission->hInputFile=NULL;
+				CloseHandle(ChildIn_Write);
+				CloseHandle(ChildOut_Write);
 
 				/* 读取子进程的标准输出，并将其传递给文件输出 */
-				OutputFile= CreateFile(outFileName, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-				if (NULL == OutputFile)
+				pstJudgeSubmission->hOutputFile= CreateFile(pstJudgeSubmission->outFileName, GENERIC_WRITE, 0,
+															NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+				if (NULL == pstJudgeSubmission->hOutputFile)
 				{
-					write_log(JUDGE_ERROR,"CreateFile outFileName(%s) Error:%s", outFileName, GetLastError());
+					write_log(JUDGE_ERROR,"CreateFile outFileName(%s) Error:%s",
+										   pstJudgeSubmission->outFileName, GetLastError());
 				}
 
-				startt = clock();
+				pstJudgeSubmission->startt = clock();
 
 				DWORD limit_output =0;
 				while (true)
@@ -617,24 +665,26 @@ DWORD WINAPI Judge_RunProgramThread(LPVOID lp) //ac
 					DWORD BytesRead, BytesWritten;
 					flag = ReadFile(ChildOut_Read, buffer, BUFSIZE, &BytesRead, NULL);
 					if (!flag || (BytesRead == 0)) break;
-					flag = WriteFile(OutputFile, buffer, BytesRead, &BytesWritten, NULL);
+					flag = WriteFile(pstJudgeSubmission->hOutputFile, buffer, BytesRead, &BytesWritten, NULL);
 					if (!flag) break;
 
 					limit_output+=BytesWritten;
-					if(limit_output>OutputLimit){
+					if(limit_output>OutputLimit)
+					{
 						write_log(JUDGE_INFO,"OLE");
-						GL_verdictId = V_OLE;
+						pstJudgeSubmission->stSolution.verdictId = V_OLE;
 						//CloseHandle(pi.hProcess);
 						break;
 					}
 				}
-				endt = clock();
+
+				pstJudgeSubmission->endt = clock();
 
 				CloseHandle(ChildIn_Read);ChildIn_Read=NULL;
 				CloseHandle(ChildOut_Read);ChildOut_Read=NULL;
-				CloseHandle(OutputFile);OutputFile=NULL;
+				CloseHandle(pstJudgeSubmission->hOutputFile);pstJudgeSubmission->hOutputFile=NULL;
 
-				write_log(JUDGE_INFO,"Judge_RunProgramThread test OK..inFileName(%s)",inFileName);
+				write_log(JUDGE_INFO,"Judge_RunProgramThread test OK..inFileName(%s)",pstJudgeSubmission->inFileName);
 				return 1;
 			}else{
 				write_log(JUDGE_SYSTEM_ERROR,"ProcessToSandBox Error:%s",GetLastError());
@@ -648,16 +698,23 @@ DWORD WINAPI Judge_RunProgramThread(LPVOID lp) //ac
 	{
 		write_log(JUDGE_SYSTEM_ERROR,"CreateProcess       [Error:%d]\n",GetLastError());
 	}
-	GL_verdictId = V_SE;
+
+	pstJudgeSubmission->stSolution.verdictId = V_SE;
+
 	return 0;
 }
 
-int Judge_SpecialJudge(const char *inFile,const char *uOutFile)
+int Judge_SpecialJudge(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 {
 	/* return 0 ====Error,return 1 ====Accepted */
 	int judge ;
 	char spj_path[MAX_PATH];
-	sprintf(spj_path,"%s%d\\spj_%d.exe %s %s",dataPath,GL_problemId,GL_problemId,inFile,uOutFile);
+
+	sprintf(spj_path,"%s%d\\spj_%d.exe %s %s",
+			dataPath,pstJudgeSubmission->stProblem.problemId,
+			pstJudgeSubmission->stProblem.problemId,
+			pstJudgeSubmission->inFileName, pstJudgeSubmission->outFileName);
+
 	judge = system(spj_path) ;
 
 	if (judge == -1)
@@ -673,7 +730,7 @@ int Judge_SpecialJudge(const char *inFile,const char *uOutFile)
 	return 0;
 }
 
-int Judge_RunLocalSolution(int solutionId)
+int Judge_RunLocalSolution(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 {
 	long caseTime=0;
 	int i,case_;
@@ -681,52 +738,74 @@ int Judge_RunLocalSolution(int solutionId)
 	char ansPath[MAX_PATH];
 	char buf[40960];
 
-	g_dwCode=0;
+	if (NULL == pstJudgeSubmission)
+	{
+		write_log(JUDGE_ERROR,"Judge_RunLocalSolution ERROR, pstJudgeSubmission is NULL....");
+		return 0;
+	}
 
-	for(i=0;;++i){
-		if(i==0){
+
+	pstJudgeSubmission->dwProStatusCode = 0;
+
+	for(i=0;;++i)
+	{
+		case_=i;
+
+		if(i==0)
+		{
 			case_=1;
-		}else{
-			case_=i;
 		}
-		sprintf(inFileName,"%s%d\\data%d.in",dataPath,GL_problemId,case_);
-		sprintf(outFileName,"%s%d_%d.out",workPath,solutionId,case_);
-		sprintf(srcPath, "%s",outFileName);
-		sprintf(ansPath, "%s%d\\data%d.out",dataPath,GL_problemId,case_);
+
+		sprintf(pstJudgeSubmission->inFileName, "%s%d\\data%d.in",
+				dataPath, pstJudgeSubmission->stProblem.problemId, case_);
+		sprintf(pstJudgeSubmission->outFileName,"%s%d_%d.out",
+				workPath, pstJudgeSubmission->stSolution.solutionId,case_);
+
+		sprintf(srcPath, "%s", pstJudgeSubmission->outFileName);
+		sprintf(ansPath, "%s%d\\data%d.out",
+				dataPath, pstJudgeSubmission->stProblem.problemId, case_);
 
 		write_log(JUDGE_INFO,"TEST(%d)\r\n inFileName:%s\r\n outFileName:%s\r\n srcPath:%s\r\n ansPath:%s\r\n",
-					i, inFileName, outFileName, srcPath, ansPath);
+					i, pstJudgeSubmission->inFileName, pstJudgeSubmission->outFileName, srcPath, ansPath);
 
-		if( (_access(inFileName, 0 )) == -1 )   {
+		if( (_access(pstJudgeSubmission->inFileName, 0 )) == -1 )
+		{
 			write_log(JUDGE_INFO,"Test over..");
 			break ;
 		}
 
-		GL_testcase = case_;
+		pstJudgeSubmission->stSolution.testcase = case_;
 
-		SQL_updateSolution(solutionId,V_RUN,case_,GL_time-GL_time%10,GL_memory);
+		SQL_updateSolution(pstJudgeSubmission->stSolution.solutionId ,
+							V_RUN,
+							case_,
+							pstJudgeSubmission->stSolution.time_used - pstJudgeSubmission->stSolution.time_used%10,
+							pstJudgeSubmission->stSolution.memory_used);
 
 		HANDLE hThread_run;
-		hThread_run=CreateThread(NULL,NULL,Judge_RunProgramThread,NULL,0,NULL);
-		if(hThread_run==NULL) {
+		hThread_run = (HANDLE)_beginthreadex(NULL, NULL, Judge_RunProgramThread, (void*)pstJudgeSubmission, 0, NULL);
+		if(hThread_run == NULL)
+		{
 			write_log(JUDGE_ERROR,"Create thread error");
 			CloseHandle(hThread_run);
 		}
 
 		write_log(JUDGE_ERROR,"Create Judge_RunProgramThread ok...");
 
-		DWORD status_ = WaitForSingleObject(hThread_run,GL_time_limit+2000);   //放宽时限2S,返回值大于零说明超时.
-		if(status_>0){
+		DWORD status_ = WaitForSingleObject(hThread_run, pstJudgeSubmission->stProblem.time_limit + 2000);   /* 放宽时限2S,返回值大于零说明超时. */
+		if(status_>0)
+		{
 			write_log(JUDGE_INFO,"hThread_run TIME LIMIT");
-			GL_time = GL_time_limit;
-			if(GL_verdictId==V_AC)
+			pstJudgeSubmission->stSolution.time_used = pstJudgeSubmission->stProblem.time_limit;
+
+			if(pstJudgeSubmission->stSolution.verdictId == V_AC)
 			{
-				GL_verdictId = V_TLE;
+				pstJudgeSubmission->stSolution.verdictId = V_TLE;
 			}
 		}
 
-		if(InputFile!=NULL) CloseHandle(InputFile);
-		if(OutputFile!=NULL) CloseHandle(OutputFile);
+		if(pstJudgeSubmission->hInputFile  != NULL) CloseHandle(pstJudgeSubmission->hInputFile);
+		if(pstJudgeSubmission->hOutputFile != NULL) CloseHandle(pstJudgeSubmission->hOutputFile);
 
 		//get memory info
 		PROCESS_MEMORY_COUNTERS   pmc;
@@ -734,152 +813,173 @@ int Judge_RunLocalSolution(int solutionId)
 
 		#ifdef _WIN32_
 		 //del for mingw
-		if(GetProcessMemoryInfo(G_pi.hProcess,&pmc,sizeof(pmc))) {
+		if(GetProcessMemoryInfo(pstJudgeSubmission->pProRunInfo.hProcess, &pmc, sizeof(pmc)))
+		{
 			tmp_memory=pmc.PeakWorkingSetSize/1024;
-			if(tmp_memory>GL_memory) GL_memory=tmp_memory;
+			if(tmp_memory > pstJudgeSubmission->stSolution.memory_used)
+			{
+				pstJudgeSubmission->stSolution.memory_used= tmp_memory;
+			}
 		}
         #endif
 
 		//get process state
-		GetExitCodeProcess(G_pi.hProcess, &g_dwCode);
-		if(Judge_ExistException(g_dwCode))
+		GetExitCodeProcess(pstJudgeSubmission->pProRunInfo.hProcess, &(pstJudgeSubmission->dwProStatusCode));
+		if(Judge_ExistException(pstJudgeSubmission->dwProStatusCode))
 		{
-			GL_verdictId=V_RE;
+			pstJudgeSubmission->stSolution.verdictId=V_RE;
 			goto l;
 		}
-		else if(g_dwCode==STILL_ACTIVE)
-		{	//超时
+		else if(pstJudgeSubmission->dwProStatusCode == STILL_ACTIVE)
+		{
 			puts("TIME LIMIT");
-			TerminateProcess(G_pi.hProcess, 0);
-			if(GL_verdictId==V_AC)
+			TerminateProcess(pstJudgeSubmission->pProRunInfo.hProcess, 0);
+			if(pstJudgeSubmission->stSolution.verdictId == V_AC)
 			{
-				//TLE 超时
-				GL_verdictId=V_TLE;
-				GL_time = GL_time_limit;
+				pstJudgeSubmission->stSolution.verdictId = V_TLE;
+				pstJudgeSubmission->stSolution.time_used = pstJudgeSubmission->stProblem.time_limit;
 				goto l;
 			}
 		}
 
-		caseTime = endt - startt;
-		if(caseTime<0){
-			caseTime = GL_time_limit;
+		caseTime = pstJudgeSubmission->endt - pstJudgeSubmission->startt;
+		if(caseTime < 0)
+		{
+			caseTime = pstJudgeSubmission->stProblem.time_limit;
 		}
 
-		TerminateJobObject(G_job,0);//exit
-		CloseHandle(G_pi.hProcess);
-		CloseHandle(G_job);G_job=NULL;
+		TerminateJobObject(pstJudgeSubmission->hJob,0);
+		CloseHandle(pstJudgeSubmission->pProRunInfo.hProcess);
+		CloseHandle(pstJudgeSubmission->hJob);pstJudgeSubmission->hJob = NULL;
 
 
-		GL_time = (caseTime>GL_time)?caseTime:GL_time;
+		pstJudgeSubmission->stSolution.time_used = (caseTime>pstJudgeSubmission->stSolution.time_used)?caseTime:caseTime>pstJudgeSubmission->stSolution.time_used;
 
-		if(GL_time>=GL_time_limit){
-			GL_verdictId=V_TLE;
-			GL_time = GL_time_limit;
+		if(pstJudgeSubmission->stSolution.time_used >= pstJudgeSubmission->stProblem.time_limit)
+		{
+			pstJudgeSubmission->stSolution.verdictId = V_TLE;
+			pstJudgeSubmission->stSolution.time_used = pstJudgeSubmission->stProblem.time_limit;
 			goto l;
 		}
-		if(GL_memory>=GL_memory_limit){
-			GL_verdictId=V_MLE;
-			GL_memory = GL_memory_limit;
+		if(pstJudgeSubmission->stSolution.memory_used >= pstJudgeSubmission->stProblem.memory_limit)
+		{
+			pstJudgeSubmission->stSolution.verdictId = V_MLE;
+			pstJudgeSubmission->stSolution.memory_used = pstJudgeSubmission->stProblem.memory_limit;
 			goto l;
 		}
-		//OLE
-		if(GL_verdictId!=V_AC){
+
+
+		if(pstJudgeSubmission->stSolution.verdictId != V_AC)
+		{
 			goto l;
 		}
-		//judge file，spj or not
 
-		if(GL_spj==1){
-			int verdict_ = Judge_SpecialJudge(inFileName,outFileName);
-			if(verdict_) GL_verdictId=V_AC;
-			else GL_verdictId=V_WA;
-		}else{
-			GL_verdictId = compare(srcPath,ansPath);
+		//spj
+		if(pstJudgeSubmission->stProblem.isSpecialJudge == 1)
+		{
+			int verdict_ = Judge_SpecialJudge(pstJudgeSubmission);
+			if(verdict_) pstJudgeSubmission->stSolution.verdictId=V_AC;
+			else pstJudgeSubmission->stSolution.verdictId=V_WA;
+		}
+		else
+		{
+			pstJudgeSubmission->stSolution.verdictId = compare(srcPath,ansPath);
 		}
 
-l:		write_log(JUDGE_INFO,"ID:%d Test%d ,%s ,%dms %dkb ,Return code:%u",GL_solutionId,i,VERDICT_NAME[GL_verdictId],caseTime,tmp_memory,g_dwCode);
+l:		write_log(JUDGE_INFO,"ID:%d Test%d ,%s ,%dms %dkb ,Return code:%u",
+					pstJudgeSubmission->stSolution.solutionId, i,
+					VERDICT_NAME[pstJudgeSubmission->stSolution.verdictId],
+					caseTime, tmp_memory, pstJudgeSubmission->dwProStatusCode);
 
 		/* write judge-log */
 
 		if (i == 0)
 		{
-			reset_file(judge_log_filename);
-			if (GL_verdictId!=V_AC)
+			reset_file(pstJudgeSubmission->judge_log_filename);
+			if (pstJudgeSubmission->stSolution.verdictId!=V_AC)
 			{
 				i  = 1;
-				write_buffer(judge_log_filename,"Test: #%d, time: %d ms, memory: %d kb, exit code: %d,verdict: %s",
-					i,GL_time-GL_time%10,tmp_memory,g_dwCode,VERDICT_NAME[GL_verdictId]);
+				write_buffer(pstJudgeSubmission->judge_log_filename,
+							"Test: #%d, time: %d ms, memory: %d kb, exit code: %d,verdict: %s",
+							i, pstJudgeSubmission->stSolution.time_used - pstJudgeSubmission->stSolution.time_used%10,
+							tmp_memory, pstJudgeSubmission->dwProStatusCode,
+							VERDICT_NAME[pstJudgeSubmission->stSolution.verdictId]);
 
 				memset(buf,0,sizeof(buf));
-				read_buffer(inFileName, buf, JUDGE_LOG_BUF_SIZE);
-				write_buffer(judge_log_filename,"\nInput\n",i);
-				write_buffer(judge_log_filename,buf);
+				read_buffer(pstJudgeSubmission->inFileName, buf, JUDGE_LOG_BUF_SIZE);
+				write_buffer(pstJudgeSubmission->judge_log_filename,"\nInput\n",i);
+				write_buffer(pstJudgeSubmission->judge_log_filename,buf);
 
 				memset(buf,0,sizeof(buf));
-				read_buffer(outFileName, buf, JUDGE_LOG_BUF_SIZE);
-				write_buffer(judge_log_filename,"\nOutput\n",i);
-				write_buffer(judge_log_filename,buf);
+				read_buffer(pstJudgeSubmission->outFileName, buf, JUDGE_LOG_BUF_SIZE);
+				write_buffer(pstJudgeSubmission->judge_log_filename,"\nOutput\n",i);
+				write_buffer(pstJudgeSubmission->judge_log_filename,buf);
 
 				memset(buf,0,sizeof(buf));
 				read_buffer(ansPath, buf, JUDGE_LOG_BUF_SIZE);
-				write_buffer(judge_log_filename,"\nAnswer\n");
-				write_buffer(judge_log_filename,buf);
+				write_buffer(pstJudgeSubmission->judge_log_filename,"\nAnswer\n");
+				write_buffer(pstJudgeSubmission->judge_log_filename,buf);
 
-				write_buffer(judge_log_filename,"\n------------------------------------------------------------------\n");
+				write_buffer(pstJudgeSubmission->judge_log_filename,"\n------------------------------------------------------------------\n");
 				break;
 			}
 		}
 		else
 		{
-			write_buffer(judge_log_filename,"Test: #%d, time: %d ms, memory: %d kb, exit code: %d,verdict: %s",
-				i,caseTime - caseTime%10,tmp_memory,g_dwCode,VERDICT_NAME[GL_verdictId]);
+			write_buffer(pstJudgeSubmission->judge_log_filename,
+						"Test: #%d, time: %d ms, memory: %d kb, exit code: %d,verdict: %s",
+						i, caseTime - caseTime%10, tmp_memory, pstJudgeSubmission->dwProStatusCode,
+						VERDICT_NAME[pstJudgeSubmission->stSolution.verdictId]);
 
 			memset(buf,0,sizeof(buf));
-			read_buffer(inFileName, buf, JUDGE_LOG_BUF_SIZE);
-			write_buffer(judge_log_filename,"\nInput\n");
-			write_buffer(judge_log_filename,buf);
+			read_buffer(pstJudgeSubmission->inFileName, buf, JUDGE_LOG_BUF_SIZE);
+			write_buffer(pstJudgeSubmission->judge_log_filename,"\nInput\n");
+			write_buffer(pstJudgeSubmission->judge_log_filename,buf);
 
 			memset(buf,0,sizeof(buf));
-			read_buffer(outFileName, buf, JUDGE_LOG_BUF_SIZE);
-			write_buffer(judge_log_filename,"\nOutput\n");
-			write_buffer(judge_log_filename,buf);
+			read_buffer(pstJudgeSubmission->outFileName, buf, JUDGE_LOG_BUF_SIZE);
+			write_buffer(pstJudgeSubmission->judge_log_filename,"\nOutput\n");
+			write_buffer(pstJudgeSubmission->judge_log_filename,buf);
 
 			memset(buf,0,sizeof(buf));
 			read_buffer(ansPath, buf, JUDGE_LOG_BUF_SIZE);
-			write_buffer(judge_log_filename,"\nAnswer\n");
-			write_buffer(judge_log_filename,buf);
+			write_buffer(pstJudgeSubmission->judge_log_filename,"\nAnswer\n");
+			write_buffer(pstJudgeSubmission->judge_log_filename,buf);
 
-			write_buffer(judge_log_filename,"\n------------------------------------------------------------------\n");
+			write_buffer(pstJudgeSubmission->judge_log_filename,"\n------------------------------------------------------------------\n");
 		}
 
-		if(GL_verdictId!=V_AC){
+		if(pstJudgeSubmission->stSolution.verdictId != V_AC){
 			break;
 		}
 		if(i==0){
-			GL_time=0;
-			GL_memory=0;
+			pstJudgeSubmission->stSolution.time_used = 0;
+			pstJudgeSubmission->stSolution.memory_used = 0;
 		}
 	}
 	return 0;
 
 }
 
-int Judge_Local()
+int Judge_Local(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 {
 	write_log(JUDGE_INFO,"Enter Judge_Local...");
 
-	if(0 == Judge_CompileProc())
+	if(0 == Judge_CompileProc(pstJudgeSubmission))
 	{
-		GL_verdictId=V_CE;
-		SQL_updateCompileInfo(GL_solutionId);
+		pstJudgeSubmission->stSolution.verdictId=V_CE;
+		SQL_updateCompileInfo(pstJudgeSubmission);
 
-		reset_file(judge_log_filename);
+		reset_file(pstJudgeSubmission->judge_log_filename);
 
-		write_buffer(judge_log_filename,"Test: #1, time: 0 ms, memory: 0 kb, exit code: 0,verdict: %s\n",VERDICT_NAME[GL_verdictId]);
+		write_buffer(pstJudgeSubmission->judge_log_filename,
+					"Test: #1, time: 0 ms, memory: 0 kb, exit code: 0,verdict: %s\n",
+					VERDICT_NAME[pstJudgeSubmission->stSolution.verdictId]);
 	}
 	else
 	{
 		write_log(JUDGE_INFO,"Start Run...");
-		Judge_RunLocalSolution(GL_solutionId);
+		Judge_RunLocalSolution(pstJudgeSubmission);
 	}
 
 	write_log(JUDGE_INFO,"End Judge_Local...");
@@ -887,7 +987,26 @@ int Judge_Local()
 	return OS_TRUE;
 }
 
-int Judge_SendToJudger(int port,char *ip)
+
+/*****************************************************************************
+*   Prototype    : Judge_SendToJudger
+*   Description  : Send judge-request to remote judger
+*   Input        : int solutionId  submition ID
+*                  int port        judger socket-port
+*                  char *ip        judger IP
+*   Output       : None
+*   Return Value : int
+*   Calls        :
+*   Called By    :
+*
+*   History:
+*
+*       1.  Date         : 2014/7/8
+*           Author       : weizengke
+*           Modification : Created function
+*
+*****************************************************************************/
+int Judge_SendToJudger(int solutionId, int port,char *ip)
 {
 
 	SOCKET sClient_hdu;
@@ -911,30 +1030,20 @@ int Judge_SendToJudger(int port,char *ip)
 		return OS_ERR;
 	}
 
-	send(sClient_hdu,(const char*)&GL_solutionId,sizeof(GL_solutionId),0);
+	send(sClient_hdu,(const char*)&solutionId,sizeof(solutionId),0);
 
 	closesocket(sClient_hdu);
 
 	return OS_OK;
 }
 
-int Judge_IsVirtualJudgeEnable()
-{
-	if (GL_vjudge_enable == OS_YES)
-	{
-		return OS_YES;
-	}
-
-	return OS_NO;
-}
-
-int Judge_Remote()
+int Judge_Remote(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 {
 	int ret = OS_OK;
 
 	do
 	{
-		if (0 == strcmp(GL_ojname.c_str(),"HDU"))
+		if (0 == strcmp(pstJudgeSubmission->stProblem.szVirJudgerName,"HDU"))
 		{
 			pdt_debug_print("virtual-judge HDU.(vjudge_enable=%u,remote_enable=%d)",
 							hdu_vjudge_enable, hdu_remote_enable);
@@ -949,22 +1058,22 @@ int Judge_Remote()
 			{
 				pdt_debug_print("Send to remote judger(%s:%d).", hdu_judgerIP, hdu_sockport);
 
-				ret = Judge_SendToJudger(hdu_sockport, hdu_judgerIP);
+				ret = Judge_SendToJudger(pstJudgeSubmission->stSolution.solutionId, hdu_sockport, hdu_judgerIP);
 				if (OS_OK == ret)
 				{
 					/* virdict置quieue , 由远程judger继续执行 */
-					GL_verdictId = V_Q;
+					pstJudgeSubmission->stSolution.verdictId = V_Q;
 				}
 
 				return ret;
 			}
 
 			/* local vjudge */
-			ret = HDU_VJudge();
+			ret = HDU_VJudge(pstJudgeSubmission);
 			break;
 		}
 
-		if (0 == strcmp(GL_ojname.c_str(),"GUET_DEPT3"))
+		if (0 == strcmp(pstJudgeSubmission->stProblem.szVirJudgerName,"GUET_DEPT3"))
 		{
 			pdt_debug_print("virtual-judge GUET_DEPT3.(vjudge_enable=%u,remote_anable=%d)",
 							guet_vjudge_enable, guet_remote_enable);
@@ -979,18 +1088,18 @@ int Judge_Remote()
 			{
 				pdt_debug_print("Send to remote judger(%s:%d).", guet_judgerIP, guet_sockport);
 
-				ret = Judge_SendToJudger(guet_sockport, guet_judgerIP);
+				ret = Judge_SendToJudger(pstJudgeSubmission->stSolution.solutionId, guet_sockport, guet_judgerIP);
 				if (OS_OK == ret)
 				{
 					/* virdict置quieue , 由远程judger继续执行 */
-					GL_verdictId = V_Q;
+					pstJudgeSubmission->stSolution.verdictId = V_Q;
 				}
 
 				return ret;
 			}
 
 			/* local vjudge */
-			ret = GUET_VJudge();
+			ret = GUET_VJudge(pstJudgeSubmission);
 			break;
 		}
 
@@ -999,114 +1108,112 @@ int Judge_Remote()
 	return ret;
 }
 
-int Judge_Proc(int solutionId)
+int Judge_Proc(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 {
 	int ret = OS_OK;
 	int isExist = OS_NO;
 
-	GL_solutionId = solutionId;
-
-	write_log(JUDGE_INFO,"Enter Judge_Proc. (solutionId=%d)", solutionId);
-
-	Judge_ResetJudgeStatus();
-
-	ret = SQL_getSolutionInfo(&isExist);
+	ret = SQL_getSolutionByID(pstJudgeSubmission->stSolution.solutionId, &(pstJudgeSubmission->stSolution), &isExist);
 	if (OS_ERR == ret || OS_NO == isExist)
 	{
-		pdt_debug_print("No such solution %d.", solutionId);
+		pdt_debug_print("No such solution %d.", pstJudgeSubmission->stSolution.solutionId);
 		return OS_ERR;
 	}
 
-	write_log(JUDGE_INFO,"Do SQL_getSolutionInfo ok. (solutionId=%d)", solutionId);
+	Judge_InitJudgePath(pstJudgeSubmission);
 
-	Judge_InitJudgePath();
-
-	write_log(JUDGE_INFO,"Do Judge_InitJudgePath ok. (solutionId=%d)", solutionId);
-
-	ret = SQL_getSolutionSource();
+	ret = SQL_getSolutionSource(pstJudgeSubmission);
 	if (OS_OK != ret)
 	{
-		pdt_debug_print("SQL_getSolutionSource failed.(solutionId=%d)", solutionId);
-		write_log(JUDGE_INFO,"SQL_getSolutionSource failed.(solutionId=%d)", solutionId);
+		pdt_debug_print("SQL_getSolutionSource failed.(solutionId=%d)", pstJudgeSubmission->stSolution.solutionId);
+		write_log(JUDGE_INFO,"SQL_getSolutionSource failed.(solutionId=%d)", pstJudgeSubmission->stSolution.solutionId);
 		return OS_ERR;
 	}
 
-	write_log(JUDGE_INFO,"Do SQL_getSolutionSource ok. (solutionId=%d)", solutionId);
+	write_log(JUDGE_INFO,"Do SQL_getSolutionSource ok. (solutionId=%d)", pstJudgeSubmission->stSolution.solutionId);
 
-	ret = SQL_getProblemInfo();
+	pstJudgeSubmission->stProblem.problemId = pstJudgeSubmission->stSolution.problemId;
+
+	ret = SQL_getProblemInfo(&(pstJudgeSubmission->stProblem));
 	if (OS_OK != ret)
 	{
-		pdt_debug_print("SQL_getProblemInfo failed.(solutionId=%d)", solutionId);
-		write_log(JUDGE_INFO,"SQL_getProblemInfo failed.(solutionId=%d)", solutionId);
+		pdt_debug_print("SQL_getProblemInfo failed.(solutionId=%d)", pstJudgeSubmission->stSolution.solutionId);
+		write_log(JUDGE_INFO,"SQL_getProblemInfo failed.(solutionId=%d)", pstJudgeSubmission->stSolution.solutionId);
 		return OS_ERR;
 	}
 
-	write_log(JUDGE_INFO,"Do SQL_getProblemInfo ok. (solutionId=%d)", solutionId);
-
-
-	if (OS_YES == GL_vjudge)
+	if (OS_YES == pstJudgeSubmission->stProblem.isVirtualJudge)
 	{
 		#if(JUDGE_VIRTUAL == VOS_YES)
 
 		if (OS_YES == Judge_IsVirtualJudgeEnable())
 		{
-			if (OS_OK != Judge_Remote())
+			if (OS_OK != Judge_Remote(pstJudgeSubmission))
 			{
-				GL_verdictId = V_SK;
+				pstJudgeSubmission->stSolution.verdictId = V_SK;
 				pdt_debug_print("virtua-judge is fail...");
 			}
 		}
 		else
 		{
 			pdt_debug_print("Error: virtual-judge is not enable.");
-			GL_verdictId = V_SK;
+			pstJudgeSubmission->stSolution.verdictId = V_SK;
 		}
 
 		#else
-		GL_verdictId = V_SK;
+		pstJudgeSubmission->stSolution.verdictId = V_SK;
 		pdt_debug_print("virtua-judge is not support.");
 		#endif
 
-		g_dwCode = 0;
-		GL_testcase = 0;  /* 后续可能不填0 */
+		pstJudgeSubmission->dwProStatusCode = 0;
+		pstJudgeSubmission->stSolution.testcase = 0;  /* 后续可能不填0 */
 
 	}
 	else
 	{
-		GL_time_limit*=limitIndex;
-		GL_memory_limit*=limitIndex;
-		(void)Judge_Local();
+		pstJudgeSubmission->stProblem.time_limit *=pstJudgeSubmission->limitIndex;
+		pstJudgeSubmission->stProblem.memory_limit *=pstJudgeSubmission->limitIndex;
+
+		(void)Judge_Local(pstJudgeSubmission);
 	}
 
-	write_log(JUDGE_INFO,"Do Judge finish. (solutionId=%d)", solutionId);
 
-	SQL_updateSolution(GL_solutionId,GL_verdictId,GL_testcase,GL_time-GL_time%10,GL_memory);
-	SQL_updateProblem(GL_problemId);
-	SQL_updateUser(GL_username);
+	write_log(JUDGE_INFO,"Do Judge finish. (solutionId=%d)", pstJudgeSubmission->stSolution.solutionId);
+
+	SQL_updateSolution(pstJudgeSubmission->stSolution.solutionId,
+					   pstJudgeSubmission->stSolution.verdictId,
+					   pstJudgeSubmission->stSolution.testcase,
+					   pstJudgeSubmission->stSolution.time_used - pstJudgeSubmission->stSolution.time_used%10,
+					   pstJudgeSubmission->stSolution.memory_used);
+
+	SQL_updateProblem(pstJudgeSubmission->stSolution.problemId);
+	SQL_updateUser(pstJudgeSubmission->stSolution.username);
 
 	/* contest or not */
-	if(GL_contestId > 0)
+	if(pstJudgeSubmission->stSolution.contestId > 0)
 	{
 		/* contest judge */
 		time_t contest_s_time,contest_e_time;
 		char num[10]={0};
 
 		/* 获取contest problem题目标号 */
-		SQL_getProblemInfo_contest(GL_contestId,GL_problemId,num);
-		SQL_getContestInfo(GL_contestId,contest_s_time,contest_e_time);
+		SQL_getProblemInfo_contest(pstJudgeSubmission->stSolution.contestId,pstJudgeSubmission->stSolution.problemId,num);
+		SQL_getContestInfo(pstJudgeSubmission->stSolution.contestId,contest_s_time,contest_e_time);
 
-		if(contest_e_time>GL_submitDate)
+		if(contest_e_time>pstJudgeSubmission->stSolution.submitDate)
 		{
 			/* 比赛running ，修改Attend */
-			SQL_updateAttend_contest(GL_contestId,GL_verdictId,GL_problemId,num,GL_username,contest_s_time,contest_e_time);
+			SQL_updateAttend_contest(pstJudgeSubmission->stSolution.contestId, pstJudgeSubmission->stSolution.verdictId,
+									pstJudgeSubmission->stSolution.problemId, num, pstJudgeSubmission->stSolution.username,
+									contest_s_time,contest_e_time);
 		}
 
-		SQL_updateProblem_contest(GL_contestId,GL_problemId);
+		SQL_updateProblem_contest(pstJudgeSubmission->stSolution.contestId, pstJudgeSubmission->stSolution.problemId);
 	}
 
-	DeleteFile(sourcePath);
-	DeleteFile(DebugFile);
-	DeleteFile(exePath);
+	DeleteFile(pstJudgeSubmission->sourcePath);
+	DeleteFile(pstJudgeSubmission->DebugFile);
+	DeleteFile(pstJudgeSubmission->exePath);
 
 	return OS_OK;
 }
@@ -1119,13 +1226,13 @@ void Judge_PushQueue(int solutionId)
 	Q.push(jd);
 }
 
-DWORD WINAPI Judge_DispatchThread(LPVOID lpParam)
+unsigned _stdcall Judge_DispatchThread(void *pEntry)
 {
 	int ret = OS_OK;
 	JUDGE_DATA_S jd;
-	time_t first_t,second_t;
-	string str_time;
-    time(&first_t);
+
+	JUDGE_SUBMISSION_ST stJudgeSubmission;
+
 	for (;;)
 	{
 		if(Q.size()>limitJudge)
@@ -1136,20 +1243,17 @@ DWORD WINAPI Judge_DispatchThread(LPVOID lpParam)
 		if(!Q.empty())
 		{
 				jd=Q.front();
-				//judge_outstring("Info: Start to judge the solution, please wait...");
-				//MSG_StartDot();
 
 				/* 启动评判 */
-				ret = Judge_Proc(jd.solutionId);
-				Q.pop();
 
-				//MSG_StopDot();
-				//judge_outstring("done.\r\n");
-
+				memset(&stJudgeSubmission, 0, sizeof(stJudgeSubmission));
+				Judge_InitSubmissionData(&stJudgeSubmission);
+				stJudgeSubmission.stSolution.solutionId = jd.solutionId;
+				ret = Judge_Proc(&stJudgeSubmission);
 				if (OS_OK == ret)
 				{
 					string time_string_;
-					API_TimeToString(time_string_,GL_submitDate);
+					API_TimeToString(time_string_, stJudgeSubmission.stSolution.submitDate);
 					judge_outstring("\r\n -----------------------"
 								"\r\n     *Judge verdict*"
 								"\r\n -----------------------"
@@ -1162,11 +1266,16 @@ DWORD WINAPI Judge_DispatchThread(LPVOID lpParam)
 								"\r\n Submit Date  : %3s"
 								"\r\n Username     : %3s"
 								"\r\n -----------------------\r\n",
-									GL_solutionId,GL_testcase,GL_time-GL_time%10,GL_memory,
-									g_dwCode,VERDICT_NAME[GL_verdictId],time_string_.c_str(),GL_username);
+									stJudgeSubmission.stSolution.solutionId, stJudgeSubmission.stSolution.testcase,
+									stJudgeSubmission.stSolution.time_used - stJudgeSubmission.stSolution.time_used%10,
+									stJudgeSubmission.stSolution.memory_used,
+									stJudgeSubmission.dwProStatusCode,
+									VERDICT_NAME[stJudgeSubmission.stSolution.verdictId],
+									time_string_.c_str(), stJudgeSubmission.stSolution.username);
 
 				}
 
+				Q.pop();
 		}
 		Sleep(1);
 	}
@@ -1176,7 +1285,7 @@ DWORD WINAPI Judge_DispatchThread(LPVOID lpParam)
 	return 0;
 }
 
-DWORD WINAPI Judge_ListenThread(LPVOID lpParam)
+unsigned _stdcall Judge_ListenThread(void *pEntry)
 {
 	sockaddr_in remoteAddr;
 	SOCKET sClient;
@@ -1290,14 +1399,35 @@ int OJ_InitData()
 
 }
 
+
+/*
+unsigned long _beginthreadex( void *security,
+								unsigned stack_size,
+								unsigned ( __stdcall *start_address )( void * ),
+								void *arglist,
+								unsigned initflag,
+								unsigned *thrdaddr );
+
+//第1个参数：安全属性，NULL为默认安全属性
+//第2个参数：指定线程堆栈的大小。如果为0，则线程堆栈大小和创建它的线程的相同。一般用0
+//第3个参数：指定线程函数的地址，也就是线程调用执行的函数地址(用函数名称即可，函数名称就表示地址)
+//第4个参数：传递给线程的参数的指针，可以通过传入对象的指针，在线程函数中再转化为对应类的指针
+//第5个参数：线程初始状态，0:立即运行；CREATE_SUSPEND：suspended（悬挂）
+//第6个参数：用于记录线程ID的地址
+
+*/
+
 void OJ_TaskEntry(void *pEntry)
 {
 	write_log(JUDGE_INFO,"Running Judge Core...");
 
 	(void)OJ_InitData();
 
-	HANDLE hThreadD=CreateThread(NULL,NULL,Judge_DispatchThread,0,0,0);
-	HANDLE hThreadR=CreateThread(NULL,NULL,Judge_ListenThread,0,0,0);
+	_beginthreadex(NULL, 0, Judge_DispatchThread, NULL, NULL, NULL);
+	_beginthreadex(NULL, 0, Judge_ListenThread, NULL, NULL, NULL);
+
+	//WaitForSingleObject(handle, INFINITE);
+	//CloseHandle(handle);
 
 	write_log(JUDGE_INFO,"Judge Task init ok...");
 

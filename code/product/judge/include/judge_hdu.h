@@ -8,7 +8,7 @@ extern int hdu_sockport;
 extern int hdu_remote_enable;
 extern int hdu_vjudge_enable;
 
-extern int HDU_VJudge();
+extern int HDU_VJudge(JUDGE_SUBMISSION_ST *pstJudgeSubmission);
 
 
 #endif

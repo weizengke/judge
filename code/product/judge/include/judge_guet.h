@@ -9,7 +9,7 @@ extern int guet_sockport;
 extern int guet_remote_enable;
 extern int guet_vjudge_enable;
 
-extern int GUET_VJudge();
+extern int GUET_VJudge(JUDGE_SUBMISSION_ST *pstJudgeSubmission);
 
 #endif
 

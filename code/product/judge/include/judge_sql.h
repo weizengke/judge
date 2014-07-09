@@ -13,9 +13,9 @@ extern char Mysql_Character[255];  //±àÂë
 
 
 extern int SQL_InitMySQL();
-extern int SQL_getSolutionSource();
-extern int SQL_getSolutionInfo(int *pIsExist);
-extern int SQL_getProblemInfo();
+extern int SQL_getSolutionSource(JUDGE_SUBMISSION_ST *pstJudgeSubmission);
+extern int SQL_getSolutionByID(int solutionID, JUDGE_SOLUTION_ST *pstJudgeSolution, int *pIsExist);
+extern int SQL_getProblemInfo(JUDGE_PROBLEM_INFO_ST *pstProblem);
 extern int SQL_getProblemInfo_contest(int contestId,int problemId,char *num);
 extern int SQL_getContestInfo(int contestId,time_t &start_time,time_t &end_time);
 extern int SQL_getContestAttend(int contestId,char *username,char num,long &ac_time,int &wrongsubmits);
@@ -30,6 +30,6 @@ extern int SQL_getContestScore(int contestId,char *username,time_t start_time,ti
 extern void SQL_updateAttend_contest(int contestId,int verdictId,int problemId,
 										char *num,char *username,time_t start_time,time_t end_time);
 extern void SQL_updateUser(char *username);
-extern void SQL_updateCompileInfo(int solutionId);
+extern void SQL_updateCompileInfo(JUDGE_SUBMISSION_ST *pstJudgeSubmission);
 
 #endif

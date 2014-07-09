@@ -48,9 +48,16 @@ int SQL_Destroy()
 	mysql_close(mysql);
 }
 
-int SQL_getSolutionSource()
+int SQL_getSolutionSource(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 {
-	sprintf(query,"select source from solution_source where solution_id=%d",GL_solutionId);
+	if (NULL == pstJudgeSubmission)
+	{
+		write_log(JUDGE_ERROR,"SQL_getSolutionSourceEx, Input param is null...");
+		return OS_ERR;
+	}
+
+	sprintf(query,"select source from solution_source where solution_id=%d",
+			pstJudgeSubmission->stSolution.solutionId);
 
 	int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));
 	if(ret)
@@ -66,7 +73,7 @@ int SQL_getSolutionSource()
 		return OS_ERR;
 	}
 
-	FILE *fp_source = fopen(sourcePath, "w");
+	FILE *fp_source = fopen(pstJudgeSubmission->sourcePath, "w");
 	char code[MAX_CODE]={0};
 	MYSQL_ROW row;
 
@@ -79,7 +86,7 @@ int SQL_getSolutionSource()
 		write_log(JUDGE_ERROR,"SQL_getSolutionSource Error");
 	}
 
-	if(isTranscoding==1)
+	if(pstJudgeSubmission->isTranscoding == 1)
 	{
 		int ii=0;
 		//解决VS下字符问题
@@ -97,49 +104,59 @@ int SQL_getSolutionSource()
 	fprintf(fp_source, "%s", code);
 
 	/* add for vjudge*/
-	string code_ = code;
-	GL_source = code_;
+	strcpy(pstJudgeSubmission->szSource, code);
 
 	mysql_free_result(recordSet);
 	fclose(fp_source);
 	return OS_OK;
 }
 
-int SQL_getSolutionInfo(int *pIsExist)
+int SQL_getSolutionByID(int solutionID, JUDGE_SOLUTION_ST *pstJudgeSolution, int *pIsExist)
 {
+	int ret = OS_OK;
+	MYSQL_RES *recordSet = NULL;
+	MYSQL_ROW row;
+
+	if (NULL == pstJudgeSolution
+	    ||NULL == pIsExist)
+	{
+		return OS_ERR;
+	}
+
 	*pIsExist = OS_NO;
 
-	sprintf(query,"select problem_id,contest_id,language,username,submit_date from solution where solution_id=%d",GL_solutionId);
+	sprintf(query,"select problem_id,contest_id,language,username,submit_date from solution where solution_id=%d",
+		    solutionID);
 
-	int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));
+	ret = mysql_real_query(mysql,query,(unsigned int)strlen(query));
 	if(ret)
 	{
 		write_log(JUDGE_ERROR,mysql_error(mysql));
 		return OS_ERR;
 	}
 
-	MYSQL_RES *recordSet = mysql_store_result(mysql);
-	if (recordSet==NULL)
+	recordSet = mysql_store_result(mysql);
+	if (recordSet == NULL)
 	{
 		write_log(JUDGE_ERROR,"Error SQL_getSolutionData");
 		return OS_ERR;
 	}
 
-	//获取数据
-	MYSQL_ROW row; //一个行数据的类型安全(type-safe)的表示
-	if (row = mysql_fetch_row(recordSet))  //获取下一条记录
+	if (row = mysql_fetch_row(recordSet))
 	{
-		GL_problemId=atoi(row[0]);
-		GL_contestId=atoi(row[1]);
-		GL_languageId=atoi(row[2]);
-		strcpy(GL_username,row[3]);
-		StringToTimeEX(row[4],GL_submitDate);
+		pstJudgeSolution->solutionId = solutionID;
+		pstJudgeSolution->problemId = atoi(row[0]);
+		pstJudgeSolution->contestId = atoi(row[1]);
+		pstJudgeSolution->languageId = atoi(row[2]);
+		strcpy(pstJudgeSolution->username, row[3]);
+		StringToTimeEX(row[4],pstJudgeSolution->submitDate);
 		*pIsExist = OS_YES;
-		write_log(JUDGE_INFO,"Found record.");
+
+		write_log(JUDGE_INFO,"Found record. (solutionID=%d)", solutionID);
 	}
 	else
 	{
-		write_log(JUDGE_ERROR,"No such record.");
+		write_log(JUDGE_ERROR,"No such record. (solutionID=%d)", solutionID);
 	}
 
 	/* 释放结果集 */
@@ -148,9 +165,16 @@ int SQL_getSolutionInfo(int *pIsExist)
 	return OS_OK;
 }
 
-int SQL_getProblemInfo()
+int SQL_getProblemInfo(JUDGE_PROBLEM_INFO_ST *pstProblem)
 {
-	sprintf(query,"select time_limit,memory_limit,spj,isvirtual,oj_pid,oj_name from problem where problem_id=%d",GL_problemId);
+	if (NULL == pstProblem)
+	{
+		write_log(JUDGE_ERROR,"SQL_getProblemInfo, Input param is null...");
+		return OS_ERR;
+	}
+
+	sprintf(query,"select time_limit,memory_limit,spj,isvirtual,oj_pid,oj_name from problem where problem_id=%d",
+			pstProblem->problemId);
 
 	int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));
 	if(ret)
@@ -165,16 +189,16 @@ int SQL_getProblemInfo()
 		return OS_ERR;
 	}
 
-	//获取数据
-	MYSQL_ROW row; //一个行数据的类型安全(type-safe)的表示
-	if(row=mysql_fetch_row(recordSet))  //获取下一条记录
+
+	MYSQL_ROW row;
+	if(row=mysql_fetch_row(recordSet))
 	{
-		GL_time_limit=atoi(row[0]);
-		GL_memory_limit=atoi(row[1]);
-		GL_spj=atoi(row[2]);
-		GL_vjudge=atoi(row[3]);
-		GL_vpid=atoi(row[4]);
-		GL_ojname=row[5];
+		pstProblem->time_limit = atoi(row[0]);
+		pstProblem->memory_limit = atoi(row[1]);
+		pstProblem->isSpecialJudge = atoi(row[2]);
+		pstProblem->isVirtualJudge = atoi(row[3]);
+		pstProblem->virtualPID = atoi(row[4]);
+		strcpy(pstProblem->szVirJudgerName, row[5]);
 	}
 
 	mysql_free_result(recordSet);//释放结果集
@@ -524,7 +548,7 @@ void SQL_updateAttend_contest(int contestId,int verdictId,int problemId,char *nu
 		write_log(JUDGE_ERROR,mysql_error(mysql));
 	}
 
-	long ac_nCount=SQL_countProblemVerdict(GL_contestId,problemId,V_AC,username);
+	long ac_nCount=SQL_countProblemVerdict(contestId,problemId,V_AC,username);
 	int score_ = SQL_getContestScore(contestId,username,start_time,end_time);
 	string s_t,e_t,fAC_t;
 	API_TimeToString(s_t,start_time);
@@ -560,7 +584,6 @@ void SQL_updateAttend_contest(int contestId,int verdictId,int problemId,char *nu
 		write_log(JUDGE_ERROR,mysql_error(mysql));
 	}
 
-
 }
 
 /* update user table*/
@@ -579,26 +602,32 @@ void SQL_updateUser(char *username)
 	}
 }
 
-
-void SQL_updateCompileInfo(int solutionId)
+void SQL_updateCompileInfo(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 {
 	FILE *fp;
 	char buffer[4096]={0};
 
-	if ((fp = fopen (DebugFile, "r")) == NULL)
+	if (NULL == pstJudgeSubmission)
+	{
+		write_log(JUDGE_ERROR,"SQL_updateCompileInfo, Input param is null...");
+		return ;
+	}
+
+
+	if ((fp = fopen (pstJudgeSubmission->DebugFile, "r")) == NULL)
 	{
 		write_log(JUDGE_ERROR,"DebugFile open error");
 		return ;
 	}
 
 	//先删除
-	sprintf(query,"delete from compile_info  where solution_id=%d;",solutionId);
+	sprintf(query,"delete from compile_info  where solution_id=%d;",pstJudgeSubmission->stSolution.solutionId);
 	mysql_real_query(mysql,query,(unsigned int)strlen(query));
 
 	//先插入
 	if((fgets(buffer, 4095, fp))!= NULL)
 	{
-		sprintf(query,"insert into compile_info values(%d,\"%s\");",solutionId,buffer);
+		sprintf(query,"insert into compile_info values(%d,\"%s\");",pstJudgeSubmission->stSolution.solutionId,buffer);
 		int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));
 		if(ret)
 		{
@@ -612,9 +641,10 @@ void SQL_updateCompileInfo(int solutionId)
 	while ((fgets (buffer, 4095, fp))!= NULL)
 	{
 		buffer[strlen(buffer)];
-		sprintf(query,"update compile_info set error=CONCAT(error,\"%s\") where solution_id=%d;",buffer,solutionId);
+		sprintf(query,"update compile_info set error=CONCAT(error,\"%s\") where solution_id=%d;",
+				buffer, pstJudgeSubmission->stSolution.solutionId);
 
-		int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));
+		int ret = mysql_real_query(mysql, query, (unsigned int)strlen(query));
 		if(ret)
 		{
 			write_log(JUDGE_ERROR,mysql_error(mysql));

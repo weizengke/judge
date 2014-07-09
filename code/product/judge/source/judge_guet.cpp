@@ -401,10 +401,9 @@ ULONG GUET_getStatusEx(char *username)
 	system(cmd_string) ;
 
 	/* id×ª»» */
-	int lang_id = GUET_getGUETLangID(GL_languageId);
-	GL_vpid = 1000;
+	int lang_id = GUET_getGUETLangID(0);
 	lang_id = 2;
-	ret =GUET_getStatus(guet_username, GL_vpid, lang_id, runid, result,ce_info,tu,mu);
+	ret =GUET_getStatus(guet_username, 1000, lang_id, runid, result,ce_info,tu,mu);
 
 	if (result.find("Queuing")!=string::npos
 		|| result.find("Compiling")!=string::npos
@@ -424,7 +423,7 @@ ULONG GUET_getStatusEx(char *username)
 		ce_info = CE_Info;
 	}
 
-	judge_outstring("Info: problem[%d] language[%d]  verdict[%s] submissionID[%s] time[%s ms] memory[%s kb].\r\n\r\n", GL_vpid, lang_id, result.c_str(), runid.c_str(), tu.c_str(), mu.c_str());
+	judge_outstring("Info: problem[%d] language[%d]  verdict[%s] submissionID[%s] time[%s ms] memory[%s kb].\r\n\r\n", 1000, lang_id, result.c_str(), runid.c_str(), tu.c_str(), mu.c_str());
 
 	return ret;
 
@@ -438,25 +437,25 @@ int GUET_Login(char *uname, char *psw)
 
 }
 
-int GUET_Judge_python()
+int GUET_Judge_python(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 {
 	char current_path[MAX_PATH] = {0};
 	char tmp_source_path[MAX_PATH] = {0};
 	char tmp_return_path[MAX_PATH] = {0};
 	GetCurrentDirectory(sizeof(current_path),current_path);
 
-	sprintf(tmp_source_path, "%s//%s",current_path,sourcePath);
-	sprintf(tmp_return_path, "%s//OJ_TMP//guetjudge-%d.tmp",current_path,GL_solutionId);
+	sprintf(tmp_source_path, "%s//%s",current_path,pstJudgeSubmission->sourcePath);
+	sprintf(tmp_return_path, "%s//OJ_TMP//guetjudge-%d.tmp",current_path,pstJudgeSubmission->stSolution.solutionId);
 
 	strcpy(g_Vjudgetfilename,tmp_return_path);
 
 	do
 	{
-		int lang_id = GUET_getGUETLangID(GL_languageId);
+		int lang_id = GUET_getGUETLangID(pstJudgeSubmission->stSolution.languageId);
 
 		char cmd_string[MAX_PATH];
 		sprintf(cmd_string,"python -O guet-vjudge.py submit %d %d %s %s %s %s",
-				GL_vpid, lang_id, guet_username, guet_password, tmp_source_path,tmp_return_path);
+				pstJudgeSubmission->stProblem.virtualPID, lang_id, guet_username, guet_password, tmp_source_path,tmp_return_path);
 		system(cmd_string) ;
 
 		int tryTime = 10;
@@ -477,7 +476,7 @@ int GUET_Judge_python()
 
 			system(cmd_string) ;
 
-			ret =GUET_getStatus(guet_username, GL_vpid, lang_id, runid, result,ce_info,tu,mu);
+			ret =GUET_getStatus(guet_username, pstJudgeSubmission->stProblem.virtualPID, lang_id, runid, result,ce_info,tu,mu);
 
 			if (result.find("Queuing")!=string::npos
 				|| result.find("Compiling")!=string::npos
@@ -508,60 +507,60 @@ int GUET_Judge_python()
 		if (OS_FALSE == ret)
 		{
 			pdt_debug_print("Get Status Error...");
-			GL_verdictId = V_SE;
+			pstJudgeSubmission->stSolution.verdictId = V_SE;
 		}
 		else
 		{
 			if (result.find("Accepted")!=string::npos)
 			{
-				GL_verdictId = V_AC;
+				pstJudgeSubmission->stSolution.verdictId = V_AC;
 			}
 			else if (result.find("Presentation Error")!=string::npos)
 			{
-				GL_verdictId = V_PE;
+				pstJudgeSubmission->stSolution.verdictId = V_PE;
 			}
 			else if (result.find("Runtime Error")!=string::npos)
 			{
-				GL_verdictId = V_RE;
+				pstJudgeSubmission->stSolution.verdictId = V_RE;
 			}
 			else if (result.find("Time Limit Exceeded")!=string::npos)
 			{
-				GL_verdictId = V_TLE;
+				pstJudgeSubmission->stSolution.verdictId = V_TLE;
 			}
 			else if (result.find("Memory Limit Exceeded")!=string::npos)
 			{
-				GL_verdictId = V_TLE;
+				pstJudgeSubmission->stSolution.verdictId = V_TLE;
 			}
 			else if (result.find("Output Limit Exceeded")!=string::npos)
 			{
-				GL_verdictId = V_OLE;
+				pstJudgeSubmission->stSolution.verdictId = V_OLE;
 			}
 			else if (result.find("Wrong Answer")!=string::npos)
 			{
-				GL_verdictId = V_WA;
+				pstJudgeSubmission->stSolution.verdictId = V_WA;
 			}
 			else if (result.find("Compile Error")!=string::npos)
 			{
-				GL_verdictId = V_CE;
+				pstJudgeSubmission->stSolution.verdictId = V_CE;
 				FILE *fp;
 				char buffer[4096]={0};
-				if ((fp = fopen (DebugFile, "w")) == NULL){
+				if ((fp = fopen (pstJudgeSubmission->DebugFile, "w")) == NULL){
 					write_log(JUDGE_ERROR,"DebugFile open error");
-					pdt_debug_print("DebugFile open error. File:",DebugFile);
+					pdt_debug_print("DebugFile open error. File:%s.",pstJudgeSubmission->DebugFile);
 					break;
 				}
 				fputs(ce_info.c_str(),fp);
 				fclose(fp);
-				SQL_updateCompileInfo(GL_solutionId);
+				SQL_updateCompileInfo(pstJudgeSubmission);
 			}
 			else
 			{
-				GL_verdictId = V_SE;
+				pstJudgeSubmission->stSolution.verdictId = V_SE;
 			}
 		}
 
-		GL_time = atoi(tu.c_str());
-		GL_memory = atoi(mu.c_str());
+		pstJudgeSubmission->stSolution.time_used= atoi(tu.c_str());
+		pstJudgeSubmission->stSolution.memory_used= atoi(mu.c_str());
 
 	} while (0);
 
@@ -571,9 +570,9 @@ int GUET_Judge_python()
 
 }
 
-int GUET_VJudge()
+int GUET_VJudge(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 {
-	return GUET_Judge_python();
+	return GUET_Judge_python(pstJudgeSubmission);
 }
 
 

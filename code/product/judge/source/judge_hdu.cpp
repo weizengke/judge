@@ -1192,7 +1192,7 @@ ULONG getHDUStatus(string hdu_username, int pid,int lang, string &runid, string 
 	return OS_TRUE;
 }
 
-int Judge_Via_CurlLib()
+int Judge_Via_CurlLib(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 {
 	int ret = OS_TRUE;
 	char current_path[MAX_PATH] = {0};
@@ -1200,8 +1200,8 @@ int Judge_Via_CurlLib()
 	char tmp_return_path[MAX_PATH] = {0};
 	GetCurrentDirectory(sizeof(current_path),current_path);
 
-	sprintf(tmp_source_path, "%s//%s",current_path,sourcePath);
-	sprintf(tmp_return_path, "%s//OJ_TMP//hdujudge-%d.tmp",current_path,GL_solutionId);
+	sprintf(tmp_source_path, "%s//%s",current_path,pstJudgeSubmission->sourcePath);
+	sprintf(tmp_return_path, "%s//OJ_TMP//hdujudge-%d.tmp",current_path,pstJudgeSubmission->stSolution.solutionId);
 	do
 	{
 
@@ -1214,10 +1214,10 @@ int Judge_Via_CurlLib()
 
 		/* get source , just get 0xFFFFFF size */
 		string source_ = "";
-		int lang_id = getHDULangID(GL_languageId);
+		int lang_id = getHDULangID(pstJudgeSubmission->stSolution.languageId);
 
 		int cnt_ = 0xFFFF;
-		FILE * fp=fopen(sourcePath,"r");
+		FILE * fp=fopen(pstJudgeSubmission->sourcePath,"r");
     	while (fgets(g_HDUtmps,0xFFFFFF,fp))
     	{
 			source_+=g_HDUtmps;
@@ -1226,9 +1226,7 @@ int Judge_Via_CurlLib()
 
 	    fclose(fp);
 
-		//pdt_debug_print("PID:%d, LangID:%d\r\nSource:\r\n%s", GL_vpid, lang_id, source_.c_str());
-
-		ret = DLL_HDUSubmit(GL_vpid, lang_id, source_);
+		ret = DLL_HDUSubmit(pstJudgeSubmission->stProblem.virtualPID, lang_id, source_);
 		if (OS_TRUE != ret)
 		{
 			pdt_debug_print("Error: Submit solution to hdu-judge failed.");
@@ -1248,7 +1246,7 @@ int Judge_Via_CurlLib()
 
 			Sleep(10000);
 
-			ret =DLL_HDUGetStatus(hdu_username, GL_vpid, lang_id, runid, result,ce_info,tu,mu);
+			ret =DLL_HDUGetStatus(hdu_username, pstJudgeSubmission->stProblem.virtualPID, lang_id, runid, result,ce_info,tu,mu);
 			if (ret != OS_TRUE
 				||result.find("Queuing")!=string::npos
 				|| result.find("Compiling")!=string::npos
@@ -1263,7 +1261,6 @@ int Judge_Via_CurlLib()
 				//获取编译错误信息
 				string  CE_Info = getCEinfo(runid);
 				ce_info = CE_Info;
-				//pdt_debug_print("CE:%s", CE_Info.c_str());
 			}
 
 			tryTime --;
@@ -1277,60 +1274,60 @@ int Judge_Via_CurlLib()
 		if (OS_FALSE == ret)
 		{
 			MSG_OUPUT_DBG("Get Status Error...");
-			GL_verdictId = V_SE;
+			pstJudgeSubmission->stSolution.verdictId = V_SE;
 		}
 		else
 		{
 			MSG_OUPUT_DBG("Get Status success...");
 			if (result.find("Accepted")!=string::npos)
 			{
-				GL_verdictId = V_AC;
+				pstJudgeSubmission->stSolution.verdictId = V_AC;
 			}
 			else if (result.find("Presentation Error")!=string::npos)
 			{
-				GL_verdictId = V_PE;
+				pstJudgeSubmission->stSolution.verdictId = V_PE;
 			}
 			else if (result.find("Runtime Error")!=string::npos)
 			{
-				GL_verdictId = V_RE;
+				pstJudgeSubmission->stSolution.verdictId = V_RE;
 			}
 			else if (result.find("Time Limit Exceeded")!=string::npos)
 			{
-				GL_verdictId = V_TLE;
+				pstJudgeSubmission->stSolution.verdictId = V_TLE;
 			}
 			else if (result.find("Memory Limit Exceeded")!=string::npos)
 			{
-				GL_verdictId = V_TLE;
+				pstJudgeSubmission->stSolution.verdictId = V_TLE;
 			}
 			else if (result.find("Output Limit Exceeded")!=string::npos)
 			{
-				GL_verdictId = V_OLE;
+				pstJudgeSubmission->stSolution.verdictId = V_OLE;
 			}
 			else if (result.find("Wrong Answer")!=string::npos)
 			{
-				GL_verdictId = V_WA;
+				pstJudgeSubmission->stSolution.verdictId = V_WA;
 			}
 			else if (result.find("Compilation Error")!=string::npos)
 			{
-				GL_verdictId = V_CE;
+				pstJudgeSubmission->stSolution.verdictId = V_CE;
 				FILE *fp;
 				char buffer[4096]={0};
-				if ((fp = fopen (DebugFile, "w")) == NULL){
+				if ((fp = fopen (pstJudgeSubmission->DebugFile, "w")) == NULL){
 					write_log(JUDGE_ERROR,"DebugFile open error");
 					break;
 				}
 				fputs(ce_info.c_str(),fp);
 				fclose(fp);
-				SQL_updateCompileInfo(GL_solutionId);
+				SQL_updateCompileInfo(pstJudgeSubmission);
 			}
 			else
 			{
-				GL_verdictId = V_SE;
+				pstJudgeSubmission->stSolution.verdictId = V_SE;
 			}
 		}
 
-		GL_time = atoi(tu.c_str());
-		GL_memory = atoi(mu.c_str());
+		pstJudgeSubmission->stSolution.time_used= atoi(tu.c_str());
+		pstJudgeSubmission->stSolution.memory_used= atoi(mu.c_str());
 
 	}while(0);
 
@@ -1339,6 +1336,7 @@ int Judge_Via_CurlLib()
 	return OS_OK;
 }
 
+#if 0
 int Judge_Via_python()
 {
 	char current_path[MAX_PATH] = {0};
@@ -1473,14 +1471,14 @@ int Judge_Via_python()
 	return OS_TRUE;
 
 }
+#endif
 
-
-int HDU_VJudge()
+int HDU_VJudge(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 {
 
 	pdt_debug_print("virtua-judge Local HDU.");
 
-	return Judge_Via_CurlLib();
+	return Judge_Via_CurlLib(pstJudgeSubmission);
 
 	//return Judge_Via_python();
 }
