@@ -16,18 +16,40 @@
 #include "product\judge\include\judge_inc.h"
 
 
-MYSQL *mysql;     //mysql连接
-char query[1024]; //查询语句
+MYSQL *mysql;
+char query[1024];
 char Mysql_url[255];
 char Mysql_username[255];
 char Mysql_password[255];
 char Mysql_table[255];
 int  Mysql_port;
-char Mysql_Character[255];  //编码
+char Mysql_Character[255];
+
+/* BEGIN: Added by weizengke, 2014/7/10  for 多线程判题信号量保护数据库访问 */
+
+HANDLE hSemaphore_SQL;
+
+void SQL_CreateSem()
+{
+	hSemaphore_SQL = CreateSemaphore(NULL, 1, 1, "SQL_SEM");
+}
+void SQL_SemP()
+{
+	WaitForSingleObject(hSemaphore_SQL, INFINITE);
+}
+
+void SQL_SemV()
+{
+	ReleaseSemaphore(hSemaphore_SQL, 1, NULL);
+}
+/* END:   Added by weizengke, 2014/7/10 */
+
 
 /* 初始化mysql，并设置字符集 */
 int SQL_InitMySQL()
 {
+	SQL_CreateSem();
+
 	mysql=mysql_init((MYSQL*)0);
 	if(mysql!=0 && !mysql_real_connect(mysql,Mysql_url, Mysql_username, Mysql_password, Mysql_table,Mysql_port,NULL,CLIENT_MULTI_STATEMENTS )){
 		write_log(JUDGE_ERROR,mysql_error(mysql));
@@ -48,277 +70,7 @@ int SQL_Destroy()
 	mysql_close(mysql);
 }
 
-int SQL_getSolutionSource(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
-{
-	if (NULL == pstJudgeSubmission)
-	{
-		write_log(JUDGE_ERROR,"SQL_getSolutionSourceEx, Input param is null...");
-		return OS_ERR;
-	}
-
-	sprintf(query,"select source from solution_source where solution_id=%d",
-			pstJudgeSubmission->stSolution.solutionId);
-
-	int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));
-	if(ret)
-	{
-		write_log(JUDGE_ERROR,mysql_error(mysql));
-		return OS_ERR;
-	}
-
-	MYSQL_RES *recordSet = mysql_store_result(mysql);
-	if (recordSet==NULL)
-	{
-		write_log(JUDGE_ERROR,"SQL_getSolutionSource");
-		return OS_ERR;
-	}
-
-	FILE *fp_source = fopen(pstJudgeSubmission->sourcePath, "w");
-	char code[MAX_CODE]={0};
-	MYSQL_ROW row;
-
-	if(row=mysql_fetch_row(recordSet))
-	{
-		sprintf(code, "%s", row[0]);
-	}
-	else
-	{
-		write_log(JUDGE_ERROR,"SQL_getSolutionSource Error");
-	}
-
-	if(pstJudgeSubmission->isTranscoding == 1)
-	{
-		int ii=0;
-		//解决VS下字符问题
-		while (code[ii]!='\0')
-		{
-			if (code[ii]=='\r')
-			{
-				code[ii] = '\n';
-			}
-
-			ii++;
-		}
-	}
-
-	fprintf(fp_source, "%s", code);
-
-	/* add for vjudge*/
-	strcpy(pstJudgeSubmission->szSource, code);
-
-	mysql_free_result(recordSet);
-	fclose(fp_source);
-	return OS_OK;
-}
-
-int SQL_getSolutionByID(int solutionID, JUDGE_SOLUTION_ST *pstJudgeSolution, int *pIsExist)
-{
-	int ret = OS_OK;
-	MYSQL_RES *recordSet = NULL;
-	MYSQL_ROW row;
-
-	if (NULL == pstJudgeSolution
-	    ||NULL == pIsExist)
-	{
-		return OS_ERR;
-	}
-
-	*pIsExist = OS_NO;
-
-	sprintf(query,"select problem_id,contest_id,language,username,submit_date from solution where solution_id=%d",
-		    solutionID);
-
-	ret = mysql_real_query(mysql,query,(unsigned int)strlen(query));
-	if(ret)
-	{
-		write_log(JUDGE_ERROR,mysql_error(mysql));
-		return OS_ERR;
-	}
-
-	recordSet = mysql_store_result(mysql);
-	if (recordSet == NULL)
-	{
-		write_log(JUDGE_ERROR,"Error SQL_getSolutionData");
-		return OS_ERR;
-	}
-
-	if (row = mysql_fetch_row(recordSet))
-	{
-		pstJudgeSolution->solutionId = solutionID;
-		pstJudgeSolution->problemId = atoi(row[0]);
-		pstJudgeSolution->contestId = atoi(row[1]);
-		pstJudgeSolution->languageId = atoi(row[2]);
-		strcpy(pstJudgeSolution->username, row[3]);
-		StringToTimeEX(row[4],pstJudgeSolution->submitDate);
-		*pIsExist = OS_YES;
-
-		write_log(JUDGE_INFO,"Found record. (solutionID=%d)", solutionID);
-	}
-	else
-	{
-		write_log(JUDGE_ERROR,"No such record. (solutionID=%d)", solutionID);
-	}
-
-	/* 释放结果集 */
-	mysql_free_result(recordSet);
-
-	return OS_OK;
-}
-
-int SQL_getProblemInfo(JUDGE_PROBLEM_INFO_ST *pstProblem)
-{
-	if (NULL == pstProblem)
-	{
-		write_log(JUDGE_ERROR,"SQL_getProblemInfo, Input param is null...");
-		return OS_ERR;
-	}
-
-	sprintf(query,"select time_limit,memory_limit,spj,isvirtual,oj_pid,oj_name from problem where problem_id=%d",
-			pstProblem->problemId);
-
-	int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));
-	if(ret)
-	{
-		write_log(JUDGE_ERROR,mysql_error(mysql));
-		return OS_ERR;
-	}
-
-	MYSQL_RES *recordSet = mysql_store_result(mysql);
-	if (recordSet==NULL)
-	{
-		return OS_ERR;
-	}
-
-
-	MYSQL_ROW row;
-	if(row=mysql_fetch_row(recordSet))
-	{
-		pstProblem->time_limit = atoi(row[0]);
-		pstProblem->memory_limit = atoi(row[1]);
-		pstProblem->isSpecialJudge = atoi(row[2]);
-		pstProblem->isVirtualJudge = atoi(row[3]);
-		pstProblem->virtualPID = atoi(row[4]);
-		strcpy(pstProblem->szVirJudgerName, row[5]);
-	}
-
-	mysql_free_result(recordSet);//释放结果集
-	return OS_OK;
-}
-
-int SQL_getProblemInfo_contest(int contestId,int problemId,char *num)
-{
-	sprintf(query,"select num from contest_problem where contest_id=%d and problem_id=%d",contestId,problemId);
-
-	int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));
-	if(ret)
-	{
-		write_log(JUDGE_ERROR,mysql_error(mysql));
-		return 0;
-	}
-
-	MYSQL_RES *recordSet = mysql_store_result(mysql);
-	if (recordSet==NULL)
-	{
-		write_log(JUDGE_INFO,"SQL_getProblemInfo_contest ,No record");
-		return 0;
-	}
-
-	//获取数据
-	MYSQL_ROW row; //一个行数据的类型安全(type-safe)的表示
-	if(row=mysql_fetch_row(recordSet))  //获取下一条记录
-	{
-		strcpy(num,row[0]);
-	}
-
-	mysql_free_result(recordSet);//释放结果集
-	return 1;
-}
-
-int SQL_getContestInfo(int contestId,time_t &start_time,time_t &end_time)
-{
-	//start_time,end_time
-	sprintf(query,"select start_time,end_time from contest where contest_id=%d",contestId);
-	int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));
-	if(ret)
-	{
-		write_log(JUDGE_ERROR,mysql_error(mysql));
-		return 0;
-	}
-
-	MYSQL_RES *recordSet = mysql_store_result(mysql);
-	if (recordSet==NULL)
-	{
-		return 0;
-	}
-
-	//获取数据
-	MYSQL_ROW row; //一个行数据的类型安全(type-safe)的表示
-	if(row=mysql_fetch_row(recordSet))  //获取下一条记录
-	{
-		StringToTimeEX(row[0],start_time);
-		StringToTimeEX(row[1],end_time);
-	}
-
-	mysql_free_result(recordSet);//释放结果集
-	return 1;
-}
-int SQL_getContestAttend(int contestId,char *username,char num,long &ac_time,int &wrongsubmits)
-{
-	sprintf(query,"select %c_time,%c_wrongsubmits from attend where contest_id=%d and username='%s';",num,num,contestId,username);
-
-	int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));
-	if(ret)
-	{
-		write_log(JUDGE_ERROR,mysql_error(mysql));
-		return 0;
-	}
-
-	MYSQL_RES *recordSet = mysql_store_result(mysql);
-	if (recordSet==NULL)
-	{
-		return 0;
-	}
-
-	MYSQL_ROW row;
-	if(row=mysql_fetch_row(recordSet))
-	{
-		ac_time=atol(row[0]);
-		wrongsubmits=atoi(row[1]);
-	}
-
-	mysql_free_result(recordSet);
-
-	return 1;
-}
-
-int SQL_countContestProblems(int contestId)
-{
-	sprintf(query,"select count(problem_id) from contest_problem where contest_id=%d",contestId);
-
-	int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));
-	if(ret)
-	{
-		write_log(JUDGE_ERROR,mysql_error(mysql));
-		return 0;
-	}
-
-	MYSQL_RES *recordSet = mysql_store_result(mysql);
-	if (recordSet==NULL)
-	{
-		return 0;
-	}
-
-	int nCount=0;
-	MYSQL_ROW row;
-	if(row=mysql_fetch_row(recordSet))
-	{
-		nCount=atoi(row[0]);
-	}
-
-	mysql_free_result(recordSet);
-	return nCount;
-}
-
+#if M_DES("内部函数，请勿P信号量",1)
 int SQL_getFirstACTime_contest(int contestId,int problemId,char *username,time_t &ac_time,time_t start_time,time_t end_time){
 	//
 	string s_t,e_t;
@@ -336,7 +88,6 @@ int SQL_getFirstACTime_contest(int contestId,int problemId,char *username,time_t
 	MYSQL_RES *recordSet = mysql_store_result(mysql);
 	if (recordSet==NULL)
 	{
-
 		return 0;
 	}
 
@@ -384,107 +135,9 @@ long SQL_countProblemVerdict(int contestId,int problemId,int verdictId,char *use
 	}
 
 	mysql_free_result(recordSet);//释放结果集
+
 	return nCount;
 }
-
-/* update Solution table*/
-void SQL_updateSolution(int solutionId,int verdictId,int testCase,int time,int memory)
-{
-	sprintf(query,"update solution set verdict=%d,testcase=%d,time=%d,memory=%d where solution_id=%d;",verdictId,testCase,time,memory,solutionId);
-
-	if(mysql_real_query(mysql,query,(unsigned int)strlen(query)))
-	{
-		write_log(JUDGE_ERROR,mysql_error(mysql));
-	}
-}
-
-/* update problem table*/
-void SQL_updateProblem(int problemId)
-{
-	sprintf(query,"update problem set accepted=(SELECT count(*) FROM solution WHERE problem_id=%d and verdict=%d) where problem_id=%d;",problemId,V_AC,problemId);
-	if(mysql_real_query(mysql,query,(unsigned int)strlen(query)))
-	{
-		write_log(JUDGE_ERROR,mysql_error(mysql));
-	}
-
-	sprintf(query,"update problem set submit=(SELECT count(*) FROM solution WHERE problem_id=%d)  where problem_id=%d;",problemId,problemId);
-	if(mysql_real_query(mysql,query,(unsigned int)strlen(query)))
-	{
-		write_log(JUDGE_ERROR,mysql_error(mysql));
-	}
-
-	sprintf(query,"update problem set solved=(SELECT count(DISTINCT username) FROM solution WHERE problem_id=%d and verdict=%d) where problem_id=%d;",problemId,V_AC,problemId);
-	if(mysql_real_query(mysql,query,(unsigned int)strlen(query)))
-	{
-		write_log(JUDGE_ERROR,mysql_error(mysql));
-	}
-
-	sprintf(query,"update problem set submit_user=(SELECT count(DISTINCT username) FROM solution WHERE problem_id=%d) where problem_id=%d;",problemId,problemId);
-	if(mysql_real_query(mysql,query,(unsigned int)strlen(query)))
-	{
-		write_log(JUDGE_ERROR,mysql_error(mysql));
-	}
-
-}
-void SQL_updateProblem_contest(int contestId,int problemId)
-{
-	sprintf(query,"update contest_problem set accepted=(SELECT count(*) FROM solution WHERE contest_id=%d and problem_id=%d and verdict=%d) where contest_id=%d and problem_id=%d;",contestId,V_AC,contestId,problemId);
-	if(mysql_real_query(mysql,query,(unsigned int)strlen(query)))
-	{
-		write_log(JUDGE_ERROR,mysql_error(mysql));
-	}
-
-	sprintf(query,"update contest_problem set submit=(SELECT count(*) FROM solution WHERE contest_id=%d and problem_id=%d)  where contest_id=%d and problem_id=%d;",contestId,problemId,contestId,problemId);
-	if(mysql_real_query(mysql,query,(unsigned int)strlen(query)))
-	{
-		write_log(JUDGE_ERROR,mysql_error(mysql));
-	}
-
-	sprintf(query,"update contest_problem set solved=(SELECT count(DISTINCT username) FROM solution WHERE contest_id=%d and problem_id=%d and verdict=%d) where contest_id=%d and problem_id=%d;",contestId,problemId,V_AC,contestId,problemId);
-	if(mysql_real_query(mysql,query,(unsigned int)strlen(query)))
-	{
-		write_log(JUDGE_ERROR,mysql_error(mysql));
-	}
-
-	sprintf(query,"update contest_problem set submit_user=(SELECT count(DISTINCT username) FROM solution WHERE contest_id=%d and problem_id=%d) where contest_id=%d and problem_id=%d;",contestId,problemId,contestId,problemId);
-	if(mysql_real_query(mysql,query,(unsigned int)strlen(query)))
-	{
-		write_log(JUDGE_ERROR,mysql_error(mysql));
-	}
-
-}
-
-int SQL_countACContestProblems(int contestId,char *username,time_t start_time,time_t end_time){
-
-	string s_t,e_t;
-	API_TimeToString(s_t,start_time);
-	API_TimeToString(e_t,end_time);
-
-	sprintf(query,"select count(distinct(problem_id)) from solution where  verdict=%d and contest_id=%d and username='%s' and submit_date between '%s' and '%s'",V_AC,contestId,username,s_t.c_str(),e_t.c_str());
-
-	if(mysql_real_query(mysql,query,(unsigned int)strlen(query)))
-	{
-		write_log(JUDGE_ERROR,mysql_error(mysql));
-		return 0;
-	}
-
-	MYSQL_RES *recordSet = mysql_store_result(mysql);
-	if (recordSet==NULL)
-	{
-		return 0;
-	}
-
-	int nCount=0;
-	MYSQL_ROW row;
-	if(row=mysql_fetch_row(recordSet))
-	{
-		nCount=atoi(row[0]);
-	}
-
-	mysql_free_result(recordSet);
-	return nCount;
-}
-
 
 int SQL_getContestScore(int contestId,char *username,time_t start_time,time_t end_time){
 
@@ -523,6 +176,441 @@ int SQL_getContestScore(int contestId,char *username,time_t start_time,time_t en
 
 	return point;
 }
+#endif
+
+int SQL_getSolutionSource(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
+{
+	if (NULL == pstJudgeSubmission)
+	{
+		write_log(JUDGE_ERROR,"SQL_getSolutionSourceEx, Input param is null...");
+		return OS_ERR;
+	}
+
+	SQL_SemP();
+
+	sprintf(query,"select source from solution_source where solution_id=%d",
+			pstJudgeSubmission->stSolution.solutionId);
+
+	int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));
+	if(ret)
+	{
+		write_log(JUDGE_ERROR,mysql_error(mysql));
+		SQL_SemV();
+		return OS_ERR;
+	}
+
+	MYSQL_RES *recordSet = mysql_store_result(mysql);
+	if (recordSet==NULL)
+	{
+		write_log(JUDGE_ERROR,"SQL_getSolutionSource");
+		SQL_SemV();
+		return OS_ERR;
+	}
+
+	FILE *fp_source = fopen(pstJudgeSubmission->sourcePath, "w");
+	char code[MAX_CODE]={0};
+	MYSQL_ROW row;
+
+	if(row = mysql_fetch_row(recordSet))
+	{
+		sprintf(code, "%s", row[0]);
+	}
+	else
+	{
+		write_log(JUDGE_ERROR,"SQL_getSolutionSource Error");
+	}
+
+	if(pstJudgeSubmission->isTranscoding == 1)
+	{
+		int ii=0;
+		/* 解决VS下字符问题 */
+		while (code[ii]!='\0')
+		{
+			if (code[ii]=='\r')
+			{
+				code[ii] = '\n';
+			}
+
+			ii++;
+		}
+	}
+
+	fprintf(fp_source, "%s", code);
+
+	/* add for vjudge*/
+	strcpy(pstJudgeSubmission->szSource, code);
+
+	mysql_free_result(recordSet);
+	fclose(fp_source);
+
+	SQL_SemV();
+
+	return OS_OK;
+}
+
+
+int SQL_getSolutionByID(int solutionID, JUDGE_SOLUTION_ST *pstJudgeSolution, int *pIsExist)
+{
+	int ret = OS_OK;
+	MYSQL_RES *recordSet = NULL;
+	MYSQL_ROW row;
+
+	if (NULL == pstJudgeSolution
+	    ||NULL == pIsExist)
+	{
+		return OS_ERR;
+	}
+
+	*pIsExist = OS_NO;
+
+	SQL_SemP();
+
+	sprintf(query,"select problem_id,contest_id,language,username,submit_date from solution where solution_id=%d",
+		    solutionID);
+
+	ret = mysql_real_query(mysql,query,(unsigned int)strlen(query));
+	if(ret)
+	{
+		write_log(JUDGE_ERROR,mysql_error(mysql));
+		SQL_SemV();
+		return OS_ERR;
+	}
+
+	recordSet = mysql_store_result(mysql);
+	if (recordSet == NULL)
+	{
+		write_log(JUDGE_ERROR,"Error SQL_getSolutionData");
+		SQL_SemV();
+		return OS_ERR;
+	}
+
+	if (row = mysql_fetch_row(recordSet))
+	{
+		pstJudgeSolution->solutionId = solutionID;
+		pstJudgeSolution->problemId = atoi(row[0]);
+		pstJudgeSolution->contestId = atoi(row[1]);
+		pstJudgeSolution->languageId = atoi(row[2]);
+		strcpy(pstJudgeSolution->username, row[3]);
+		StringToTimeEX(row[4],pstJudgeSolution->submitDate);
+		*pIsExist = OS_YES;
+
+		write_log(JUDGE_INFO,"Found record. (solutionID=%d)", solutionID);
+	}
+	else
+	{
+		write_log(JUDGE_ERROR,"No such record. (solutionID=%d)", solutionID);
+	}
+
+	/* 释放结果集 */
+	mysql_free_result(recordSet);
+
+	SQL_SemV();
+
+	return OS_OK;
+}
+
+int SQL_getProblemInfo(JUDGE_PROBLEM_INFO_ST *pstProblem)
+{
+	if (NULL == pstProblem)
+	{
+		write_log(JUDGE_ERROR,"SQL_getProblemInfo, Input param is null...");
+		return OS_ERR;
+	}
+
+	SQL_SemP();
+
+	sprintf(query,"select time_limit,memory_limit,spj,isvirtual,oj_pid,oj_name from problem where problem_id=%d",
+			pstProblem->problemId);
+
+	int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));
+	if(ret)
+	{
+		write_log(JUDGE_ERROR,mysql_error(mysql));
+		SQL_SemV();
+		return OS_ERR;
+	}
+
+	MYSQL_RES *recordSet = mysql_store_result(mysql);
+	if (recordSet==NULL)
+	{
+		SQL_SemV();
+		return OS_ERR;
+	}
+
+
+	MYSQL_ROW row;
+	if(row=mysql_fetch_row(recordSet))
+	{
+		pstProblem->time_limit = atoi(row[0]);
+		pstProblem->memory_limit = atoi(row[1]);
+		pstProblem->isSpecialJudge = atoi(row[2]);
+		pstProblem->isVirtualJudge = atoi(row[3]);
+		pstProblem->virtualPID = atoi(row[4]);
+		strcpy(pstProblem->szVirJudgerName, row[5]);
+	}
+
+	mysql_free_result(recordSet);//释放结果集
+
+	SQL_SemV();
+
+	return OS_OK;
+}
+
+int SQL_getProblemInfo_contest(int contestId,int problemId,char *num)
+{
+	SQL_SemP();
+
+	sprintf(query,"select num from contest_problem where contest_id=%d and problem_id=%d",contestId,problemId);
+
+	int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));
+	if(ret)
+	{
+		write_log(JUDGE_ERROR,mysql_error(mysql));
+		SQL_SemV();
+		return 0;
+	}
+
+	MYSQL_RES *recordSet = mysql_store_result(mysql);
+	if (recordSet==NULL)
+	{
+		write_log(JUDGE_INFO,"SQL_getProblemInfo_contest ,No record");
+		SQL_SemV();
+		return 0;
+	}
+
+	//获取数据
+	MYSQL_ROW row; //一个行数据的类型安全(type-safe)的表示
+	if(row=mysql_fetch_row(recordSet))  //获取下一条记录
+	{
+		strcpy(num,row[0]);
+	}
+
+	mysql_free_result(recordSet);//释放结果集
+
+	SQL_SemV();
+
+	return 1;
+}
+
+int SQL_getContestInfo(int contestId,time_t &start_time,time_t &end_time)
+{
+	SQL_SemP();
+
+	//start_time,end_time
+	sprintf(query,"select start_time,end_time from contest where contest_id=%d",contestId);
+	int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));
+	if(ret)
+	{
+		write_log(JUDGE_ERROR,mysql_error(mysql));
+		SQL_SemV();
+		return 0;
+	}
+
+	MYSQL_RES *recordSet = mysql_store_result(mysql);
+	if (recordSet==NULL)
+	{
+		SQL_SemV();
+		return 0;
+	}
+
+	//获取数据
+	MYSQL_ROW row; //一个行数据的类型安全(type-safe)的表示
+	if(row=mysql_fetch_row(recordSet))  //获取下一条记录
+	{
+		StringToTimeEX(row[0],start_time);
+		StringToTimeEX(row[1],end_time);
+	}
+
+	mysql_free_result(recordSet);//释放结果集
+
+	SQL_SemV();
+
+	return 1;
+}
+
+int SQL_getContestAttend(int contestId,char *username,char num,long &ac_time,int &wrongsubmits)
+{
+	SQL_SemP();
+
+	sprintf(query,"select %c_time,%c_wrongsubmits from attend where contest_id=%d and username='%s';",num,num,contestId,username);
+
+	int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));
+	if(ret)
+	{
+		write_log(JUDGE_ERROR,mysql_error(mysql));
+		SQL_SemV();
+		return 0;
+	}
+
+	MYSQL_RES *recordSet = mysql_store_result(mysql);
+	if (recordSet==NULL)
+	{
+		SQL_SemV();
+		return 0;
+	}
+
+	MYSQL_ROW row;
+	if(row=mysql_fetch_row(recordSet))
+	{
+		ac_time=atol(row[0]);
+		wrongsubmits=atoi(row[1]);
+	}
+
+	mysql_free_result(recordSet);
+
+	SQL_SemV();
+
+	return 1;
+}
+
+int SQL_countContestProblems(int contestId)
+{
+	SQL_SemP();
+
+	sprintf(query,"select count(problem_id) from contest_problem where contest_id=%d",contestId);
+
+	int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));
+	if(ret)
+	{
+		write_log(JUDGE_ERROR,mysql_error(mysql));
+		SQL_SemV();
+		return 0;
+	}
+
+	MYSQL_RES *recordSet = mysql_store_result(mysql);
+	if (recordSet==NULL)
+	{
+		SQL_SemV();
+		return 0;
+	}
+
+	int nCount=0;
+	MYSQL_ROW row;
+	if(row=mysql_fetch_row(recordSet))
+	{
+		nCount=atoi(row[0]);
+	}
+
+	mysql_free_result(recordSet);
+
+	SQL_SemV();
+
+	return nCount;
+}
+
+
+/* update Solution table*/
+void SQL_updateSolution(int solutionId,int verdictId,int testCase,int time,int memory)
+{
+	SQL_SemP();
+
+	sprintf(query,"update solution set verdict=%d,testcase=%d,time=%d,memory=%d where solution_id=%d;",verdictId,testCase,time,memory,solutionId);
+
+	if(mysql_real_query(mysql,query,(unsigned int)strlen(query)))
+	{
+		write_log(JUDGE_ERROR,mysql_error(mysql));
+	}
+
+	SQL_SemV();
+}
+
+/* update problem table*/
+void SQL_updateProblem(int problemId)
+{
+	SQL_SemP();
+
+	sprintf(query,"update problem set accepted=(SELECT count(*) FROM solution WHERE problem_id=%d and verdict=%d) where problem_id=%d;",problemId,V_AC,problemId);
+	if(mysql_real_query(mysql,query,(unsigned int)strlen(query)))
+	{
+		write_log(JUDGE_ERROR,mysql_error(mysql));
+	}
+
+	sprintf(query,"update problem set submit=(SELECT count(*) FROM solution WHERE problem_id=%d)  where problem_id=%d;",problemId,problemId);
+	if(mysql_real_query(mysql,query,(unsigned int)strlen(query)))
+	{
+		write_log(JUDGE_ERROR,mysql_error(mysql));
+	}
+
+	sprintf(query,"update problem set solved=(SELECT count(DISTINCT username) FROM solution WHERE problem_id=%d and verdict=%d) where problem_id=%d;",problemId,V_AC,problemId);
+	if(mysql_real_query(mysql,query,(unsigned int)strlen(query)))
+	{
+		write_log(JUDGE_ERROR,mysql_error(mysql));
+	}
+
+	sprintf(query,"update problem set submit_user=(SELECT count(DISTINCT username) FROM solution WHERE problem_id=%d) where problem_id=%d;",problemId,problemId);
+	if(mysql_real_query(mysql,query,(unsigned int)strlen(query)))
+	{
+		write_log(JUDGE_ERROR,mysql_error(mysql));
+	}
+
+	SQL_SemV();
+
+}
+
+void SQL_updateProblem_contest(int contestId,int problemId)
+{
+	SQL_SemP();
+
+	sprintf(query,"update contest_problem set accepted=(SELECT count(*) FROM solution WHERE contest_id=%d and problem_id=%d and verdict=%d) where contest_id=%d and problem_id=%d;",contestId,V_AC,contestId,problemId);
+	if(mysql_real_query(mysql,query,(unsigned int)strlen(query)))
+	{
+		write_log(JUDGE_ERROR,mysql_error(mysql));
+	}
+
+	sprintf(query,"update contest_problem set submit=(SELECT count(*) FROM solution WHERE contest_id=%d and problem_id=%d)  where contest_id=%d and problem_id=%d;",contestId,problemId,contestId,problemId);
+	if(mysql_real_query(mysql,query,(unsigned int)strlen(query)))
+	{
+		write_log(JUDGE_ERROR,mysql_error(mysql));
+	}
+
+	sprintf(query,"update contest_problem set solved=(SELECT count(DISTINCT username) FROM solution WHERE contest_id=%d and problem_id=%d and verdict=%d) where contest_id=%d and problem_id=%d;",contestId,problemId,V_AC,contestId,problemId);
+	if(mysql_real_query(mysql,query,(unsigned int)strlen(query)))
+	{
+		write_log(JUDGE_ERROR,mysql_error(mysql));
+	}
+
+	sprintf(query,"update contest_problem set submit_user=(SELECT count(DISTINCT username) FROM solution WHERE contest_id=%d and problem_id=%d) where contest_id=%d and problem_id=%d;",contestId,problemId,contestId,problemId);
+	if(mysql_real_query(mysql,query,(unsigned int)strlen(query)))
+	{
+		write_log(JUDGE_ERROR,mysql_error(mysql));
+	}
+
+	SQL_SemV();
+}
+
+/* Note: No need to P Sem!!!! */
+int SQL_countACContestProblems(int contestId,char *username,time_t start_time,time_t end_time){
+
+	string s_t,e_t;
+	API_TimeToString(s_t,start_time);
+	API_TimeToString(e_t,end_time);
+
+	sprintf(query,"select count(distinct(problem_id)) from solution where  verdict=%d and contest_id=%d and username='%s' and submit_date between '%s' and '%s'",V_AC,contestId,username,s_t.c_str(),e_t.c_str());
+
+	if(mysql_real_query(mysql,query,(unsigned int)strlen(query)))
+	{
+		write_log(JUDGE_ERROR,mysql_error(mysql));
+		return 0;
+	}
+
+	MYSQL_RES *recordSet = mysql_store_result(mysql);
+	if (recordSet==NULL)
+	{
+		return 0;
+	}
+
+	int nCount=0;
+	MYSQL_ROW row;
+	if(row=mysql_fetch_row(recordSet))
+	{
+		nCount=atoi(row[0]);
+	}
+
+	mysql_free_result(recordSet);
+
+	return nCount;
+}
+
 
 void SQL_updateAttend_contest(int contestId,int verdictId,int problemId,char *num,char *username,time_t start_time,time_t end_time){
 
@@ -530,6 +618,8 @@ void SQL_updateAttend_contest(int contestId,int verdictId,int problemId,char *nu
 	//update ac_time
 	long AC_time=0;
 	time_t first_ac_t;
+
+	SQL_SemP();
 
 	if(SQL_getFirstACTime_contest(contestId,problemId,username,first_ac_t,start_time,end_time))
 	{
@@ -584,11 +674,15 @@ void SQL_updateAttend_contest(int contestId,int verdictId,int problemId,char *nu
 		write_log(JUDGE_ERROR,mysql_error(mysql));
 	}
 
+	SQL_SemV();
+
 }
 
 /* update user table*/
 void SQL_updateUser(char *username)
 {
+	SQL_SemP();
+
 	sprintf(query,"update users set submit=(SELECT count(*) FROM solution WHERE username='%s') where username='%s';",username,username);
 	if(mysql_real_query(mysql,query,(unsigned int)strlen(query)))
 	{
@@ -600,6 +694,8 @@ void SQL_updateUser(char *username)
 	{
 		write_log(JUDGE_ERROR,mysql_error(mysql));
 	}
+
+	SQL_SemV();
 }
 
 void SQL_updateCompileInfo(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
@@ -620,6 +716,8 @@ void SQL_updateCompileInfo(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 		return ;
 	}
 
+	SQL_SemP();
+
 	//先删除
 	sprintf(query,"delete from compile_info  where solution_id=%d;",pstJudgeSubmission->stSolution.solutionId);
 	mysql_real_query(mysql,query,(unsigned int)strlen(query));
@@ -633,6 +731,7 @@ void SQL_updateCompileInfo(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 		{
 			write_log(JUDGE_ERROR,mysql_error(mysql));
 			fclose(fp);
+			SQL_SemV();
 			return ;
 		}
 	}
@@ -649,11 +748,14 @@ void SQL_updateCompileInfo(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 		{
 			write_log(JUDGE_ERROR,mysql_error(mysql));
 			fclose(fp);
+			SQL_SemV();
 			return ;
 		}
  	}
 
 	fclose(fp);
+
+	SQL_SemV();
 
 }
 

@@ -444,8 +444,8 @@ int GUET_Judge_python(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 	char tmp_return_path[MAX_PATH] = {0};
 	GetCurrentDirectory(sizeof(current_path),current_path);
 
-	sprintf(tmp_source_path, "%s//%s",current_path,pstJudgeSubmission->sourcePath);
-	sprintf(tmp_return_path, "%s//OJ_TMP//guetjudge-%d.tmp",current_path,pstJudgeSubmission->stSolution.solutionId);
+	sprintf(tmp_source_path, "%s\\%s",current_path,pstJudgeSubmission->sourcePath);
+	sprintf(tmp_return_path, "%s\\OJ_TMP\\guetjudge-%d.tmp",current_path,pstJudgeSubmission->stSolution.solutionId);
 
 	strcpy(g_Vjudgetfilename,tmp_return_path);
 

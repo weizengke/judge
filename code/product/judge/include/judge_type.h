@@ -47,6 +47,9 @@ typedef struct tag_Judge_Submission_ST
 	JUDGE_SOLUTION_ST     stSolution;
 	JUDGE_PROBLEM_INFO_ST stProblem;
 
+	int time_used_case;     /* 单个case耗时 */
+	int memory_used_case;
+
     int isTranscoding;   /* 针对VS的转码 */
     int limitIndex;
     int nProcessLimit;
@@ -56,6 +59,10 @@ typedef struct tag_Judge_Submission_ST
 	char languageName[100];
 	char languageExt[10];
 	char languageExe[10];
+
+	unsigned long ulSeed;  /* 随机种子 */
+	char subPath[MAX_PATH]; /* 子目录 */
+
 
 	char sourcePath[MAX_PATH];
 	char exePath[MAX_PATH];
