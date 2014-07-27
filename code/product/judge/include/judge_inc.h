@@ -18,6 +18,7 @@
 
 #include "osp\common\include\osp_common_def.h"
 
+#include "osp\event\include\event_pub.h"
 
 #include "product\judge\include\judge_def.h"
 #include "product\judge\include\judge_type.h"

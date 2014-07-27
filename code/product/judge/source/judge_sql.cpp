@@ -50,18 +50,29 @@ int SQL_InitMySQL()
 {
 	SQL_CreateSem();
 
-	mysql=mysql_init((MYSQL*)0);
-	if(mysql!=0 && !mysql_real_connect(mysql,Mysql_url, Mysql_username, Mysql_password, Mysql_table,Mysql_port,NULL,CLIENT_MULTI_STATEMENTS )){
+	mysql = mysql_init((MYSQL*)0);
+
+	if (mysql != 0 &&
+		!mysql_real_connect(mysql,Mysql_url,
+							Mysql_username,
+							Mysql_password,
+							Mysql_table,
+							Mysql_port,
+							NULL,
+							CLIENT_MULTI_STATEMENTS ))
+	{
 		write_log(JUDGE_ERROR,mysql_error(mysql));
 		return 0;
 	}
 
 	strcpy(query,"SET CHARACTER SET gbk"); //设置编码 gbk
-	int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));
-	if(ret){
-		write_log(JUDGE_ERROR,mysql_error(mysql));
+	int ret = mysql_real_query(mysql,query, (unsigned int)strlen(query));
+	if (ret)
+	{
+		write_log(JUDGE_ERROR, mysql_error(mysql));
 		return 0;
 	}
+
 	return 1;
 }
 
@@ -71,15 +82,15 @@ int SQL_Destroy()
 }
 
 #if M_DES("内部函数，请勿P信号量",1)
-int SQL_getFirstACTime_contest(int contestId,int problemId,char *username,time_t &ac_time,time_t start_time,time_t end_time){
-	//
+int SQL_getFirstACTime_contest(int contestId,int problemId,char *username,time_t &ac_time,time_t start_time,time_t end_time)
+{
 	string s_t,e_t;
 	API_TimeToString(s_t,start_time);
 	API_TimeToString(e_t,end_time);
 
 	sprintf(query,"select submit_date from solution where contest_id=%d and problem_id=%d and username='%s'and verdict=%d and submit_date between '%s' and '%s' order by solution_id ASC limit 1;",contestId,problemId,username,V_AC,s_t.c_str(),e_t.c_str());
-	int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));
-	if(ret)
+	int ret = mysql_real_query(mysql,query,(unsigned int)strlen(query));
+	if (ret)
 	{
 		write_log(JUDGE_ERROR,mysql_error(mysql));
 		return 0;
@@ -92,7 +103,7 @@ int SQL_getFirstACTime_contest(int contestId,int problemId,char *username,time_t
 	}
 
 	MYSQL_ROW row;
-	if(row=mysql_fetch_row(recordSet))
+	if (row = mysql_fetch_row(recordSet))
 	{
 
 		StringToTimeEX(row[0],ac_time);
@@ -719,7 +730,7 @@ void SQL_updateCompileInfo(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 	SQL_SemP();
 
 	//先删除
-	sprintf(query,"delete from compile_info  where solution_id=%d;",pstJudgeSubmission->stSolution.solutionId);
+	sprintf(query,"delete from compile_info where solution_id=%d;",pstJudgeSubmission->stSolution.solutionId);
 	mysql_real_query(mysql,query,(unsigned int)strlen(query));
 
 	//先插入

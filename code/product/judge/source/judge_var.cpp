@@ -10,3 +10,5 @@ int GL_vjudge_enable = OS_NO;  /* 全局使能vjudge */
 char g_Vjudgetfilename[MAX_PATH]="tmpfile.txt";
 
 
+SOCKET g_sListen;
+

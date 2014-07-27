@@ -48,8 +48,6 @@ char dataPath[MAX_PATH];
 char logPath[MAX_PATH]="log\\";
 char judgePath[MAX_PATH];
 
-char judge_log_filename[MAX_PATH] = {0};
-
 #define PORT 5000
 #define BUFFER 1024
 
@@ -89,24 +87,7 @@ typedef struct tagMBuff_S
 }MBUF_S;
 #endif
 
-queue <JUDGE_DATA_S> Q; /* 全局队列 */
-
-SOCKET sListen;
-
-char compileCmd_str[BUFFER]={0};
-char runCmd_str[BUFFER]={0};
-
-
-clock_t startt,endt ;  /* 每次run的时间点 */
-
-STARTUPINFO si;
-PROCESS_INFORMATION G_pi = {0};
-PROCESS_INFORMATION G_pi_com = {0};
-
-HANDLE G_job=NULL;
-HANDLE InputFile ;  /* 父进程输入文件句柄 */
-HANDLE OutputFile;  /* 子进程标准输出句柄 */
-DWORD g_dwCode;  	/* 定义进程状态 */
+queue <JUDGE_DATA_S> g_JudgeQueue; /* 全局队列 */
 
 extern void pdt_debug_print(const char *format, ...);
 
@@ -139,8 +120,8 @@ int Judge_InitSocket()
 	if(WSAStartup(sockVersion, &wsaData) != 0)
 		return 0;
 
-	sListen = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-	if(sListen == INVALID_SOCKET)
+	g_sListen = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if(g_sListen == INVALID_SOCKET)
 	{
 		write_log(JUDGE_SYSTEM_ERROR,"create socket error");
 		return 0;
@@ -155,11 +136,11 @@ int Judge_InitSocket()
 	int trybind=50;
 	int ret=0;
 
-	ret = bind(sListen,(LPSOCKADDR)&sin,sizeof(sin));
+	ret = bind(g_sListen,(LPSOCKADDR)&sin,sizeof(sin));
 
 	while(ret == SOCKET_ERROR && trybind > 0)
 	{
-		bind(sListen,(LPSOCKADDR)&sin,sizeof(sin));
+		bind(g_sListen,(LPSOCKADDR)&sin,sizeof(sin));
 		write_log(JUDGE_SYSTEM_ERROR,"bind failed:%d , it will try later...",WSAGetLastError());
 		trybind--;
 		Sleep(100);
@@ -171,7 +152,7 @@ int Judge_InitSocket()
 		{
 			g_sock_port++;
 			sin.sin_port = htons(g_sock_port);
-			ret =  bind(sListen,(LPSOCKADDR)&sin,sizeof(sin));
+			ret =  bind(g_sListen,(LPSOCKADDR)&sin,sizeof(sin));
 			if (ret != SOCKET_ERROR)
 			{
 				char szPort[10] = {0};
@@ -188,7 +169,7 @@ int Judge_InitSocket()
 
 	//进入监听状态
 	int trylisten=50; //重试listen次数
-	while((ret=listen(sListen,20))==SOCKET_ERROR&&trylisten)
+	while((ret=listen(g_sListen,20))==SOCKET_ERROR&&trylisten)
 	{
 		write_log(JUDGE_SYSTEM_ERROR,"listen failed:%d , it will try later..",WSAGetLastError());
 		trylisten--;
@@ -200,7 +181,7 @@ int Judge_InitSocket()
 		write_log(JUDGE_SYSTEM_ERROR,"Listen failed...");
 		pdt_debug_print("Error: Listen port(%u) failed......[code:%u]", g_sock_port, GetLastError());
 
-		closesocket(sListen);
+		closesocket(g_sListen);
 		WSACleanup();
 		return 0;
 	}
@@ -214,7 +195,7 @@ int Judge_InitSocket()
 
 void Judge_Destroy()
 {
-	closesocket(sListen);
+	closesocket(g_sListen);
 }
 
 void Judge_InitConfigData()
@@ -1093,7 +1074,7 @@ int Judge_Remote(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 				ret = Judge_SendToJudger(pstJudgeSubmission->stSolution.solutionId, hdu_sockport, hdu_judgerIP);
 				if (OS_OK == ret)
 				{
-					/* virdict置quieue , 由远程judger继续执行 */
+					/* virdict置queue , 由远程judger继续执行 */
 					pstJudgeSubmission->stSolution.verdictId = V_Q;
 				}
 
@@ -1187,10 +1168,10 @@ unsigned _stdcall  Judge_Proc(void *pData)
 	if (OS_YES == stJudgeSubmission.stProblem.isVirtualJudge)
 	{
 		#if(JUDGE_VIRTUAL == VOS_YES)
-
 		if (OS_YES == Judge_IsVirtualJudgeEnable())
 		{
-			if (OS_OK != Judge_Remote(&stJudgeSubmission))
+			ret = Judge_Remote(&stJudgeSubmission);
+			if (OS_OK != ret)
 			{
 				stJudgeSubmission.stSolution.verdictId = V_SK;
 				pdt_debug_print("virtua-judge is fail...");
@@ -1216,9 +1197,8 @@ unsigned _stdcall  Judge_Proc(void *pData)
 		stJudgeSubmission.stProblem.time_limit *=stJudgeSubmission.limitIndex;
 		stJudgeSubmission.stProblem.memory_limit *=stJudgeSubmission.limitIndex;
 
-		(void)Judge_Local(&stJudgeSubmission);
+		ret = Judge_Local(&stJudgeSubmission);
 	}
-
 
 	write_log(JUDGE_INFO,"Do Judge finish. (solutionId=%d)", stJudgeSubmission.stSolution.solutionId);
 
@@ -1258,34 +1238,29 @@ unsigned _stdcall  Judge_Proc(void *pData)
 	DeleteFile(stJudgeSubmission.exePath);
 
 
-	if (OS_OK == ret)
-	{
-		string time_string_;
-		API_TimeToString(time_string_, stJudgeSubmission.stSolution.submitDate);
-		judge_outstring("\r\n -----------------------"
-					"\r\n	  *Judge verdict*"
-					"\r\n -----------------------"
-					"\r\n SolutionId   : %3d"
-					"\r\n ProblemId    : %3d"
-					"\r\n Pasted cases : %3d"
-					"\r\n Time-used    : %3d ms"
-					"\r\n Memory-used  : %3d kb"
-					"\r\n Return code  : %3u"
-					"\r\n Verdict      : %3s"
-					"\r\n Submit Date  : %3s"
-					"\r\n Username     : %3s"
-					"\r\n -----------------------\r\n",
-						stJudgeSubmission.stSolution.solutionId,
-						stJudgeSubmission.stProblem.problemId,
-						stJudgeSubmission.stSolution.testcase,
-						stJudgeSubmission.stSolution.time_used - stJudgeSubmission.stSolution.time_used%10,
-						stJudgeSubmission.stSolution.memory_used,
-						stJudgeSubmission.dwProStatusCode,
-						VERDICT_NAME[stJudgeSubmission.stSolution.verdictId],
-						time_string_.c_str(), stJudgeSubmission.stSolution.username);
-
-	}
-
+	string time_string_;
+	API_TimeToString(time_string_, stJudgeSubmission.stSolution.submitDate);
+	judge_outstring("\r\n -----------------------"
+				"\r\n     *Judge verdict*"
+				"\r\n -----------------------"
+				"\r\n SolutionId   : %3d"
+				"\r\n ProblemId    : %3d"
+				"\r\n Pasted cases : %3d"
+				"\r\n Time-used    : %3d ms"
+				"\r\n Memory-used  : %3d kb"
+				"\r\n Return code  : %3u"
+				"\r\n Verdict      : %3s"
+				"\r\n Submit Date  : %3s"
+				"\r\n Username     : %3s"
+				"\r\n -----------------------\r\n",
+					stJudgeSubmission.stSolution.solutionId,
+					stJudgeSubmission.stProblem.problemId,
+					stJudgeSubmission.stSolution.testcase,
+					stJudgeSubmission.stSolution.time_used - stJudgeSubmission.stSolution.time_used%10,
+					stJudgeSubmission.stSolution.memory_used,
+					stJudgeSubmission.dwProStatusCode,
+					VERDICT_NAME[stJudgeSubmission.stSolution.verdictId],
+					time_string_.c_str(), stJudgeSubmission.stSolution.username);
 
 	return OS_OK;
 }
@@ -1295,34 +1270,38 @@ void Judge_PushQueue(int solutionId)
 	JUDGE_DATA_S jd = {0};
 
 	jd.solutionId = solutionId;
-	Q.push(jd);
+	g_JudgeQueue.push(jd);
 }
 
+/* virtual-judge & local-judge 应分两个队列 */
 unsigned _stdcall Judge_DispatchThread(void *pEntry)
 {
 	JUDGE_DATA_S jd;
 
 	for (;;)
 	{
-		if(Q.size()>limitJudge)
+		if(g_JudgeQueue.size()>limitJudge)
 		{
 			return 0;
 		}
 
-		if(!Q.empty())
+		if(!g_JudgeQueue.empty())
 		{
-				jd=Q.front();
+				jd = g_JudgeQueue.front();
 
 				/* 启动评判 */
-				_beginthreadex(NULL, NULL, Judge_Proc, (void*)&(jd.solutionId), 0, NULL);
+				Judge_Proc((void*)&(jd.solutionId));
+				//_beginthreadex(NULL, NULL, Judge_Proc, (void*)&(jd.solutionId), 0, NULL);
 
-				Q.pop();
+				g_JudgeQueue.pop();
 		}
+
 		Sleep(1);
 	}
 
 	return 0;
 }
+
 
 unsigned _stdcall Judge_ListenThread(void *pEntry)
 {
@@ -1333,7 +1312,7 @@ unsigned _stdcall Judge_ListenThread(void *pEntry)
 
 	while(TRUE)
 	{
-		sClient = accept(sListen, (SOCKADDR*)&remoteAddr, &nAddrLen);
+		sClient = accept(g_sListen, (SOCKADDR*)&remoteAddr, &nAddrLen);
 		if(sClient == INVALID_SOCKET)
 		{
 			write_log(JUDGE_ERROR,"Accept() Error");
@@ -1344,7 +1323,7 @@ unsigned _stdcall Judge_ListenThread(void *pEntry)
 		if(ret>0)
 		{
 			write_log(JUDGE_INFO,"Push SolutionId:%d into Judge Queue....",j.solutionId);
-			Q.push(j);
+			g_JudgeQueue.push(j);
 		}
 		Sleep(1);
 	}
@@ -1363,7 +1342,7 @@ long WINAPI Judge_ExceptionFilter(EXCEPTION_POINTERS * lParam)
 
 	/* ShellExecuteA(NULL,"open",judgePath,NULL,NULL,SW_SHOWNORMAL); */
 
-	closesocket(sListen);
+	closesocket(g_sListen);
 	WSACleanup();
 
 	return EXCEPTION_EXECUTE_HANDLER;
@@ -1477,7 +1456,7 @@ void OJ_TaskEntry(void *pEntry)
 		Sleep(10);
 	}
 
-	closesocket(sListen);
+	closesocket(g_sListen);
 	WSACleanup();
 
 	return ;
@@ -1491,9 +1470,54 @@ APP_INFO_S g_judgeAppInfo =
 	OJ_TaskEntry
 };
 
+#if 0
+int  Test1(int evtId, int cmdId, void *pData, void **ppInfo)
+{
+	pdt_debug_print("Do test1, evtId=%d, cmdId=%d..", evtId, cmdId);
+
+	return OS_OK;
+}
+
+int  Test2(int evtId, int cmdId, void *pData, void **ppInfo)
+{
+	pdt_debug_print("Do test2, evtId=%d, cmdId=%d..", evtId, cmdId);
+	return OS_OK;
+}
+
+int  Test3(int evtId, int cmdId, void *pData, void **ppInfo)
+{
+	pdt_debug_print("Do test3, evtId=%d, cmdId=%d..", evtId, cmdId);
+	return OS_OK;
+}
+int  Test4(int evtId, int cmdId, void *pData, void **ppInfo)
+{
+	pdt_debug_print("Do test4, evtId=%d, cmdId=%d..", evtId, cmdId);
+	return OS_OK;
+}
+#endif
+
 void Judge_RegAppInfo()
 {
 	RegistAppInfo(&g_judgeAppInfo);
+
+#if 0
+	EVENT_RegistFunc("Test1", EVENT_NTF_JUDGE, EVENT_NTF_CMD_NONE, 100, Test1);
+	EVENT_RegistFunc("Test2", EVENT_NTF_JUDGE, EVENT_NTF_CMD_NONE, 102, Test2);
+	EVENT_RegistFunc("Test3", EVENT_NTF_CMD, EVENT_NTF_CMD_NONE, 102, Test3);
+	EVENT_RegistFunc("Test4", EVENT_NTF_JUDGE, EVENT_NTF_CMD_NONE, 102, Test4);
+	EVENT_RegistFunc("Test5", EVENT_NTF_JUDGE, EVENT_NTF_CMD_NONE, 102, Test2);
+	EVENT_RegistFunc("Test6", EVENT_NTF_JUDGE, EVENT_NTF_CMD_NONE, 106, Test2);
+	EVENT_RegistFunc("Test7", EVENT_NTF_JUDGE, 1, 99, Test2);
+	EVENT_RegistFunc("Test8", EVENT_NTF_JUDGE, EVENT_NTF_CMD_NONE, 97, Test2);
+	EVENT_RegistFunc("Test9", EVENT_NTF_JUDGE, EVENT_NTF_CMD_NONE, 98, Test2);
+	EVENT_RegistFunc("Test10", EVENT_NTF_JUDGE, 2, 120, Test2);
+	EVENT_RegistFunc("Test11", EVENT_NTF_JUDGE, EVENT_NTF_CMD_NONE, 98, Test2);
+
+	EVENT_Ntf_Show();
+
+	EVENT_Ntf_Notify(EVENT_NTF_JUDGE, 1, (void *)NULL, (void **)NULL);
+#endif
+
 }
 
 #if 0
@@ -1503,3 +1527,6 @@ int main(int argc, char **argv)
 	return 0;
 }
 #endif
+
+
+

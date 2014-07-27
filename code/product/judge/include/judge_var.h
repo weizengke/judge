@@ -9,5 +9,7 @@ extern int g_oj_debug_switch;
 extern int GL_vjudge_enable;
 extern char g_Vjudgetfilename[MAX_PATH];
 
+extern SOCKET g_sListen;
+
 
 #endif
