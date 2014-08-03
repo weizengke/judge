@@ -1348,7 +1348,11 @@ void cmd_delete_word(struct cmd_vty *vty)
 		pos--;
 	}
 
-	vty->buffer[pos] = '\0';
+	/* BEGIN: Added by weizengke, 2014/8/3 */
+	//vty->buffer[pos] = '\0';
+	memset(&vty->buffer[pos], 0, sizeof(vty->buffer) - pos);
+	/* END:   Added by weizengke, 2014/8/3 */
+
 	vty->cur_pos = strlen(vty->buffer);
 	vty->used_len = strlen(vty->buffer);
 }
@@ -1396,7 +1400,7 @@ void cmd_delete_word_ctrl_W_ex(struct cmd_vty *vty)
 	int pos = vty->cur_pos;
 
 
-	debug_print_ex(CMD_DEBUG_TYPE_INFO, "\r\n cur_poscur_pos = %d buffer_len = %d \r\n", pos, len);
+	debug_print_ex(CMD_DEBUG_TYPE_INFO, "\r\nctrl_W:cur_poscur_pos = %d buffer_len = %d \r\n", pos, len);
 
 	if (pos == 0)
 	{
@@ -1463,7 +1467,7 @@ void cmd_delete_word_ctrl_W_ex(struct cmd_vty *vty)
 	vty->cur_pos -= (vty->cur_pos - start_pos);
 	vty->used_len -= (end_pos - start_pos);
 
-	debug_print_ex(CMD_DEBUG_TYPE_INFO, "\r\nstart_pos=%d end_pos=%d len_last=%d cur_pos=%d used_len=%d\r\n",
+	debug_print_ex(CMD_DEBUG_TYPE_INFO, "\r\nctrl+w end:start_pos=%d end_pos=%d len_last=%d cur_pos=%d used_len=%d\r\n",
 		start_pos,end_pos,len_last,vty->cur_pos, vty->used_len);
 
 }

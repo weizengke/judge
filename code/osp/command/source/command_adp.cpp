@@ -318,6 +318,9 @@ void cmd_resolve_tab(struct cmd_vty *vty)
 	vty->used_len = strlen(vty->buffer);
 	/* END:   Added by weizengke, 2013/11/17 */
 
+	debug_print_ex(CMD_DEBUG_TYPE_INFO,"\r\ntab in:used_len=%d, pos=%d\r\n",vty->used_len, vty->cur_pos);
+
+
 	if (g_InputMachine_prev == CMD_KEY_CODE_TAB)
 	{
 		cmd_delete_word(vty);
@@ -450,6 +453,9 @@ void cmd_resolve_tab(struct cmd_vty *vty)
 		default:
 			break;
 	}
+
+
+	debug_print_ex(CMD_DEBUG_TYPE_INFO,"\r\ntab out:used_len=%d, pos=%d\r\n",vty->used_len, vty->cur_pos);
 }
 
 /*****************************************************************************
@@ -765,7 +771,7 @@ void cmd_resolve_insert(struct cmd_vty *vty)
 		return;
 	size = vty->used_len - vty->cur_pos;
 
-	debug_print_ex(CMD_DEBUG_TYPE_INFO,"\r\nused_len=%d, pos=%d\r\n",vty->used_len, vty->cur_pos);
+	debug_print_ex(CMD_DEBUG_TYPE_INFO,"\r\ninsert in:used_len=%d, pos=%d, buffer_len=%d\r\n",vty->used_len, vty->cur_pos, strlen(vty->buffer));
 
 	CMD_DBGASSERT(size >= 0, "cmd_resolve_insert");
 
@@ -788,6 +794,8 @@ void cmd_resolve_insert(struct cmd_vty *vty)
 
 	vty->cur_pos++;
 	vty->used_len++;
+
+	debug_print_ex(CMD_DEBUG_TYPE_INFO,"\r\ninsert out:used_len=%d, pos=%d, buffer_len=%d\r\n",vty->used_len, vty->cur_pos, strlen(vty->buffer));
 
 }
 
