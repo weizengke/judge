@@ -3,6 +3,8 @@ Jungle
 
 The best online judge kernel on windows platform.
 
+演示地址：http://121.40.153.46
+
 支持如下功能：
 
 (1) Online Judge Kernel理论上支持所有可命令行编译和运行的程序语言；支持分布式部署；支持动态添加Online Jungle平台程序语言；
