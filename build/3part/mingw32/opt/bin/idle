@@ -1,0 +1,5 @@
+#!/tmp/x32-481-posix-dwarf-r5/mingw32/opt/bin\python2.7.exe
+
+from idlelib.PyShell import main
+if __name__ == '__main__':
+    main()
