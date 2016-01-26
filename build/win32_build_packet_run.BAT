@@ -1,10 +1,12 @@
+set CUR_DIR=%cd%
 
-set Path=%Path%;D:\mingw32\bin
+rem 添加g++编译环境路径
+set Path=%Path%;%CUR_DIR%\3part\mingw32\bin
 
 mingw32-make -f makefile32
 
 @ECHO off
-SET BIN_NAME=JungleOS.exe
+SET BIN_NAME=judge.exe
 
 setlocal enabledelayedexpansion
 
