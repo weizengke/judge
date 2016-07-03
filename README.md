@@ -3,7 +3,8 @@ Jungle
 
 The best online judge kernel on windows platform.
 
-演示地址：http://121.40.153.46
+http://debugforces.com/
+
 
 支持如下功能：
 
