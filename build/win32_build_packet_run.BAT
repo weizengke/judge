@@ -3,7 +3,8 @@ set CUR_DIR=%cd%
 rem 添加g++编译环境路径
 set Path=%Path%;%CUR_DIR%\3part\mingw32\bin
 
-mingw32-make -f makefile32
+rem -j32并行编译，加快编译速度
+mingw32-make -j32 -f makefile32
 
 @ECHO off
 SET BIN_NAME=judge.exe
