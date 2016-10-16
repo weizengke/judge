@@ -157,7 +157,7 @@ int Judge_InitSocket()
 			{
 				char szPort[10] = {0};
 				(void)itoa(g_sock_port, szPort ,10);
-				WritePrivateProfileString("System","Port",szPort,INI_filename);
+				WritePrivateProfileString("System","sock_port",szPort,INI_filename);
 			}
 			Sleep(10);
 		}
