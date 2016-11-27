@@ -98,6 +98,7 @@ ULONG Judge_DebugSwitch(ULONG st)
 	return OS_TRUE;
 }
 
+#if(JUDGE_VIRTUAL == VOS_YES)
 int Judge_IsVirtualJudgeEnable()
 {
 	if (GL_vjudge_enable == OS_YES)
@@ -107,7 +108,7 @@ int Judge_IsVirtualJudgeEnable()
 
 	return OS_NO;
 }
-
+#endif
 /* #pragma comment(linker, "/subsystem:windows /ENTRY:mainCRTStartup") */
 
 int Judge_InitSocket()
@@ -1050,6 +1051,7 @@ int Judge_SendToJudger(int solutionId, int port,char *ip)
 	return OS_OK;
 }
 
+#if(JUDGE_VIRTUAL == VOS_YES)
 int Judge_Remote(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 {
 	int ret = OS_OK;
@@ -1082,7 +1084,10 @@ int Judge_Remote(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 			}
 
 			/* local vjudge */
+			#if(JUDGE_VIRTUAL == VOS_YES)
 			ret = HDU_VJudge(pstJudgeSubmission);
+			#endif
+			
 			break;
 		}
 
@@ -1112,7 +1117,10 @@ int Judge_Remote(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 			}
 
 			/* local vjudge */
+			#if(JUDGE_VIRTUAL == VOS_YES)
 			ret = GUET_VJudge(pstJudgeSubmission);
+			#endif
+			
 			break;
 		}
 
@@ -1120,6 +1128,7 @@ int Judge_Remote(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 
 	return ret;
 }
+#endif
 
 unsigned _stdcall  Judge_Proc(void *pData)
 {

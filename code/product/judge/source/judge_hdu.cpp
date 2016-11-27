@@ -6,7 +6,7 @@ Create Date: 2012-05-12
 
 */
 
-#if(JUDGE_VIRTUAL == VOS_YES)
+
 #include <windows.h>
 #include <process.h>
 #include <iostream>
@@ -64,6 +64,8 @@ char hdu_judgerIP[20]="127.0.0.1";
 int hdu_sockport = 6606;
 int hdu_remote_enable=OS_NO;
 int hdu_vjudge_enable=OS_NO;
+
+#if(JUDGE_VIRTUAL == VOS_YES)
 
 ULONG getLanguageNameByID(ULONG id, UCHAR *ucLanguageName)
 {

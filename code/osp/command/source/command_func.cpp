@@ -15,6 +15,7 @@
 
 #include "osp\command\include\command_inc.h"
 
+#include "product\judge\include\judge_inc.h"
 
 #if M_DES("cmd_debugging_enable_st",1)
 DEFUN(cmd_debugging_enable_st, (char*)"debugging enable", (char*)"Debugging switch on", Debugging_enable)
@@ -329,6 +330,7 @@ DEFUN(cmd_display_debugging_st, (char*)"display debugging", (char*)"display debu
 }
 #endif
 
+#if(JUDGE_VIRTUAL == VOS_YES)
 #if M_DES("cmd_hdujudge_login_st",1)
 /*
 version    : r90
@@ -430,29 +432,6 @@ DEFUN(cmd_guetjudge_login_st, (char*)"guet-judge login STRING<1-24> STRING<1-24>
 	return 0;
 }
 #endif
-
-#if M_DES("cmd_display_command_tree_st",1)
-
-DEFUN(cmd_display_command_tree_st, (char*)"display command-tree", (char*)"display command tree", display_command_tree)
-{
-	extern void cmd_show_command_tree();
-	cmd_show_command_tree();
-
-	return 0;
-}
-#endif
-
-#if M_DES("cmd_display_current_configuration_st",1)
-
-DEFUN(cmd_display_current_configuration_st, (char*)"display current-configuration", (char*)"display current-configuration", display_current_configuration)
-{
-	extern void Judge_ShowCfgContent();
-	Judge_ShowCfgContent();
-
-	return 0;
-}
-#endif
-
 #if M_DES("cmd_display_hdu_judge_problem_by_pid_st",1)
 
 DEFUN(cmd_display_hdu_judge_problem_by_pid_st, (char*)"display hdu-judge problem INTEGER<1-65535>", (char*)"display hdu-judge problem by problem ID", display_hdu_judge_problem_by_pid)
@@ -566,6 +545,31 @@ void Test()
 
 }
 #endif
+
+#endif
+
+#if M_DES("cmd_display_command_tree_st",1)
+
+DEFUN(cmd_display_command_tree_st, (char*)"display command-tree", (char*)"display command tree", display_command_tree)
+{
+	extern void cmd_show_command_tree();
+	cmd_show_command_tree();
+
+	return 0;
+}
+#endif
+
+#if M_DES("cmd_display_current_configuration_st",1)
+
+DEFUN(cmd_display_current_configuration_st, (char*)"display current-configuration", (char*)"display current-configuration", display_current_configuration)
+{
+	extern void Judge_ShowCfgContent();
+	Judge_ShowCfgContent();
+
+	return 0;
+}
+#endif
+
 
 #if M_DES("cmd_display_st",1)
 
@@ -1242,18 +1246,19 @@ void cmd_install()
 
 	install_element(&cmd_display_debugging_st);
 
+#if(JUDGE_VIRTUAL == VOS_YES)
 	install_element(&cmd_hdujudge_login_st);
 	install_element(&cmd_display_hdujudge_status_st);
 	install_element(&cmd_display_guetjudge_status_st);
 	install_element(&cmd_guetjudge_login_st);
-
 	install_element(&cmd_judge_solution_st);
-
+	install_element(&cmd_display_hdu_judge_problem_by_pid_st);
+	
 	install_element(&cmd_display_command_tree_st);
 
 	install_element(&cmd_display_current_configuration_st);
 
-	install_element(&cmd_display_hdu_judge_problem_by_pid_st);
+#endif
 
 	install_element(&cmd_set_config_section_name_value_st);
 

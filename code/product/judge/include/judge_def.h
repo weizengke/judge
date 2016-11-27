@@ -2,8 +2,8 @@
 #define _JUDGE_DEF_H_
 
 
-#define JUDGE_VIRTUAL VOS_YES   /* VJUDGE switch */
-#define VJUDGE_CURL VOS_YES   /* VJUDGE switch */
+#define JUDGE_VIRTUAL VOS_NO   /* VJUDGE switch */
+#define VJUDGE_CURL VOS_NO   /* VJUDGE switch */
 
 
 #define STD_MB 1048576

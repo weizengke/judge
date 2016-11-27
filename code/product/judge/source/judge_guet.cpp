@@ -7,7 +7,7 @@ Create Date: 2013-12-28
 
 */
 
-#if(JUDGE_VIRTUAL == VOS_YES)
+
 #include <windows.h>
 #include <process.h>
 #include <iostream>
@@ -21,11 +21,12 @@ Create Date: 2013-12-28
 
 #include "tlhelp32.h"
 
-
 #include "product\judge\include\judge_inc.h"
 
 
 using namespace std;
+
+
 
 char g_GUETtmps[VJUDGE_MAX_SIZE_BUF];
 
@@ -43,6 +44,7 @@ int guet_sockport = 7706;
 int guet_remote_enable=OS_NO;
 int guet_vjudge_enable=OS_NO;
 
+#if(JUDGE_VIRTUAL == VOS_YES)
 
 ULONG GUET_getLanguageNameByID(ULONG id, UCHAR *ucLanguageName)
 {
