@@ -17,6 +17,27 @@
 
 #include "product\judge\include\judge_inc.h"
 
+extern char hdu_username[];
+extern char hdu_password[];
+extern char guet_username[];
+extern char guet_password[];
+extern char hdu_judgerIP[];
+extern int hdu_sockport;
+extern char guet_judgerIP[];
+extern int guet_sockport;
+extern int GL_vjudge_enable;
+extern int hdu_vjudge_enable;
+extern int hdu_remote_enable;
+extern int guet_vjudge_enable;
+extern int guet_remote_enable;
+extern int g_sock_port;
+extern char dataPath[];
+extern char Mysql_url[];
+extern char Mysql_username[];
+extern char Mysql_password[];
+extern char Mysql_table[];
+extern int	Mysql_port;
+	
 #if M_DES("cmd_debugging_enable_st",1)
 DEFUN(cmd_debugging_enable_st, (char*)"debugging enable", (char*)"Debugging switch on", Debugging_enable)
 {
@@ -893,8 +914,7 @@ DEFUN(cmd_hdu_judge_username_password_st, (char*)"hdu-judge username STRING<1-24
 {
 	char name[25] = {0};
 	char psw[25]={0};
-	extern char hdu_username[];
-	extern char hdu_password[];
+
 
 	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "%d %s %s %s %s %s.\n", argc, argv[0], argv[1], argv[2], argv[3], argv[4]);
 
@@ -937,9 +957,6 @@ DEFUN(cmd_guet_judge_username_password_st, (char*)"guet-judge username STRING<1-
 	char name[25] = {0};
 	char psw[25]={0};
 
-	extern char guet_username[];
-	extern char guet_password[];
-
 	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "%d %s %s %s %s %s.\n", argc, argv[0], argv[1], argv[2], argv[3], argv[4]);
 
 	strcpy(name, argv[2]);
@@ -980,9 +997,6 @@ DEFUN(cmd_hdu_judge_ip_port_st, (char*)"hdu-judge ip STRING<1-24> port INTEGER<1
 {
 	char ip[25] = {0};
 	char port[20] = {0};
-
-	extern char hdu_judgerIP[];
-	extern int hdu_sockport;
 
 	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "%d %s %s %s %s %s.\n", argc, argv[0], argv[1], argv[2], argv[3], argv[4]);
 
@@ -1025,9 +1039,6 @@ DEFUN(cmd_guet_judge_ip_port_st, (char*)"guet-judge ip STRING<1-24> port INTEGER
 	char ip[25] = {0};
 	char port[20] = {0};
 
-	extern char guet_judgerIP[];
-	extern int guet_sockport;
-
 	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "%d %s %s %s %s %s.\n", argc, argv[0], argv[1], argv[2], argv[3], argv[4]);
 
 	strcpy(ip, argv[2]);
@@ -1066,29 +1077,7 @@ DEFUN(cmd_guet_judge_ip_port_st, (char*)"guet-judge ip STRING<1-24> port INTEGER
 DEFUN(cmd_display_judge_brief_st, (char*)"display judge brief",
 		(char*)"display judge brief", display_judge_brief_st)
 {
-	extern int GL_vjudge_enable;
 
-	extern char hdu_username[];
-	extern char hdu_password[];
-	extern int hdu_vjudge_enable;
-	extern int hdu_remote_enable;
-	extern int hdu_sockport;
-	extern char hdu_judgerIP[];
-
-	extern char guet_username[];
-	extern char guet_password[];
-	extern int guet_vjudge_enable;
-	extern int guet_remote_enable;
-	extern int guet_sockport;
-	extern char guet_judgerIP[];
-
-	extern int g_sock_port;
-	extern char dataPath[];
-	extern char Mysql_url[];
-	extern char Mysql_username[];
-	extern char Mysql_password[];
-	extern char Mysql_table[];
-	extern int	Mysql_port;
 
 	printf("# Local Judger Info\r\n");
 	printf("  Sysname  : %s\r\n", g_sysname);
