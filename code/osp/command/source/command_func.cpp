@@ -330,6 +330,26 @@ DEFUN(cmd_display_debugging_st, (char*)"display debugging", (char*)"display debu
 }
 #endif
 
+#if M_DES("cmd_judge_solution_st",1)
+
+DEFUN(cmd_judge_solution_st, (char*)"judge solution INTEGER<1-65535>", (char*)"judge solution <ID>", judge_solution)
+{
+	int solutionId = 0;
+
+	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "%d %s %s %s\n", argc, argv[0], argv[1], argv[2]);
+
+	solutionId = atoi(argv[2]);
+
+	extern int Judge_PushQueue(int solutionId);
+	Judge_PushQueue(solutionId);
+
+	cmd_outstring("Info: Solution judge-request has been sent to Judge-Queue asynchronously.\r\n");
+
+	return 0;
+}
+#endif
+
+
 #if(JUDGE_VIRTUAL == VOS_YES)
 #if M_DES("cmd_hdujudge_login_st",1)
 /*
@@ -379,24 +399,6 @@ DEFUN(cmd_display_hdujudge_status_st, (char*)"display hdu-judge status STRING<1-
 }
 #endif
 
-#if M_DES("cmd_judge_solution_st",1)
-
-DEFUN(cmd_judge_solution_st, (char*)"judge solution INTEGER<1-65535>", (char*)"judge solution <ID>", judge_solution)
-{
-	int solutionId = 0;
-
-	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "%d %s %s %s\n", argc, argv[0], argv[1], argv[2]);
-
-	solutionId = atoi(argv[2]);
-
-	extern int Judge_PushQueue(int solutionId);
-	Judge_PushQueue(solutionId);
-
-	cmd_outstring("Info: Solution judge-request has been sent to Judge-Queue asynchronously.\r\n");
-
-	return 0;
-}
-#endif
 
 #if M_DES("cmd_display_guetjudge_status_st",1)
 
@@ -1251,15 +1253,13 @@ void cmd_install()
 	install_element(&cmd_display_hdujudge_status_st);
 	install_element(&cmd_display_guetjudge_status_st);
 	install_element(&cmd_guetjudge_login_st);
-	install_element(&cmd_judge_solution_st);
 	install_element(&cmd_display_hdu_judge_problem_by_pid_st);
-	
-	install_element(&cmd_display_command_tree_st);
-
-	install_element(&cmd_display_current_configuration_st);
-
 #endif
 
+	install_element(&cmd_judge_solution_st);
+	install_element(&cmd_display_command_tree_st);
+	install_element(&cmd_display_current_configuration_st);
+	
 	install_element(&cmd_set_config_section_name_value_st);
 
 	install_element(&cmd_virtual_judge_enable_st);
