@@ -14,7 +14,7 @@
 #define OS_YES 1
 #define OS_NO  0
 
-#define APP_NAME_SIZE 20
+#define APP_NAME_SIZE 64
 
 #define SOLFWARE_VERSION "V100R001C00B010"
 
@@ -25,7 +25,7 @@ typedef struct tagAPP_INFO_S
 	unsigned long taskMID;
 	char taskName[APP_NAME_SIZE];
 	int (*pfInitFunction)();
-	void (*pfTaskMain)(void *);
+	unsigned _stdcall  (*pfTaskMain)(void *);
 
 }APP_INFO_S;
 

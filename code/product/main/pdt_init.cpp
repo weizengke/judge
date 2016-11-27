@@ -106,7 +106,8 @@ int main()
 	{
 		if (NULL != g_vector_appInfo[ix]->pfTaskMain)
 		{
-			_beginthread(g_vector_appInfo[ix]->pfTaskMain,0,NULL);
+			_beginthreadex(NULL, 0, g_vector_appInfo[ix]->pfTaskMain, NULL, NULL, NULL);
+			//_beginthread(g_vector_appInfo[ix]->pfTaskMain,0,NULL);
 
 			pdt_debug_print("%s Task running ok...", g_vector_appInfo[ix]->taskName);
 		}

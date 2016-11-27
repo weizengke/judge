@@ -1,7 +1,7 @@
 #include <iostream>
 #include <windows.h>
 #include <stdlib.h>
-//#include <thread>
+#include <process.h>
 #include <string>
 //#include <mutex>
 #include <ctype.h>
@@ -102,22 +102,25 @@ void MSG_OutStringWait()
 
 int g_dotprint = 0;
 
-void msg_dot_thread(void *pEntry)
+unsigned _stdcall msg_dot_thread(void *pEntry)
 {
 	int i;
 
 	g_dotprint = 1;
 
 	for (int i=0; g_dotprint!=0; i++)
-    {
-        printf(".");
-        RunDelay(500);
-    }
+	{
+		printf(".");
+		RunDelay(500);
+	}
 
+	return 0;
 }
+
 void MSG_StartDot()
 {
-	_beginthread(msg_dot_thread,0,NULL);
+	_beginthreadex(NULL, 0, msg_dot_thread, NULL, NULL, NULL);
+	//_beginthread(msg_dot_thread,0,NULL);
 }
 
 void MSG_StopDot()
@@ -125,7 +128,7 @@ void MSG_StopDot()
 	g_dotprint = 0;
 }
 
-void MSGQueueMain(void *pEntry)
+unsigned _stdcall  MSGQueueMain(void *pEntry)
 {
     MSGQUEUE_S stMsgQ = {0};
     for (;;)
@@ -150,6 +153,8 @@ void MSGQueueMain(void *pEntry)
         RunDelay(1);
 
     }
+
+	return 0;
 }
 
 APP_INFO_S g_DebugAppInfo =

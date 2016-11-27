@@ -1146,6 +1146,7 @@ DEFUN(cmd_reboot_st, (char*)"reboot", (char*)"reboot", reboot_st)
 
 void cmd_install()
 {
+
 	/* reg cmd-element */
 	cmd_reg_newcmdelement(CMD_ELEM_ID_CR, 			CMD_ELEM_TYPE_END,			CMD_END,			    ""               );
 	cmd_reg_newcmdelement(CMD_ELEM_ID_STRING1TO24,  CMD_ELEM_TYPE_STRING,       "STRING<1-24>",     "String lenth range form 1 to 24");

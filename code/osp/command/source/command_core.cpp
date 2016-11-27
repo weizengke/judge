@@ -1589,7 +1589,7 @@ int cmd_init()
 }
 
 
-void cmd_main_entry(void *pEntry)
+unsigned _stdcall  cmd_main_entry(void *pEntry)
 {
 	/*
 		cmd_outprompt(vty->prompt);
@@ -1601,7 +1601,7 @@ void cmd_main_entry(void *pEntry)
 
 	cmd_vty_deinit(vty);
 
-	return ;
+	return 0;
 }
 
 

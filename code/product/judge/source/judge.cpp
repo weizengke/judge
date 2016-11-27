@@ -141,7 +141,7 @@ int Judge_InitSocket()
 	while(ret == SOCKET_ERROR && trybind > 0)
 	{
 		bind(g_sListen,(LPSOCKADDR)&sin,sizeof(sin));
-		write_log(JUDGE_SYSTEM_ERROR,"bind failed:%d , it will try later...",WSAGetLastError());
+		//write_log(JUDGE_SYSTEM_ERROR,"bind failed:%d , it will try later...",WSAGetLastError());
 		trybind--;
 		Sleep(100);
 	}
@@ -1435,7 +1435,7 @@ unsigned long _beginthreadex( void *security,
 
 */
 
-void OJ_TaskEntry(void *pEntry)
+unsigned _stdcall  OJ_TaskEntry(void *pEntry)
 {
 	write_log(JUDGE_INFO,"Running Judge Core...");
 
@@ -1459,7 +1459,7 @@ void OJ_TaskEntry(void *pEntry)
 	closesocket(g_sListen);
 	WSACleanup();
 
-	return ;
+	return 0;
 }
 
 APP_INFO_S g_judgeAppInfo =
