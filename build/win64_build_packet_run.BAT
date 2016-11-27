@@ -4,7 +4,7 @@ set Path=%Path%;D:\mingw64\bin
 mingw32-make -f makefile64
 
 @ECHO off
-SET BIN_NAME=JungleOS.exe
+SET BIN_NAME=judge.exe
 
 setlocal enabledelayedexpansion
 
