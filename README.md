@@ -35,3 +35,5 @@ Releases Dashboard:
 
 （3）命令行视图能力，以便按模块特性管理命令行权限
  
+ 
+ 更换代码仓库到码云（Change to gitee）: https://gitee.com/jungle/online-judge
