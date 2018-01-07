@@ -3,15 +3,9 @@
 
 #include <winsock2.h>
 #include <stdio.h>
-#include <iostream.h>
 #define PORT 5000
 
-#pragma comment(lib,"ws2_32")
-
-typedef struct
-{
-		int solutionId;
-}JUDGE_DATA;
+//#pragma comment(lib,"ws2_32")
 
 SOCKET sClient;
 
@@ -50,10 +44,11 @@ int main(int argc, char* argv[])
 	char INI_filename[256]="D:\\OJ\\conf\\config.ini";
 	char IP[30]="127.0.0.1";
 	int languageId=1;
-	JUDGE_DATA j;
+	int sulotionId=0;
+	char buff[1024] = {0};
 
 	if(argc>0){
-		j.solutionId=atoi(argv[1]);
+		sulotionId=atoi(argv[1]);
 	}else{
 		return 0;
 	}
@@ -75,8 +70,9 @@ int main(int argc, char* argv[])
 	port=GetPrivateProfileInt("System","sock_port",PORT,INI_filename);
 
 	initSocket(port,IP);
-
-	send(sClient,(const char*)&j,sizeof(j),0);
+	
+	sprintf(buff, "judge solution %u", sulotionId);
+	send(sClient,(const char*)buff,sizeof(buff),0);
 
 	closesocket(sClient);
 	WSACleanup();

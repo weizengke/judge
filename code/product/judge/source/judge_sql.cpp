@@ -16,8 +16,8 @@
 #include "product\judge\include\judge_inc.h"
 
 
-MYSQL *mysql;
-char query[1024];
+MYSQL *mysql = NULL;
+char query[40960];
 char Mysql_url[255];
 char Mysql_username[255];
 char Mysql_password[255];
@@ -45,9 +45,31 @@ void SQL_SemV()
 /* END:   Added by weizengke, 2014/7/10 */
 
 
+ULONG SQL_BuildRun(CHAR **ppBuildrun)
+{
+	CHAR *pBuildrun = NULL;
+
+	*ppBuildrun = (CHAR*)malloc(BDN_MAX_BUILDRUN_SIZE);
+	if (NULL == *ppBuildrun)
+	{
+		return OS_ERR;
+	}
+	memset(*ppBuildrun, 0, BDN_MAX_BUILDRUN_SIZE);
+	
+	pBuildrun = *ppBuildrun;
+		
+	pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN"mysql url %s port %u username %s password %s table %s", 
+						Mysql_url, Mysql_port, Mysql_username, Mysql_password, Mysql_table);
+
+	return OS_OK;
+}
+
+
 /* 初始化mysql，并设置字符集 */
 int SQL_InitMySQL()
 {
+	(void)BDN_RegistBuildRun(MID_SQL, BDN_PRIORITY_NORMAL, SQL_BuildRun);
+
 	SQL_CreateSem();
 
 	mysql = mysql_init((MYSQL*)0);
@@ -65,6 +87,10 @@ int SQL_InitMySQL()
 		return 0;
 	}
 
+	/* 设置自动重连 */
+	my_bool my_true= TRUE;
+	(void)mysql_options(mysql, MYSQL_OPT_RECONNECT, &my_true);
+		
 	strcpy(query,"SET CHARACTER SET gbk"); //设置编码 gbk
 	int ret = mysql_real_query(mysql,query, (unsigned int)strlen(query));
 	if (ret)
@@ -72,6 +98,9 @@ int SQL_InitMySQL()
 		write_log(JUDGE_ERROR, mysql_error(mysql));
 		return 0;
 	}
+
+	write_log(JUDGE_INFO,"Connect MySQL(%s, %s, %s, %s, %d) ok...",Mysql_url, Mysql_username, Mysql_password, Mysql_table, Mysql_port);
+	printf("Connect MySQL(%s, %s, %s, %s, %d) ok...\r\n",Mysql_url, Mysql_username, Mysql_password, Mysql_table, Mysql_port);
 
 	return 1;
 }
@@ -256,7 +285,71 @@ int SQL_getSolutionSource(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 
 	SQL_SemV();
 
+    write_log(JUDGE_INFO, "SQL_getSolutionSource %d ok.", pstJudgeSubmission->stSolution.solutionId);
+    
 	return OS_OK;
+}
+
+void SQL_getUnJudgeSolutions(JUDGE_DATA_S *pJudgeData, int *n, int iMax)
+{
+	int ret = OS_OK;
+	int m = 0;
+	MYSQL_RES *recordSet = NULL;
+	MYSQL_ROW row;
+	JUDGE_DATA_S *pJudgeData2 = NULL;
+	SQL_SemP();
+
+	if (NULL == pJudgeData
+		|| NULL == n)
+	{
+		return ;
+	}
+	
+	*n = 0;
+	pJudgeData2 = pJudgeData;
+
+	sprintf(query,"select solution_id from solution where verdict=%d or verdict=%d", V_SK, V_Q);
+
+	ret = mysql_real_query(mysql,query,(unsigned int)strlen(query));
+	if(ret)
+	{
+		write_log(JUDGE_ERROR,mysql_error(mysql));
+		SQL_SemV();
+		return ;
+	}
+
+	recordSet = mysql_store_result(mysql);
+	if (recordSet == NULL)
+	{
+		write_log(JUDGE_ERROR,"Error SQL_getSolutionData");
+		SQL_SemV();
+		return ;
+	}
+
+	while (row = mysql_fetch_row(recordSet))
+	{	
+		pJudgeData2->solutionId = atoi(row[0]);
+		SQL_Debug(DEBUG_TYPE_FUNC, "SQL_getUnJudgeSolutions. (solutionId=%d)", pJudgeData2->solutionId);
+
+		pJudgeData2++;
+		m++;
+		
+		if (m == iMax)
+		{
+			break;
+		}
+	}
+
+	*n = m;	
+
+	SQL_Debug(DEBUG_TYPE_FUNC, "SQL_getUnJudgeSolutions. (n=%d)", m);
+	
+	/* 释放结果集 */
+	mysql_free_result(recordSet);
+
+	SQL_SemV();
+
+	return ;
 }
 
 
@@ -298,6 +391,37 @@ int SQL_getSolutionByID(int solutionID, JUDGE_SOLUTION_ST *pstJudgeSolution, int
 	if (row = mysql_fetch_row(recordSet))
 	{
 		pstJudgeSolution->solutionId = solutionID;
+
+		if (NULL == row[0])
+		{
+			write_log(JUDGE_INFO,"solutionID %d data(problemId) is not valid in MySQL Server.", solutionID);
+			return OS_ERR;
+		}
+
+		if (NULL == row[1])
+		{
+			write_log(JUDGE_INFO,"solutionID %d data(contestId) is not valid in MySQL Server.", solutionID);
+			return OS_ERR;
+		}
+
+		if (NULL == row[2])
+		{
+			write_log(JUDGE_INFO,"solutionID %d data(languageId) is not valid in MySQL Server.", solutionID);
+			return OS_ERR;
+		}
+
+		if (NULL == row[3])
+		{
+			write_log(JUDGE_INFO,"solutionID %d data(username) is not valid in MySQL Server.", solutionID);
+			return OS_ERR;
+		}
+
+		if (NULL == row[4])
+		{
+			write_log(JUDGE_INFO,"solutionID %d data(submitDate) is not valid in MySQL Server.", solutionID);
+			return OS_ERR;
+		}		
+		
 		pstJudgeSolution->problemId = atoi(row[0]);
 		pstJudgeSolution->contestId = atoi(row[1]);
 		pstJudgeSolution->languageId = atoi(row[2]);
@@ -364,6 +488,8 @@ int SQL_getProblemInfo(JUDGE_PROBLEM_INFO_ST *pstProblem)
 
 	SQL_SemV();
 
+    write_log(JUDGE_INFO, "SQL_getProblemInfo %d ok.", pstProblem->problemId);
+    
 	return OS_OK;
 }
 
@@ -511,11 +637,29 @@ int SQL_countContestProblems(int contestId)
 
 
 /* update Solution table*/
-void SQL_updateSolution(int solutionId,int verdictId,int testCase,int time,int memory)
+void SQL_updateSolution(int solutionId,int verdictId,int testCase,int failcase,int time,int memory)
 {
 	SQL_SemP();
 
-	sprintf(query,"update solution set verdict=%d,testcase=%d,time=%d,memory=%d where solution_id=%d;",verdictId,testCase,time,memory,solutionId);
+	sprintf(query,"update solution set verdict=%d,testcase=%d,failcase=%d,time=%d,memory=%d where solution_id=%d;",verdictId,testCase,failcase,time,memory,solutionId);
+	if(mysql_real_query(mysql,query,(unsigned int)strlen(query)))
+	{
+		write_log(JUDGE_ERROR,mysql_error(mysql));
+
+		/* 兼容老版本不支持failcase字段 */
+		memset(query, 0, sizeof(query));
+		sprintf(query,"update solution set verdict=%d,testcase=%d,time=%d,memory=%d where solution_id=%d;",verdictId,testCase,time,memory,solutionId);
+		mysql_real_query(mysql,query,(unsigned int)strlen(query));
+	}
+
+	SQL_SemV();
+}
+
+void SQL_updateSolutionJsonResult(int solutionId, char *pJsonResult)
+{
+	SQL_SemP();
+
+	sprintf(query,"update solution set json_result='%s' where solution_id=%d;", pJsonResult, solutionId);
 
 	if(mysql_real_query(mysql,query,(unsigned int)strlen(query)))
 	{
@@ -524,6 +668,7 @@ void SQL_updateSolution(int solutionId,int verdictId,int testCase,int time,int m
 
 	SQL_SemV();
 }
+
 
 /* update problem table*/
 void SQL_updateProblem(int problemId)
@@ -735,8 +880,19 @@ void SQL_updateCompileInfo(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 
 	//先插入
 	if((fgets(buffer, 4095, fp))!= NULL)
-	{
-		sprintf(query,"insert into compile_info values(%d,\"%s\");",pstJudgeSubmission->stSolution.solutionId,buffer);
+	{	
+		string str = buffer;
+    	string::iterator   it;
+ 
+	    for (it =str.begin(); it != str.end(); ++it)
+	    {
+	        if ( *it == '\"')
+	        {
+	            str.erase(it);
+	        }
+	    }
+
+		sprintf(query,"insert into compile_info values(%d,\"%s\");",pstJudgeSubmission->stSolution.solutionId,str.c_str());
 		int ret=mysql_real_query(mysql,query,(unsigned int)strlen(query));
 		if(ret)
 		{
@@ -751,6 +907,18 @@ void SQL_updateCompileInfo(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 	while ((fgets (buffer, 4095, fp))!= NULL)
 	{
 		buffer[strlen(buffer)];
+
+		string str = buffer;
+    	string::iterator   it;
+ 
+	    for (it =str.begin(); it != str.end(); ++it)
+	    {
+	        if ( *it == '\"')
+	        {
+	            str.erase(it);
+	        }
+	    }
+		
 		sprintf(query,"update compile_info set error=CONCAT(error,\"%s\") where solution_id=%d;",
 				buffer, pstJudgeSubmission->stSolution.solutionId);
 
@@ -768,5 +936,100 @@ void SQL_updateCompileInfo(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 
 	SQL_SemV();
 
+}
+
+int SQL_getUserByname(const char *username)
+{
+	int ret = OS_OK;
+	
+	SQL_SemP();
+
+	if (strlen(username) >= MAX_NAME
+		|| mysql == NULL)
+	{
+		SQL_SemV();
+		return OS_ERR;
+	}
+
+	sprintf(query,"select id from users where username='%s'",username);
+
+	ret = mysql_real_query(mysql,query,(unsigned int)strlen(query));
+	if(ret)
+	{
+		write_log(JUDGE_ERROR,mysql_error(mysql));
+		SQL_SemV();
+		return OS_ERR;
+	}
+
+	MYSQL_RES *recordSet = mysql_store_result(mysql);
+	if (recordSet==NULL)
+	{
+		SQL_SemV();
+		return OS_ERR;
+	}
+
+	MYSQL_ROW row;
+	if(row = mysql_fetch_row(recordSet))
+	{
+		//printf("\r\nID:%u",atol(row[0]));
+	}
+	else
+	{
+		ret = OS_ERR;
+	}
+
+	mysql_free_result(recordSet);//释放结果集
+
+	SQL_SemV();
+
+	return ret;
+}
+
+int SQL_UserLogin(const char *username, const char *password)
+{
+	int ret = OS_OK;
+	
+	SQL_SemP();
+
+	if (strlen(username) >= MAX_NAME
+		|| strlen(password) >= MAX_NAME
+		|| mysql == NULL)
+	{
+		SQL_SemV();
+		return OS_ERR;
+	}
+
+	sprintf(query,"select id from users where username='%s' and password='%s'",username, password);
+
+	ret = mysql_real_query(mysql,query,(unsigned int)strlen(query));
+	if(ret)
+	{
+		write_log(JUDGE_ERROR,mysql_error(mysql));
+		SQL_SemV();
+		return OS_ERR;
+	}
+
+	MYSQL_RES *recordSet = mysql_store_result(mysql);
+	if (recordSet==NULL)
+	{
+		SQL_SemV();
+		return OS_ERR;
+	}
+
+	MYSQL_ROW row;
+	if(row = mysql_fetch_row(recordSet))
+	{
+		//printf("\r\nID:%u",atol(row[0]));
+	}
+	else
+	{
+		ret = OS_ERR;
+	}
+
+	mysql_free_result(recordSet);//释放结果集
+
+	SQL_SemV();
+
+	return ret;
 }
 

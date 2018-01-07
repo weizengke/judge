@@ -1,120 +1,116 @@
 
 #include "osp\command\include\command_inc.h"
+#include "product\judge\include\judge_inc.h"
 
-
-/*****************************************************************************
- 函 数 名  : cmd_resolve_enter
- 功能描述  : 适配回车执行命令行
- 输入参数  : struct cmd_vty *vty
- 输出参数  : 无
- 返 回 值  : void
- 调用函数  :
- 被调函数  :
-
- 修改历史      :
-  1.日    期   : 2013年11月17日
-    作    者   : weizengke
-    修改内容   : 新生成函数
-
-bugs:
-	1:	display loopback-detect brief
-		display loopback brief
-
-		<Jungle-config>dis loop brief
-		Command 'dis loop brief ' anbigous follow:
-		 brief                     brief
-		<Jungle-config>
-
-	2:
-		display loopback-detect brief
-		display loopback brief
-		disable loopback-detect
-
-		<Jungle-config>dis loopback
-		Command 'dis loopback' anbigous follow:
-		 loopback                  loopback-detect
-		<Jungle-config>
-
-*****************************************************************************/
-void cmd_resolve_enter_ex(char* buf)
+int cmd_pub_run(struct cmd_vty *vty, char *szCmdBuf)
 {
-	struct para_desc *match[CMD_MAX_MATCH_SIZE];	// matched string
-	int match_size = 0;
+	int iRet = 0;
 
-	int match_type = CMD_NO_MATCH;
-	cmd_vector_t *v;
-
-	int i = 0;
-	int nomath_pos = -1;
-
-	//printf("enter(%d %d %s)\r\n", vty->used_len, vty->buf_len, vty->buffer);
-
-	strcpy(vty->buffer, buf);
-
-	v = str2vec(vty->buffer);
-	if (v == NULL) {
-		cmd_outstring("%s", CMD_ENTER);
-		cmd_outprompt(vty->prompt);
-		return;
-	}
-
-	/* BEGIN: Added by weizengke, 2013/10/5   PN:for cmd end with <CR> */
-	cmd_vector_insert_cr(v);
-	/* END:   Added by weizengke, 2013/10/5   PN:None */
-
-	cmd_outstring("%s", CMD_ENTER);
-
-	// do command
-	match_type = cmd_execute_command(v, vty, match, &match_size, &nomath_pos);
-	// add executed command into history
-	cmd_vty_add_history(vty);
-
-	if (match_type == CMD_NO_MATCH)
+	if (NULL == szCmdBuf)
 	{
-		cmd_output_missmatch(vty, nomath_pos);
+		return 1;
 	}
-	else if (match_type == CMD_ERR_ARGU)
-	{
-		cmd_outstring("Too Many Arguments");
-		cmd_outstring("%s", CMD_ENTER);
-	}
+	
+	memcpy(vty->buffer, szCmdBuf, CMD_BUFFER_SIZE);
+	vty->buf_len = CMD_BUFFER_SIZE;
+	
+	iRet = cmd_run(vty);
+	
+	vty->cur_pos = vty->used_len = 0;
+	memset(vty->buffer, 0, vty->buf_len);
 
-	if (match_type == CMD_ERR_AMBIGOUS)
-	{
-		if (match_size)
-		{
-			cmd_outstring("Command '%s' anbigous follow:", vty->buffer);
-			cmd_outstring("%s", CMD_ENTER);
-			for (i = 0; i < match_size; i++)
-			{
-				if (ANOTHER_LINE(i))
-					cmd_outstring("%s", CMD_ENTER);
-				cmd_outstring(" %-25s", match[i]->para);
-			}
-			cmd_outstring("%s", CMD_ENTER);
-			/* del 10-29
-			cmd_outprompt(vty->prompt);
-			cmd_outstring("%s", vty->buffer);
-			*/
-			vty->cur_pos = vty->used_len = 0;
-			memset(vty->buffer, 0, vty->buf_len);
-			cmd_outprompt(vty->prompt);
-		}
-	}
-	else
-	{
-		// ready for another command
-		vty->cur_pos = vty->used_len = 0;
-		memset(vty->buffer, 0, vty->buf_len);
-		cmd_outprompt(vty->prompt);
-	}
+	//printf("\r\nExecute command:%s. (result:%d)", vty->buffer, iRet);
+	
+	return iRet;
 }
 
+/* ------------------ Interface Function ----------------- */
+int cmd_resolve_vty(struct cmd_vty *vty)
+{
+	char c = vty->c;
+	int key_type = CMD_KEY_CODE_NOTCARE;	// default is not special key
+	
+	switch (c) 
+	{
+		case 0x1b:
+			c = vty_getch(vty);
+			//printf("\r\n~c=0x%x.", vty->c);
+			if (0x5b == c)
+			{
+				c = vty_getch(vty);
+				//printf("\r\n#c=0x%x.", vty->c);
+				vty->c = c;
+			}
+			
+			switch (c)
+			{
+				case 0x41:
+					key_type = CMD_KEY_CODE_UP;
+					break;
+				case 0x42:
+					key_type = CMD_KEY_CODE_DOWN;
+					break;
+				case 0x43:
+					key_type = CMD_KEY_CODE_RIGHT;
+					break;
+				case 0x44:
+					key_type = CMD_KEY_CODE_LEFT;
+					break;
+				default:
+					key_type = CMD_KEY_CODE_FILTER;
+					break;
+			}
+
+			break;
+		case CMD_KEY_DELETE_VTY:
+			key_type = CMD_KEY_CODE_DELETE;
+			break;
+		case CMD_KEY_BACKSPACE:  /*  */
+			key_type = CMD_KEY_CODE_BACKSPACE;
+			break;
+		case CMD_KEY_SPACE:
+			/* Linux 下空格后回车无法tab补全与'?'联想 待修复*/
+			break;
+		case CMD_KEY_CTRL_W:
+			/* del the last elem */
+			key_type = CMD_KEY_CODE_DEL_LASTWORD;
+			break;
+
+		case CMD_KEY_TAB:
+			key_type = CMD_KEY_CODE_TAB;
+			break;
+		//case CMD_KEY_LF: 
+		case CMD_KEY_CR: 
+			key_type = CMD_KEY_CODE_ENTER;
+			//printf("\r\n~c=0x%x.", c);
+			break;
+		case CMD_KEY_QUEST:
+			key_type = CMD_KEY_CODE_QUEST;
+			break;
+		default:
+			/* BEGIN: Added by weizengke, 2014/4/6 filter CTRL+a ~ z */
+			if (c >= 0x1 && c <= 0x1d)
+			{
+				key_type = CMD_KEY_CODE_FILTER;
+			}
+			else
+			{
+				//printf("\r\n@c=0x%x.", vty->c);
+			}
+			/* END:   Added by weizengke, 2014/4/6 */
+			break;
+	}
+
+	return key_type;
+}
+/* end key*/
 
 /* ------------------ Interface Function ----------------- */
-int cmd_resolve(char c)
+int cmd_resolve(struct cmd_vty *vty)
 {
+	char c = vty->c;
 	int key_type = CMD_KEY_CODE_NOTCARE;	// default is not special key
+
 	switch (c) {
 	case CMD_KEY_ARROW1:
 		c = cmd_getch();
@@ -200,18 +196,14 @@ int cmd_resolve(char c)
 		/* del the last elem */
 		key_type = CMD_KEY_CODE_DEL_LASTWORD;
 		break;
-
-	case '\t':
+	case CMD_KEY_TAB:
 		key_type = CMD_KEY_CODE_TAB;
 		break;
-	case '\r':
-	case '\n':
+	case CMD_KEY_LF:
+	case CMD_KEY_CR: 
 		key_type = CMD_KEY_CODE_ENTER;
 		break;
-	case '?':
-		/* BEGIN: Added by weizengke, 2013/10/4   PN:need print '?' */
-		cmd_put_one('?');
-		/* END:   Added by weizengke, 2013/10/4   PN:need print '?' */
+	case CMD_KEY_QUEST:
 		key_type = CMD_KEY_CODE_QUEST;
 		break;
 	default:
@@ -227,54 +219,6 @@ int cmd_resolve(char c)
 	return key_type;
 }
 /* end key*/
-/*
-int cmd_resolve(char c)
-{
-	int key_type = CMD_KEY_CODE_NOTCARE;	// default is not special key
-
-	switch (c) {
-		case CMD_KEY_ARROW1:
-			if (cmd_getch() == CMD_KEY_ARROW2) {
-				c = cmd_getch();	// get real key
-				switch (c) {
-					case CMD_KEY_UP:
-						key_type = CMD_KEY_CODE_UP;
-						break;
-					case CMD_KEY_DOWN:
-						key_type = CMD_KEY_CODE_DOWN;
-						break;
-					case CMD_KEY_RIGHT:
-						key_type = CMD_KEY_CODE_RIGHT;
-						break;
-					case CMD_KEY_LEFT:
-						key_type = CMD_KEY_CODE_LEFT;
-						break;
-					default:
-						break;
-				}
-			}
-			break;
-		case CMD_KEY_SPACE:
-		case CMD_KEY_CTRL_H:
-			key_type = CMD_KEY_CODE_BACKSPACE;
-			break;
-		case '\t':
-			key_type = CMD_KEY_CODE_TAB;
-			break;
-		case '\r':
-		case '\n':
-			key_type = CMD_KEY_CODE_ENTER;
-			break;
-		case '?':
-			key_type = CMD_KEY_CODE_QUEST;
-			break;
-		default:
-			break;
-	}
-
-	return key_type;
-}
-*/
 
 void cmd_resolve_filter(struct cmd_vty *vty)
 {
@@ -308,7 +252,6 @@ void cmd_resolve_tab(struct cmd_vty *vty)
 	char lcd_str[1024] = {0};	// if part match, then use this
 	char *last_word = NULL;
 
-
 	/*
 	1: 取pos 之前的buf
 	2: 需要覆盖当前光标后的buf
@@ -318,18 +261,17 @@ void cmd_resolve_tab(struct cmd_vty *vty)
 	vty->used_len = strlen(vty->buffer);
 	/* END:   Added by weizengke, 2013/11/17 */
 
-	debug_print_ex(CMD_DEBUG_TYPE_INFO,"\r\ntab in:used_len=%d, pos=%d\r\n",vty->used_len, vty->cur_pos);
+	CMD_debug(DEBUG_TYPE_INFO,"tab in:used_len=%d, pos=%d\r\n",vty->used_len, vty->cur_pos);
 
-
-	if (g_InputMachine_prev == CMD_KEY_CODE_TAB)
+	if (vty->inputMachine_prev == CMD_KEY_CODE_TAB)
 	{
 		cmd_delete_word(vty);
-		cmd_insert_word(vty, g_tabbingString);
+		cmd_insert_word(vty, vty->tabbingString);
 	}
 	else
 	{
-		memset(g_tabString,0,sizeof(g_tabString));
-		g_tabStringLenth = 0;
+		memset(vty->tabString,0,sizeof(vty->tabString));
+		vty->tabStringLenth = 0;
 	}
 
 	v = str2vec(vty->buffer);
@@ -353,19 +295,19 @@ void cmd_resolve_tab(struct cmd_vty *vty)
 
 		last_word = (char*)cmd_vector_slot(v, cmd_vector_max(v) - 1);
 
-		if (g_InputMachine_prev != CMD_KEY_CODE_TAB)
+		if (vty->inputMachine_prev != CMD_KEY_CODE_TAB)
 		{
-			strcpy(g_tabbingString, last_word);
+			strcpy(vty->tabbingString, last_word);
 		}
 
 		cmd_vector_deinit(v, 1);
 	}
 
-	cmd_outstring("%s", CMD_ENTER);
+	vty_printf(vty, "%s", CMD_ENTER);
 	switch (match_type) {
 		case CMD_NO_MATCH:
-			cmd_outprompt(vty->prompt);
-			cmd_outstring("%s", vty->buffer);
+			cmd_outprompt(vty);
+			vty_printf(vty, "%s", vty->buffer);
 			break;
 		case CMD_FULL_MATCH:
 			cmd_delete_word(vty);
@@ -376,13 +318,13 @@ void cmd_resolve_tab(struct cmd_vty *vty)
 			/* BEGIN: Added by weizengke, 2013/10/14 for full match then next input*/
 			cmd_insert_word(vty, " ");
 			/* END:   Added by weizengke, 2013/10/14 */
-			cmd_outprompt(vty->prompt);
-			cmd_outstring("%s", vty->buffer);
+			cmd_outprompt(vty);
+			vty_printf(vty, "%s", vty->buffer);
 
 			/* BEGIN: Added by weizengke, 2013/10/27 PN: fix the bug of CMD_FULL_MATCH and then continue TAB*/
-			memset(g_tabString,0,sizeof(g_tabString));
-			memset(g_tabbingString,0,sizeof(g_tabbingString));
-			g_tabStringLenth = 0;
+			memset(vty->tabString,0,sizeof(vty->tabString));
+			memset(vty->tabbingString,0,sizeof(vty->tabbingString));
+			vty->tabStringLenth = 0;
 			/* END:   Added by weizengke, 2013/10/27 */
 
 			break;
@@ -396,24 +338,24 @@ void cmd_resolve_tab(struct cmd_vty *vty)
 			*/
 			cmd_delete_word(vty);
 			cmd_insert_word(vty, lcd_str);
-			cmd_outprompt(vty->prompt);
-			cmd_outstring("%s", vty->buffer);
+			cmd_outprompt(vty);
+			vty_printf(vty, "%s", vty->buffer);
 			break;
 		case CMD_LIST_MATCH:
 
-			if (g_InputMachine_prev != CMD_KEY_CODE_TAB)
+			if (vty->inputMachine_prev != CMD_KEY_CODE_TAB)
 			{
-				memset(g_tabString,0,sizeof(g_tabString));
-				strcpy(g_tabString, match[0]->para);
-				g_tabStringLenth = strlen(g_tabString);
+				memset(vty->tabString,0,sizeof(vty->tabString));
+				strcpy(vty->tabString, match[0]->para);
+				vty->tabStringLenth = strlen(vty->tabString);
 
-				/* cmd_outstring("%s", CMD_ENTER); */
+				/* vty_printf(vty, "%s", CMD_ENTER); */
 			}
 			else
 			{
 				for (i = 0; i < match_size; i++)
 				{
-					if (0 == strcmp(g_tabString, match[i]->para))
+					if (0 == strcmp(vty->tabString, match[i]->para))
 					{
 						break;
 					}
@@ -421,7 +363,7 @@ void cmd_resolve_tab(struct cmd_vty *vty)
 
 				if (i == match_size)
 				{
-					debug_print_ex(CMD_DEBUG_TYPE_ERROR, "TAB for completing command. bug of tab continue. (g_tabString=%s)", g_tabString);
+					CMD_debug(DEBUG_TYPE_ERROR, "TAB for completing command. bug of tab continue. (tabString=%s)", vty->tabString);
 				}
 
 				i++;
@@ -431,31 +373,31 @@ void cmd_resolve_tab(struct cmd_vty *vty)
 					i = 0;
 				}
 
-				memset(g_tabString,0,sizeof(g_tabString));
-				strcpy(g_tabString, match[i]->para);
-				g_tabStringLenth = strlen(g_tabString);
+				memset(vty->tabString,0,sizeof(vty->tabString));
+				strcpy(vty->tabString, match[i]->para);
+				vty->tabStringLenth = strlen(vty->tabString);
 
 			}
 
 			/*for (i = 0; i < match_size; i++) {
 				if (ANOTHER_LINE(i))
-					cmd_outstring("%s", CMD_ENTER);
-				cmd_outstring("%-25s", match[i]->para);
+					vty_printf(vty, "%s", CMD_ENTER);
+				vty_printf(vty, "%-25s", match[i]->para);
 			}
 			*/
 
 			cmd_delete_word(vty);
-			cmd_insert_word(vty, g_tabString);
+			cmd_insert_word(vty, vty->tabString);
 
-			cmd_outprompt(vty->prompt);
-			cmd_outstring("%s", vty->buffer);
+			cmd_outprompt(vty);
+			vty_printf(vty, "%s", vty->buffer);
 			break;
 		default:
 			break;
 	}
 
 
-	debug_print_ex(CMD_DEBUG_TYPE_INFO,"\r\ntab out:used_len=%d, pos=%d\r\n",vty->used_len, vty->cur_pos);
+	CMD_debug(DEBUG_TYPE_INFO,"tab out:used_len=%d, pos=%d",vty->used_len, vty->cur_pos);
 }
 
 /*****************************************************************************
@@ -503,12 +445,14 @@ void cmd_resolve_enter(struct cmd_vty *vty)
 	int i = 0;
 	int nomath_pos = -1;
 
+	VIEW_ID_EN view_id_ = VIEW_NULL;
+	
 	//printf("enter(%d %d %s)\r\n", vty->used_len, vty->buf_len, vty->buffer);
 
 	v = str2vec(vty->buffer);
 	if (v == NULL) {
-		cmd_outstring("%s", CMD_ENTER);
-		cmd_outprompt(vty->prompt);
+		vty_printf(vty, "%s", CMD_ENTER); /* 串口才需要回车 */
+		cmd_outprompt(vty);
 		return;
 	}
 
@@ -516,10 +460,38 @@ void cmd_resolve_enter(struct cmd_vty *vty)
 	cmd_vector_insert_cr(v);
 	/* END:   Added by weizengke, 2013/10/5   PN:None */
 
-	cmd_outstring("%s", CMD_ENTER);
+	vty_printf(vty, "%s", CMD_ENTER);
 
 	// do command
 	match_type = cmd_execute_command(v, vty, match, &match_size, &nomath_pos);
+
+	CMD_debug(DEBUG_TYPE_FUNC, "Execute command '%s' on view '%s'. (result:%d)", vty->buffer, cmd_view_getViewName(vty->view_id), match_type);
+	write_log(JUDGE_INFO, "Execute command:%s. (result:%d)", vty->buffer, match_type);
+
+	view_id_ = vty->view_id;
+		
+	while (match_type == CMD_NO_MATCH)
+	{
+		int match_size_ = 0;
+		int nomath_pos_ = -1;
+		VIEW_ID_EN view_id__ = VIEW_NULL;
+		
+		view_id__ = vty_view_getParentViewId(vty->view_id);
+		
+		if (VIEW_NULL == view_id__
+			|| VIEW_USER == view_id__
+			|| VIEW_GLOBAL == view_id__)
+		{
+			vty->view_id = view_id_;
+			break;
+		}
+
+		vty->view_id = view_id__;
+		match_type = cmd_execute_command(v, vty, match, &match_size_, &nomath_pos_);
+
+		CMD_debug(DEBUG_TYPE_FUNC, "Continue execute command '%s' on view '%s'. (result:%d)", vty->buffer, cmd_view_getViewName(view_id__), match_type);
+	}
+	
 	// add executed command into history
 	cmd_vty_add_history(vty);
 
@@ -529,30 +501,29 @@ void cmd_resolve_enter(struct cmd_vty *vty)
 	}
 	else if (match_type == CMD_ERR_ARGU)
 	{
-		cmd_outstring("Too Many Arguments");
-		cmd_outstring("%s", CMD_ENTER);
+		vty_printf(vty, "Too Many Arguments%s"CMD_ENTER);
 	}
 
 	if (match_type == CMD_ERR_AMBIGOUS)
 	{
 		if (match_size)
 		{
-			cmd_outstring("Command '%s' anbigous follow:", vty->buffer);
-			cmd_outstring("%s", CMD_ENTER);
+			vty_printf(vty, "Command '%s' anbigous follow:%s", vty->buffer, CMD_ENTER);
+
 			for (i = 0; i < match_size; i++)
 			{
 				if (ANOTHER_LINE(i))
-					cmd_outstring("%s", CMD_ENTER);
-				cmd_outstring(" %-25s", match[i]->para);
+					vty_printf(vty, "%s", CMD_ENTER);
+				vty_printf(vty, " %-25s", match[i]->para);
 			}
-			cmd_outstring("%s", CMD_ENTER);
+			vty_printf(vty, "%s", CMD_ENTER);
 			/* del 10-29
-			cmd_outprompt(vty->prompt);
-			cmd_outstring("%s", vty->buffer);
+			cmd_outprompt(vty);
+			vty_printf(vty, "%s", vty->buffer);
 			*/
 			vty->cur_pos = vty->used_len = 0;
 			memset(vty->buffer, 0, vty->buf_len);
-			cmd_outprompt(vty->prompt);
+			cmd_outprompt(vty);
 		}
 	}
 	else
@@ -560,7 +531,7 @@ void cmd_resolve_enter(struct cmd_vty *vty)
 		// ready for another command
 		vty->cur_pos = vty->used_len = 0;
 		memset(vty->buffer, 0, vty->buf_len);
-		cmd_outprompt(vty->prompt);
+		cmd_outprompt(vty);
 	}
 }
 
@@ -594,6 +565,10 @@ void cmd_resolve_quest(struct cmd_vty *vty)
 	int i = 0;
 	int nomath_pos = -1;
 
+	/* BEGIN: Added by weizengke, 2013/10/4   PN:need print '?' */
+	cmd_put_one(vty, '?');
+	/* END:   Added by weizengke, 2013/10/4   PN:need print '?' */
+			
 	/*
 	1: 取pos 之前的buf
 	2: 需要覆盖当前光标后的buf
@@ -614,23 +589,22 @@ void cmd_resolve_quest(struct cmd_vty *vty)
 		cmd_vector_insert_cr(v);
 	}
 
-
 	cmd_complete_command(v, vty, match, &match_size, &nomath_pos);
 
-	cmd_outstring("%s", CMD_ENTER);
+	vty_printf(vty, "%s", CMD_ENTER);
 
 	if (match_size) {
 		for (i = 0; i < match_size; i++) {
-			cmd_outstring(" %-25s%s\r\n", match[i]->para,match[i]->desc);
+			vty_printf(vty, " %-25s%s\r\n", match[i]->para,match[i]->desc);
 		}
-		cmd_outprompt(vty->prompt);
-		cmd_outstring("%s", vty->buffer);
+		cmd_outprompt(vty);
+		vty_printf(vty, "%s", vty->buffer);
 	} else {
 
 		cmd_output_missmatch(vty, nomath_pos);
 
-		cmd_outprompt(vty->prompt);
-		cmd_outstring("%s", vty->buffer);
+		cmd_outprompt(vty);
+		vty_printf(vty, "%s", vty->buffer);
 	}
 
 	cmd_vector_deinit(v, 0);
@@ -651,7 +625,7 @@ void cmd_resolve_up(struct cmd_vty *vty)
 	cmd_clear_line(vty);
 	strcpy(vty->buffer, vty->history[vty->hpos]);
 	vty->cur_pos = vty->used_len = strlen(vty->history[vty->hpos]);
-	cmd_outstring("%s", vty->buffer);
+	vty_printf(vty, "%s", vty->buffer);
 }
 
 void cmd_resolve_down(struct cmd_vty *vty)
@@ -667,27 +641,34 @@ void cmd_resolve_down(struct cmd_vty *vty)
 	cmd_clear_line(vty);
 	strcpy(vty->buffer, vty->history[vty->hpos]);
 	vty->cur_pos = vty->used_len = strlen(vty->history[vty->hpos]);
-	cmd_outstring("%s", vty->buffer);
+	vty_printf(vty, "%s", vty->buffer);
 }
 
 // handle in read buffer, including left, right, delete, insert
 void cmd_resolve_left(struct cmd_vty *vty)
 {
+	//printf("\r\n%d", vty->cur_pos);
 	// already at leftmost, cannot move more
 	if (vty->cur_pos <= 0)
+	{
 		return;
+	}
+
 	// move left one step
 	vty->cur_pos--;
-	cmd_back_one();
+	cmd_back_one(vty);
 }
 
 void cmd_resolve_right(struct cmd_vty *vty)
 {
 	// already at rightmost, cannot move more
 	if (vty->cur_pos >= vty->used_len)
+	{
 		return;
+	}
+
 	// move right one step
-	cmd_put_one(vty->buffer[vty->cur_pos]);
+	cmd_put_one(vty, vty->buffer[vty->cur_pos]);
 	vty->cur_pos++;
 }
 
@@ -712,26 +693,30 @@ void cmd_resolve_delete(struct cmd_vty *vty)
 
 	// no more to delete
 	if (vty->cur_pos >= vty->used_len)
+	{
 		return;
+	}
 
 	/* del the  current char*/
-	printf(" \b");
+	cmd_delete_one(vty);
 
 	size = vty->used_len - vty->cur_pos;
 	CMD_DBGASSERT(size >= 0, "cmd_resolve_delete");
 
 	memcpy(&vty->buffer[vty->cur_pos], &vty->buffer[vty->cur_pos + 1], size);
+
+	//vty->buffer[vty->used_len] = '\0';
 	vty->buffer[vty->used_len - 1] = '\0';
 
 	/* output the right chars */
 	for (i = 0; i < size; i ++)
-		cmd_put_one(vty->buffer[vty->cur_pos + i]);
+		cmd_put_one(vty, vty->buffer[vty->cur_pos + i]);
 
 	vty->used_len--;
 
 	/* back the cur_pos */
 	for (i = 0; i < size; i++)
-		cmd_back_one();
+		cmd_back_one(vty);
 
 
 }
@@ -742,23 +727,27 @@ void cmd_resolve_backspace(struct cmd_vty *vty)
 
 	// no more to delete
 	if (vty->cur_pos <= 0)
+	{
 		return;
+	}
+
 	size = vty->used_len - vty->cur_pos;
+	
 	CMD_DBGASSERT(size >= 0, "cmd_resolve_backspace");
 
 	// delete char
 	vty->cur_pos--;
 	vty->used_len--;
-	cmd_back_one();
+	cmd_back_one(vty);
 
 	// print left chars
 	memcpy(&vty->buffer[vty->cur_pos], &vty->buffer[vty->cur_pos + 1], size);
 	vty->buffer[vty->used_len] = '\0';
 	for (i = 0; i < size; i ++)
-		cmd_put_one(vty->buffer[vty->cur_pos + i]);
-	cmd_put_one(' ');
+		cmd_put_one(vty, vty->buffer[vty->cur_pos + i]);
+	cmd_put_one(vty, ' ');
 	for (i = 0; i < size + 1; i++)
-		cmd_back_one();
+		cmd_back_one(vty);
 
 }
 
@@ -766,12 +755,16 @@ void cmd_resolve_insert(struct cmd_vty *vty)
 {
 	int i, size;
 
+	CMD_debug(DEBUG_TYPE_INFO,"insert in:used_len=%d, pos=%d, buffer_len=%d",vty->used_len, vty->cur_pos, strlen(vty->buffer));
+	
 	// no more to insert
 	if (vty->used_len >= vty->buf_len)
+	{
+		CMD_DBGASSERT(0, "cmd_resolve_insert, used_len>=buf_len");
 		return;
+	}
+	
 	size = vty->used_len - vty->cur_pos;
-
-	debug_print_ex(CMD_DEBUG_TYPE_INFO,"\r\ninsert in:used_len=%d, pos=%d, buffer_len=%d\r\n",vty->used_len, vty->cur_pos, strlen(vty->buffer));
 
 	CMD_DBGASSERT(size >= 0, "cmd_resolve_insert");
 
@@ -788,14 +781,14 @@ void cmd_resolve_insert(struct cmd_vty *vty)
 
 	// print left chars, then back size
 	for (i = 0; i < size + 1; i++)
-		cmd_put_one(vty->buffer[vty->cur_pos + i]);
+		cmd_put_one(vty, vty->buffer[vty->cur_pos + i]);
 	for (i = 0; i < size; i++)
-		cmd_back_one();
+		cmd_back_one(vty);
 
 	vty->cur_pos++;
 	vty->used_len++;
 
-	debug_print_ex(CMD_DEBUG_TYPE_INFO,"\r\ninsert out:used_len=%d, pos=%d, buffer_len=%d\r\n",vty->used_len, vty->cur_pos, strlen(vty->buffer));
+	CMD_debug(DEBUG_TYPE_INFO,"insert out:used_len=%d, pos=%d, buffer_len=%d",vty->used_len, vty->cur_pos, strlen(vty->buffer));
 
 }
 
@@ -820,19 +813,21 @@ void cmd_resolve_del_lastword(struct cmd_vty *vty)
 	int i, size;
 
 	// no more to delete
+	CMD_debug(DEBUG_TYPE_INFO, "\r\ncmd_resolve_del_lastword, cur_pos=%d",vty->cur_pos);
+	
 	if (vty->cur_pos <= 0)
 		return;
 
 	cmd_delete_word_ctrl_W_ex(vty);
 
-	cmd_outstring("%s", CMD_ENTER);
-	cmd_outprompt(vty->prompt);
-	cmd_outstring("%s", vty->buffer);
+	vty_printf(vty, "%s", CMD_ENTER);
+	cmd_outprompt(vty);
+	vty_printf(vty, "%s", vty->buffer);
 
 	/* BEGIN: Added by weizengke, 2014/3/23 support delete word form cur_pos*/
 	for (i = 0; i < strlen(vty->buffer) - vty->cur_pos; i++)
 	{
-		cmd_back_one();
+		cmd_back_one(vty);
 	}
 	/* END:   Added by weizengke, 2014/3/23 */
 

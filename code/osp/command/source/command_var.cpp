@@ -2,17 +2,6 @@
 #include "osp\command\include\command_inc.h"
 
 
-char *szDebugName[CMD_DEBUG_TYPE_MAX] = {
-	"none",
-	"error",
-	"function",
-	"info",
-	"message",
-	"fsm",
-};
-
-
-
 const char *key_name[CMD_KEY_CODE_MAX] = {
 	"EM_KEY_TAB",
 		"CMD_KEY_CODE_ENTER",
@@ -25,25 +14,16 @@ const char *key_name[CMD_KEY_CODE_MAX] = {
 		"CMD_KEY_CODE_NOTCARE"
 };
 
+struct cmd_vty g_vty[CMD_VTY_MAXUSER_NUM];
+struct cmd_vty *g_con_vty; /* 串口用户 */
 
-unsigned long g_aulDebugMask[CMD_DEBUG_TYPE_MAX/32 + 1] = {0};
-
-int g_debug_switch = DEBUG_DISABLE;
-
-struct cmd_vty *vty;
 // Global command vector, to store user installed commands
 cmd_vector_t *cmd_vec;
 
 struct para_desc g_cmd_elem[CMD_ELEM_ID_MAX];
 
-/* BEGIN: Added by weizengke, for support TAB agian and agian */
-int g_InputMachine_prev = CMD_KEY_CODE_NOTCARE;
-int g_InputMachine_now = CMD_KEY_CODE_NOTCARE;
-char g_tabbingString[CMD_MAX_CMD_ELEM_SIZE] = {0};  /* 最初始用来补全查找的字串*/
-char g_tabString[CMD_MAX_CMD_ELEM_SIZE] = {0};      /* 最后一次补全的命令 */
-int g_tabStringLenth = 0;
-/* END: Added by weizengke, for support TAB agian and agian */
 
+view_node_st *view_list;
 
 
 

@@ -17,12 +17,14 @@
 #define CMD_MAX_MATCH_SIZE	100
 
 // maximum number of command arguments
-#define CMD_MAX_CMD_NUM		10
+#define CMD_MAX_CMD_NUM		32
 
 #define CMD_MAX_CMD_ELEM_SIZE 24
 
 
 #define CMD_ELEM_SPACE_SIZE  CMD_MAX_CMD_ELEM_SIZE + 1
+
+#define CMD_MAX_VIEW_SIZE   24
 
 #define CMD_MAX_PROMPT_SIZE 24
 
@@ -41,20 +43,18 @@
 /* ------------------ Auxiliary Function ----------------- */
 #define ANOTHER_LINE(i)	(((i) != 0) && ((i) % CMD_LINE_NUM == 0))
 
-
-#define FNAME "cmd-sys.c"
-
 #define CMD_ERR 1
 #define CMD_OK  0
 
 #define CMD_YES 1
 #define CMD_NO  0
 
-#define DEBUG_DISABLE 0
-#define DEBUG_ENABLE  1
-
 /* assert(0) */
-#define CMD_DBGASSERT(x,y) if (0 == x) printf("Assert at %s", y);
+#define CMD_DBGASSERT(x,args...) \
+if (0 == x) {\
+	printf("\r\nAssert at %s:%d. ", __FILE__, __LINE__);\
+	printf(args);\
+}\
 
 #define CMD_NOUSED(x) ((x) = (x))
 
@@ -103,7 +103,16 @@
 #define CMD_KEY_CTRL_H	(0x1f | 0x7f)
 
 #define CMD_KEY_CTRL_W	0x17
+#define CMD_KEY_CR	    0xd  /* '\r' */
+#define CMD_KEY_LF	    0xa  /* '\n' */
+#define CMD_KEY_TAB	    0x9  /* '\n' */
+#define CMD_KEY_QUEST	0x3f /* '?'  */
+
+
+#define CMD_KEY_DELETE_VTY 0x7f
 
 #endif
+
+#define CMD_VTY_MAXUSER_NUM 32
 
 #endif

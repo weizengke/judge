@@ -6,7 +6,7 @@
 
 using namespace std;
 
-static int g_DEBUG = 1;
+static int g_DEBUG = 0;
 
 int isInFile(const char fname[]) {
 	int l = strlen(fname);
@@ -224,3 +224,5 @@ string&  replace_all_distinct(string&   str,const   string&   old_value,const   
 	}
 	return   str;
 }
+
+

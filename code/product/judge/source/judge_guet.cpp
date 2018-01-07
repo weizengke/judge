@@ -164,7 +164,7 @@ string GUET_getCEinfo_brief(char *filename)
         ts=g_GUETtmps;
         if (ts.find("<p>Compile Error</p>")!=string::npos)
         {
-			pdt_debug_print("Found Compile Info.");
+			Judge_Debug(DEBUG_TYPE_FUNC, "Found Compile Info.");
             while (fgets(g_GUETtmps,1000000,fp))
 			{
                 ts=g_GUETtmps;
@@ -178,7 +178,7 @@ string GUET_getCEinfo_brief(char *filename)
 						ts=g_GUETtmps;
 						if (ts.find("</div>")!=string::npos)
 						{
-							pdt_debug_print("Get Compile Info ok.");
+							Judge_Debug(DEBUG_TYPE_FUNC, "Get Compile Info ok.");
 							break;
 						}
 						else
@@ -283,7 +283,7 @@ string GUET_getLineFromFile(char *filename,int line)
 
 	if (NULL == fp)
 	{
-		pdt_debug_print("open filename:%s error.",filename);
+		Judge_Debug(DEBUG_TYPE_ERROR, "open filename:%s error.",filename);
 		return res;
 	}
 
@@ -411,7 +411,7 @@ ULONG GUET_getStatusEx(char *username)
 		|| result.find("Compiling")!=string::npos
 		|| result.find("Running")!=string::npos)
 	{
-		pdt_debug_print("Get Status, Queuing or Compiling or Running , try again...");
+		Judge_Debug(DEBUG_TYPE_FUNC, "Get Status, Queuing or Compiling or Running , try again...");
 		ret = OS_ERR;
 	}
 
@@ -425,7 +425,7 @@ ULONG GUET_getStatusEx(char *username)
 		ce_info = CE_Info;
 	}
 
-	judge_outstring("Info: problem[%d] language[%d]  verdict[%s] submissionID[%s] time[%s ms] memory[%s kb].\r\n\r\n", 1000, lang_id, result.c_str(), runid.c_str(), tu.c_str(), mu.c_str());
+	Judge_Debug(DEBUG_TYPE_FUNC, "Info: problem[%d] language[%d]  verdict[%s] submissionID[%s] time[%s ms] memory[%s kb].\r\n\r\n", 1000, lang_id, result.c_str(), runid.c_str(), tu.c_str(), mu.c_str());
 
 	return ret;
 
@@ -484,7 +484,7 @@ int GUET_Judge_python(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 				|| result.find("Compiling")!=string::npos
 				|| result.find("Running")!=string::npos)
 			{
-				pdt_debug_print("Get Status, Queuing or Compiling or Running , try again...");
+				Judge_Debug(DEBUG_TYPE_FUNC, "Get Status, Queuing or Compiling or Running , try again...");
 				ret = OS_FALSE;
 			}
 
@@ -508,7 +508,7 @@ int GUET_Judge_python(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 
 		if (OS_FALSE == ret)
 		{
-			pdt_debug_print("Get Status Error...");
+			Judge_Debug(DEBUG_TYPE_ERROR, "Get Status Error...");
 			pstJudgeSubmission->stSolution.verdictId = V_SE;
 		}
 		else
@@ -548,7 +548,7 @@ int GUET_Judge_python(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 				char buffer[4096]={0};
 				if ((fp = fopen (pstJudgeSubmission->DebugFile, "w")) == NULL){
 					write_log(JUDGE_ERROR,"DebugFile open error");
-					pdt_debug_print("DebugFile open error. File:%s.",pstJudgeSubmission->DebugFile);
+					Judge_Debug(DEBUG_TYPE_ERROR, "DebugFile open error. File:%s.",pstJudgeSubmission->DebugFile);
 					break;
 				}
 				fputs(ce_info.c_str(),fp);

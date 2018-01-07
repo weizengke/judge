@@ -2,8 +2,9 @@
 #define _JUDGE_DEF_H_
 
 
-#define JUDGE_VIRTUAL VOS_YES   /* VJUDGE switch */
-#define VJUDGE_CURL VOS_YES   /* VJUDGE switch */
+#define JUDGE_VIRTUAL 		VOS_YES   /* VJUDGE switch */
+#define VJUDGE_CURL   		VOS_YES   /* VJUDGE switch */
+#define FEATURE_JUDGE_OI    VOS_YES   /* OI switch */
 
 
 #define STD_MB 1048576
@@ -30,6 +31,8 @@
 #define V_SE 14
 #define V_SK 15
 
+#define JUDGE_ISJUDGE_STOP(v) (v == V_CE || v == V_RE || v == V_TLE || v == V_MLE || v == V_SE)
+
 static const char* VERDICT_NAME[] = {"ALL", "Queuing", "Compiling", "Compilation Error", "Running","Accepted",
 									"Wrong Answer","Runtime Error","Time Limit Exceeded",
 									"Memory Limit Exceeded","Presentation Error","Output Limit Exceeded",
@@ -50,8 +53,7 @@ static const char* LEVEL_NAME[] = {"JUDGE_SYSTEM_ERROR", "JUDGE_WARNING", "JUDGE
 #define JUDGE_DEBUG_OFF 0
 #define JUDGE_DEBUG_ON 1
 
-
-#define BUFSIZE 4096
+#define JSONBUFSIZE 65535
 
 const int MAX_NAME = 32;
 const int MAX_CODE = 100000;
@@ -64,5 +66,11 @@ const int MAX_WAITTIME = 10000 ;
 #define VJUDGE_OVECCOUNT 30    /* should be a multiple of 3 */
 #define VJUDGE_MAX_LANG_SIZE 255
 
+#define JUDGE_MODE_ACM  0
+#define JUDGE_MODE_OI   1
+
+#define JUDGE_MAX_AUTOJUDGE 100
+
+#define Judge_Debug(x, args...) debugcenter_print(MID_JUDGE, x, args)
 
 #endif

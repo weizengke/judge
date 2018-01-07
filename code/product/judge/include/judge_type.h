@@ -5,6 +5,12 @@
 
 #define JUDGE_OJNAME_SIZE_MAX 32
 
+typedef struct tagJudge_Data_S
+{
+	int solutionId;
+
+}JUDGE_DATA_S;
+
 typedef struct tag_Judge_ProblemInfo_ST
 {
 	int problemId;
@@ -32,12 +38,13 @@ typedef struct tag_Judge_Solution_ST
 	int time_used;
 	int memory_used;
 	int testcase;
-
+	int failcase; 
+	
 	int reJudge;
 	char languageName[100]={0};
 	char languageExt[10]={0};
 	char languageExe[10]={0};
-
+	
 }JUDGE_SOLUTION_ST;
 
 #define JUDGE_CMD_BUFFER 1024
@@ -71,6 +78,8 @@ typedef struct tag_Judge_Submission_ST
     char DebugFile[MAX_PATH];
     char ErrorFile[MAX_PATH];
     char judge_log_filename[MAX_PATH];
+
+	char *pszjudgeResult_Json; /* ∏Ò Ω: json */
 
     char compileCmd[1024];
     char runCmd[1024];

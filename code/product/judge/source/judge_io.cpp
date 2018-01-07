@@ -10,17 +10,18 @@
 
 #include "product\judge\include\judge_inc.h"
 
+extern char g_sysname[];
 
 void write_log(int level, const char *fmt, ...) {
 	va_list ap;
-	char buffer[4096];
+	char buffer[BUFSIZE];
 	time_t  timep = time(NULL);
 	int l;
 	struct tm *p;
     p = localtime(&timep);
     p->tm_year = p->tm_year + 1900;
     p->tm_mon = p->tm_mon + 1;
-	sprintf(buffer,"log/Judge-%04d-%02d-%02d.log",p->tm_year, p->tm_mon, p->tm_mday);
+	sprintf(buffer,"log/%04d-%02d-%02d.log", p->tm_year, p->tm_mon, p->tm_mday);
 
 	FILE *fp = fopen(buffer, "a+");
 	if (fp == NULL) {
@@ -29,18 +30,15 @@ void write_log(int level, const char *fmt, ...) {
 	}
 
 	fprintf(fp, "%s:%04d-%02d-%02d %02d:%02d:%02d ",LEVEL_NAME[level],p->tm_year, p->tm_mon, p->tm_mday,p->tm_hour,p->tm_min,p->tm_sec);
-	if (g_oj_debug_switch == JUDGE_DEBUG_ON)
-	{
-		//printf("%s:%04d-%02d-%02d %02d:%02d:%02d ",LEVEL_NAME[level],p->tm_year, p->tm_mon, p->tm_mday,p->tm_hour,p->tm_min,p->tm_sec);
-	}
 
 	va_start(ap, fmt);
-	l = vsprintf(buffer, fmt, ap);
+	l = vsnprintf(buffer, BUFSIZE, fmt, ap);
 	fprintf(fp, "%s\r\n", buffer);
 	if (g_oj_debug_switch == JUDGE_DEBUG_ON)
 	{
 		/* BEGIN: Added by weizengke, 2013/11/15 for vrp */
-		pdt_debug_print("%s", buffer);
+		//pdt_debug_print("%s", buffer);
+		Judge_Debug(DEBUG_TYPE_INFO, "%s", buffer);
 		/* END:   Added by weizengke, 2013/11/15 */
 	}
 	va_end(ap);
@@ -50,6 +48,13 @@ void write_log(int level, const char *fmt, ...) {
 
 void judge_outstring(const char *format, ...)
 {
+	extern int g_pdt_recovering;
+
+	if (OS_YES == g_pdt_recovering)
+	{
+		return ;
+	}
+	
 	va_list args;
 	va_start(args, format);
 	vprintf(format, args);
@@ -59,7 +64,7 @@ void judge_outstring(const char *format, ...)
 void MSG_OUPUT_DBG(const char *fmt, ...)
 {
 	va_list ap;
-	char buffer[4096];
+	char buffer[BUFSIZE];
 	time_t  timep = time(NULL);
 	int l;
 	struct tm *p;
@@ -76,9 +81,10 @@ void MSG_OUPUT_DBG(const char *fmt, ...)
 	printf("\r\n%04d-%02d-%02d %02d:%02d:%02d ",p->tm_year, p->tm_mon, p->tm_mday,p->tm_hour,p->tm_min,p->tm_sec);
 
 	va_start(ap, fmt);
-	l = vsprintf(buffer, fmt, ap);
+	l = vsnprintf(buffer, BUFSIZE, fmt, ap);
 
 	printf("\r\n%s", buffer);
+	
 	va_end(ap);
 
 }
@@ -101,7 +107,7 @@ int read_buffer(const char *filename, char * buffer, int buf_size)
 	}
 
 	buf = buffer;
-	while(fgets(tmp,4096 ,fp))
+	while(fgets(tmp, 4096 ,fp))
 	{
 
 		buf += sprintf(buf,"%s",tmp);
@@ -151,14 +157,14 @@ int write_buffer(const char *filename, const char *fmt, ...)
 	}
 
 	FILE *fp = fopen(filename, "a+");
-	char buffer[40960] = {0};
+	char buffer[BUFSIZE] = {0};
 	if (fp == NULL)
 	{
 		return 0;
 	}
 
 	va_start(ap, fmt);
-	l = vsprintf(buffer, fmt, ap);
+	l = vsnprintf(buffer, BUFSIZE, fmt, ap);
 	fprintf(fp, "%s", buffer);
 	va_end(ap);
 

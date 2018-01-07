@@ -14,8 +14,11 @@
 
 #include "osp\common\include\osp_common_def.h"
 #include "osp\event\include\event_pub.h"
+#include "osp\debug\include\debug_center_inc.h"
 
 struct EVENT_Ntf_Node *g_pstEventNtfList[EVENT_NTF_MAX];
+
+#define EVENT_Debug(x, args...) debugcenter_print(MID_EVENT, x, args)
 
 /*****************************************************************************
 *   Prototype    : EVENT_RegistFunc
@@ -63,7 +66,6 @@ int EVENT_RegistFunc(char *pModuleName, int  eventId, int cmdId, int  priority,
 	{
 		g_pstEventNtfList[eventId] = pstEvtNtfNodeNew;
 		pstEvtNtfNodeNew->pNext = NULL;
-		pdt_debug_print("EVENT_RegistFunc [%s] ok...", pModuleName);
 		return OS_OK;
 	}
 
@@ -103,7 +105,6 @@ int EVENT_RegistFunc(char *pModuleName, int  eventId, int cmdId, int  priority,
 
 	}
 
-	pdt_debug_print("End EVENT_RegistFunc %s ok...", pModuleName);
 
 	return OS_OK;
 }
@@ -132,7 +133,7 @@ void EVENT_Ntf_Show()
 		struct EVENT_Ntf_Node * pstHead =  g_pstEventNtfList[index];
 		while (NULL != pstHead)
 		{
-			pdt_debug_print("Mod:%s, Evt:%d, Cmd:%d, fpCBFunc:0x%x, pri:%d",
+			EVENT_Debug(DEBUG_TYPE_INFO, "Mod:%s, Evt:%d, Cmd:%d, fpCBFunc:0x%x, pri:%d",
 					pstHead->moduleName, pstHead->eventId, pstHead->cmdId, pstHead->pfCallBackFunc, pstHead->priority);
 
 			pstHead = pstHead->pNext;
@@ -182,12 +183,12 @@ int EVENT_Ntf_Notify(int evtId, int cmdId, void *pData, void **ppInfo)
 			}
 		}
 
-		pdt_debug_print("EVENT_Ntf_Notify [%s]...", pstHead->moduleName);
+		EVENT_Debug(DEBUG_TYPE_INFO, "EVENT_Ntf_Notify [%s]...", pstHead->moduleName);
 
 		ret = pstHead->pfCallBackFunc(evtId, cmdId, pData, ppInfo);
 		if (OS_OK != ret)
 		{
-			pdt_debug_print("EVENT_Ntf_Notify [%s] failed. (ret=%d)", pstHead->moduleName, ret);
+			EVENT_Debug(DEBUG_TYPE_ERROR, "EVENT_Ntf_Notify [%s] failed. (ret=%d)", pstHead->moduleName, ret);
 		}
 
 		pstHead = pstHead->pNext;

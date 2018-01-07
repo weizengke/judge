@@ -2,18 +2,6 @@
 #define _COMMAND_TYPE_H_
 
 /* BEGIN: Added by weizengke, 2013/10/27  for debug switch*/
-enum CMD_DEBUG_TYPE_EM
-{
-	CMD_DEBUG_TYPE_NONE,
-
-	CMD_DEBUG_TYPE_ERROR,
-	CMD_DEBUG_TYPE_FUNC,
-	CMD_DEBUG_TYPE_INFO,
-	CMD_DEBUG_TYPE_MSG,
-	CMD_DEBUG_TYPE_FSM,
-
-	CMD_DEBUG_TYPE_MAX,
-};
 
 
 enum CMD_ELEM_TYPE_EM
@@ -47,19 +35,34 @@ enum CMD_ELEM_ID_EM {
 	CMD_ELEM_ID_ENABLE,
 	CMD_ELEM_ID_DISABLE,
 	CMD_ELEM_ID_DISPLAY,
+	CMD_ELEM_ID_EVENT,
 	CMD_ELEM_ID_DEBUG,
+	CMD_ELEM_ID_TERMINAL,
+	CMD_ELEM_ID_DEBUGING,
 	CMD_ELEM_ID_ON,
 	CMD_ELEM_ID_OFF,
 	CMD_ELEM_ID_VERSION,
+
+	CMD_ELEM_ID_COMMON,
+	CMD_ELEM_ID_CMD,
 
 	CMD_ELEM_ID_SYSNAME,
 	CMD_ELEM_ID_CLOCK,
 	CMD_ELEM_ID_COMPUTER,
 
 	CMD_ELEM_ID_STRING1TO24,
+	CMD_ELEM_ID_STRING1TO32,
+	CMD_ELEM_ID_STRING1TO256,
 	CMD_ELEM_ID_STRING1TO65535,
 	CMD_ELEM_ID_INTEGER1TO24,
 	CMD_ELEM_ID_INTEGER1TO65535,
+
+	CMD_ELEM_ID_RETURN,
+	CMD_ELEM_ID_QUIT,
+	CMD_ELEM_ID_SYSTEM_VIEW,
+	CMD_ELEM_ID_DAIGNOSE_VIEW,
+	CMD_ELEM_ID_AAA,
+	
     CMD_ELEM_ID_COMMAND_TREE,
     CMD_ELEM_ID_CURRENT_CFG,
 
@@ -92,7 +95,37 @@ enum CMD_ELEM_ID_EM {
     CMD_ELEM_ID_IP,
     CMD_ELEM_ID_PORT,
 
+	CMD_ELEM_ID_MODE,
+	CMD_ELEM_ID_ACM,
+	CMD_ELEM_ID_OI,
+
+	CMD_ELEM_ID_ROLE,
+	CMD_ELEM_ID_MASTER,
+	CMD_ELEM_ID_AGENT,
+
+	CMD_ELEM_ID_NDP,
+	CMD_ELEM_ID_SERVER,
+	CMD_ELEM_ID_CLIENT,
+	CMD_ELEM_ID_BIND,
+	CMD_ELEM_ID_NEIGHBOR,
+	CMD_ELEM_ID_AUTO_DETECT,
+	CMD_ELEM_ID_INTERVAL,
+	CMD_ELEM_ID_DATAPATH,
+	CMD_ELEM_ID_MYSQL,
+	CMD_ELEM_ID_URL,
+	CMD_ELEM_ID_TABLE,
+	CMD_ELEM_ID_SAVE,
+	CMD_ELEM_ID_SAVE_CFG,
+	CMD_ELEM_ID_TELNET,
+	CMD_ELEM_ID_SYSTEM,
+	CMD_ELEM_ID_USERS,
+	CMD_ELEM_ID_AUTHENTICATION_MODE,
+	CMD_ELEM_ID_MODE_NONE,
+
+	CMD_ELEM_ID_LOCAL_USER,
+	
 	CMD_ELEM_ID_MAX,
+	
 };
 
 
@@ -108,22 +141,35 @@ enum CMD_KEY_CODE_EM {
 		CMD_KEY_CODE_RIGHT,
 		CMD_KEY_CODE_DELETE,	 /* delete键 */
 		CMD_KEY_CODE_BACKSPACE,  /* 退格键 */
-	    CMD_KEY_CODE_DEL_LASTWORD,
+	    CMD_KEY_CODE_DEL_LASTWORD,    /* 10 */
 
-		CMD_KEY_CODE_NOTCARE,
+		CMD_KEY_CODE_NOTCARE,   /* 11 */
 
 		CMD_KEY_CODE_MAX
 };
 
 
-/* BEGIN:   Added by weizengke, 2013/10/27 */
-#define CMD_DEBUG_TYPE_ISVALID(x) (x>CMD_DEBUG_TYPE_NONE && x<CMD_DEBUG_TYPE_MAX)
-#define CMD_MASKLENTG 32
-#define CMD_DEBUGMASK_GET(x) (( g_aulDebugMask[(x)/CMD_MASKLENTG] >> ((x)%CMD_MASKLENTG) ) & 1)
-#define CMD_DEBUGMASK_SET(x) ( g_aulDebugMask[(x)/CMD_MASKLENTG] |= ( 1 << (x)%CMD_MASKLENTG ) )
-#define CMD_DEBUGMASK_CLEAR(x) ( g_aulDebugMask[(x)/CMD_MASKLENTG] ^= ( 1 << (x)%CMD_MASKLENTG ) )
-/* END:   Added by weizengke, 2013/10/27 */
+enum VIEW_ID_EN {
+	VIEW_NULL = 0,
+	VIEW_GLOBAL = 1,
+	VIEW_USER,
+	VIEW_SYSTEM,
+	VIEW_AAA,
+	VIEW_USER_VTY,
+	VIEW_DIAGNOSE,
+};
 
+struct vty_user_s {
+	int level;
+	int type;  /* 0:com, 1:telnet */
+	int state;  /* 0:idle, 1:access */
+	int terminal_debugging;
+	SOCKET socket;
+	char user_name[32];
+	char user_psw[32];
+	time_t lastAccessTime;
+	
+};
 
 /**
  * A virtual tty used by CMD
@@ -138,7 +184,10 @@ enum CMD_KEY_CODE_EM {
  * @param hpos history current position
  * @param hindex history end index
  * */
-struct cmd_vty {
+typedef struct cmd_vty {
+	int valid;
+	VIEW_ID_EN view_id; /* 当前所在视图 */
+	vty_user_s user;
 	int buf_len;
 	int used_len;
 	int cur_pos;
@@ -147,12 +196,20 @@ struct cmd_vty {
 	char prompt[CMD_MAX_PROMPT_SIZE];
 	char buffer[CMD_BUFFER_SIZE];
 
+	/* BEGIN: Added by weizengke, for support TAB agian and agian */
+	int inputMachine_prev;
+	int inputMachine_now;
+	char tabbingString[CMD_MAX_CMD_ELEM_SIZE];	/* 最初始用来补全查找的字串*/
+	char tabString[CMD_MAX_CMD_ELEM_SIZE];		/* 最后一次补全的命令 */
+	int tabStringLenth;
+	/* END: Added by weizengke, for support TAB agian and agian */
+	
 	int hpos;
 	int hindex;
 	char *history[HISTORY_MAX_SIZE];
+}CMD_VTY;
 
-
-};
+ 
 
 /**
  * struct to store command string
@@ -176,6 +233,7 @@ typedef struct cmd_node {
 
 }cmd_node_st;
 
+
 /**
  * A struct cmd_elem_st relative to One command
  *
@@ -186,12 +244,15 @@ typedef struct cmd_node {
  * @param para_size command parameter number
  */
 struct cmd_elem_st {
+	VIEW_ID_EN view_id;
 	char *string;
 	char *doc;
 	int (*func)(struct cmd_elem_st *, struct cmd_vty *, int , char **);
 	cmd_vector_t *para_vec;
 	int para_num;
 
+	//char prompt[CMD_MAX_PROMPT_SIZE];
+	
 	int cmd_id; /* for comand function callback */
 };
 
@@ -208,6 +269,20 @@ struct para_desc {
 	char *desc;
 };
 
+#define CMD_VIEW_SONS_NUM 100
+
+typedef struct cmd_view_node {
+	VIEW_ID_EN  view_id;
+	char view_name[CMD_MAX_VIEW_SIZE];
+    char view_ais_name[CMD_MAX_VIEW_SIZE];
+
+	struct cmd_view_node *pParent;
+	
+	struct cmd_view_node **ppSons;
+	int view_son_num;
+	
+}view_node_st;
+
 
 typedef struct key_handler {
 	int key_value;
@@ -215,11 +290,12 @@ typedef struct key_handler {
 } key_handler_t;
 
 
-/* DEFUN for vty command interafce. */
-#define DEFUN(cmdname, cmdstr, helpstr, funcname) \
+/* CMD_DEFINE for vty command interafce. */
+#define CMD_DEFINE(cmdname, cmdstr, helpstr, funcname) \
 	int funcname (struct cmd_elem_st *, struct cmd_vty *, int, char **); \
 	struct cmd_elem_st cmdname = \
 	{ \
+		VIEW_GLOBAL, \
 		cmdstr, \
 		helpstr, \
 		funcname \
@@ -228,4 +304,5 @@ typedef struct key_handler {
 	(struct cmd_elem_st *self, struct cmd_vty *vty, int argc, char **argv)
 
 #endif
+
 

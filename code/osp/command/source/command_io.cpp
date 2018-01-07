@@ -1,66 +1,54 @@
 
 #include "osp\command\include\command_inc.h"
 
-
-void debug_print_ex(CMD_DEBUG_TYPE_EM type, const char *format, ...)
-{
-
-	if (g_debug_switch == DEBUG_DISABLE)
-	{
-		return;
-	}
-
-	if (!CMD_DEBUG_TYPE_ISVALID(type))
-	{
-		return;
-	}
-
-	if (!CMD_DEBUGMASK_GET(type))
-	{
-		return;
-	}
-
-
-	time_t  timep = time(NULL);
-	struct tm *p;
-
-    p = localtime(&timep);
-    p->tm_year = p->tm_year + 1900;
-    p->tm_mon = p->tm_mon + 1;
-
-	printf("<%04d-%02d-%02d %02d:%02d:%02d>",p->tm_year, p->tm_mon, p->tm_mday,p->tm_hour,p->tm_min,p->tm_sec);
+void vty_printf(struct cmd_vty *vty, const char *format, ...)
+{	
+	int ret = 0;
+	char buffer[BUFSIZE] = {0};
+	
 	va_list args;
 	va_start(args, format);
-	vprintf(format, args);
+
+	/* 0:COM, 1:vty */
+	if (0 == vty->user.type)
+	{
+		vprintf(format, args);
+	}
+	else
+	{
+		vsnprintf(buffer, BUFSIZE, format, args);
+		(void)send(vty->user.socket, buffer, strlen(buffer),0);
+	}
+	
 	va_end(args);
 
-	printf("\r\n");
-
+	return;
 }
 
-
-void debug_print(const char *format, ...)
+void vty_print2all(const char *format, ...)
 {
-	if (g_debug_switch == DEBUG_DISABLE)
-	{
-		return;
-	}
-
-	time_t  timep = time(NULL);
-	struct tm *p;
-
-    p = localtime(&timep);
-    p->tm_year = p->tm_year + 1900;
-    p->tm_mon = p->tm_mon + 1;
-
-	printf("<%04d-%02d-%02d %02d:%02d:%02d>",p->tm_year, p->tm_mon, p->tm_mday,p->tm_hour,p->tm_min,p->tm_sec);
+	int ret = 0;
+	char buffer[BUFSIZE] = {0};
+	
 	va_list args;
 	va_start(args, format);
+
+	/* com */
 	vprintf(format, args);
+
+	/* vty */
+	vsnprintf(buffer, BUFSIZE, format, args);
+	for (int i = 0; i < CMD_VTY_MAXUSER_NUM; i++)
+	{
+		if (g_vty[i].valid
+			&& g_vty[i].user.state
+			&& g_vty[i].user.terminal_debugging)
+		{
+			(void)send(g_vty[i].user.socket, buffer, strlen(buffer),0);
+		}
+	}
+	
 	va_end(args);
-
-	printf("\r\n");
-
 }
 
 
@@ -88,34 +76,29 @@ int cmd_getch()
 	return c;
 }
 
-void cmd_outprompt(char *prompt)
+int vty_getch(struct cmd_vty *vty)
 {
-	//cmd_outstring("<%s-%s>", g_sysname, prompt);
-	cmd_outstring("%s>", g_sysname);
-}
+	int ret = 0;
+	char buff[1] = {0};
 
-
-void cmd_debug(int level, const char *fname, const char *fmt, ...)
-{
-	va_list ap;
-	char logbuf[1024];
-
-	va_start(ap, fmt);
-	vsprintf(logbuf, fmt, ap);
-	va_end(ap);
-
-	if (level <= CMD_LOG_LEVEL) {
-		time_t now;
-		struct tm *tm_now;
-
-		if ((now = time(NULL)) < 0)
-			exit(1);
-		tm_now = localtime(&now);
-
-		fprintf(stderr, "%02d:%02d:%02d: %s:%s",
-			tm_now->tm_hour, tm_now->tm_min, tm_now->tm_sec,
-			fname, logbuf);
+	/* 串口模式 */
+	if (0 == vty->user.type)
+	{
+		buff[0] = cmd_getch();
 	}
+	else
+	{	
+		/* telnet模式 */
+		ret = recv(vty->user.socket, (char*)buff, 1, 0);
+		if (ret <= 0)
+		{
+			return -1;
+		}
+	}
+
+	CMD_debug(DEBUG_TYPE_INFO, "vty_getch. (c=0x%x)", buff[0]);
+	
+	return buff[0];
 }
 
 void cmd_outstring(const char *format, ...)
@@ -128,13 +111,27 @@ void cmd_outstring(const char *format, ...)
 
 
 /* io */
-void cmd_back_one()
+void cmd_delete_one(struct cmd_vty *vty)
 {
-	printf("\b");
+	if (vty->user.type == 0)
+	{
+		vty_printf(vty, " \b");
+	}
+	else
+	{
+		vty_printf(vty, "  \b");
+	}
+	
 }
 
-void cmd_put_one(char c)
+void cmd_back_one(struct cmd_vty *vty)
 {
-	printf("%c", c);
+	//vty_printf(vty, "\b");
+	vty_printf(vty, "\b");
+}
+
+void cmd_put_one(struct cmd_vty *vty, char c)
+{
+	vty_printf(vty, "%c", c);
 }
 

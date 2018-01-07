@@ -1,4 +1,6 @@
 /*
+	Code source reference from Zebra.
+	
 	Author: Jungle Wei
 	Date  : 2013-10
 	Description: A common command line module
@@ -19,9 +21,10 @@
 */
 
 #include "osp\command\include\command_inc.h"
+#include "product\judge\include\judge_inc.h"
 
 /* BEGIN: Added by weizengke, 2013/12/12 for display command-tree*/
-void cmd_show_command_tree()
+void cmd_show_command_tree(struct cmd_vty *vty)
 {
 	int i;
 	int used_size;
@@ -33,7 +36,7 @@ void cmd_show_command_tree()
 	}
 
 	used_size = cmd_vector_max(cmd_vec_copy);
-	cmd_outstring("Command active (%u):\r\n", used_size);
+	vty_printf(vty, "Command active (%u):\r\n", used_size);
 
 	for (i = 0; i < cmd_vector_max(cmd_vec_copy); i++)
 	{
@@ -43,7 +46,7 @@ void cmd_show_command_tree()
 			continue;
 		}
 
-		cmd_outstring(" %s\r\n", cmd_elem->string);
+		vty_printf(vty,"%s\r\n", cmd_elem->string);
 	}
 }
 
@@ -83,7 +86,7 @@ int cmd_get_elemid_by_name(int *cmd_elem_id, char *cmd_name)
 
 	if (cmd_elem_id == NULL || cmd_name == NULL)
 	{
-		debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd_get_elemid_by_name, param is null");
+		CMD_debug(DEBUG_TYPE_ERROR, "In cmd_get_elemid_by_name, param is null");
 		return 1;
 	}
 
@@ -104,13 +107,13 @@ int cmd_get_elem_by_id(int cmd_elem_id, struct para_desc *cmd_elem)
 {
 	if (cmd_elem == NULL)
 	{
-		debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd_get_elem_by_id, param is null");
+		CMD_debug(DEBUG_TYPE_ERROR, "In cmd_get_elem_by_id, param is null");
 		return 1;
 	}
 
 	if (cmd_elem_id <= CMD_ELEM_ID_NONE || cmd_elem_id >=  CMD_ELEM_ID_MAX)
 	{
-		debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd_get_elem_by_id, cmd_elem_id is invalid");
+		CMD_debug(DEBUG_TYPE_ERROR, "In cmd_get_elem_by_id, cmd_elem_id is invalid");
 		return 1;
 	}
 
@@ -125,7 +128,7 @@ int cmd_get_elem_by_name(char *cmd_name, struct para_desc *cmd_elem)
 
 	if (cmd_name == NULL || cmd_elem == NULL)
 	{
-		debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd_get_elem_by_name, param is null");
+		CMD_debug(DEBUG_TYPE_ERROR, "In cmd_get_elem_by_name, param is null");
 		return 1;
 	}
 
@@ -172,14 +175,14 @@ int cmd_reg_newcmdelement(int cmd_elem_id, CMD_ELEM_TYPE_EM cmd_elem_type, const
 	g_cmd_elem[cmd_elem_id].para = (char*)malloc(strlen(cmd_name) + 1);
 	if (g_cmd_elem[cmd_elem_id].para == NULL)
 	{
-		debug_print_ex(CMD_DEBUG_TYPE_ERROR, "malloc memory for para fail in regNewCmdElement.");
+		CMD_debug(DEBUG_TYPE_ERROR, "malloc memory for para fail in regNewCmdElement.");
 		return 1;
 	}
 
 	g_cmd_elem[cmd_elem_id].desc = (char*)malloc(strlen(cmd_help) + 1);
 	if (g_cmd_elem[cmd_elem_id].desc == NULL)
 	{
-		debug_print_ex(CMD_DEBUG_TYPE_ERROR, "malloc memory for desc fail in regNewCmdElement.");
+		CMD_debug(DEBUG_TYPE_ERROR, "malloc memory for desc fail in regNewCmdElement.");
 		free(g_cmd_elem[cmd_elem_id].para);
 		return 1;
 	}
@@ -189,7 +192,7 @@ int cmd_reg_newcmdelement(int cmd_elem_id, CMD_ELEM_TYPE_EM cmd_elem_type, const
 	strcpy(g_cmd_elem[cmd_elem_id].para, cmd_name);
 	strcpy(g_cmd_elem[cmd_elem_id].desc, cmd_help);
 
-	debug_print_ex(CMD_DEBUG_TYPE_MSG, "cmd_reg_newcmdelement(%d %d %s %s) ok.",
+	CMD_debug(DEBUG_TYPE_MSG, "cmd_reg_newcmdelement(%d %d %s %s) ok.",
 				cmd_elem_id,
 				cmd_elem_type,
 				g_cmd_elem[cmd_elem_id].para,
@@ -202,24 +205,29 @@ int cmd_reg_newcmdelement(int cmd_elem_id, CMD_ELEM_TYPE_EM cmd_elem_type, const
 
 
 /* vty */
-struct cmd_vty *cmd_vty_init()
+void cmd_vty_init(struct cmd_vty *vty)
 {
-	struct cmd_vty *vty;
-
-	vty = (struct cmd_vty *)calloc(1, sizeof(struct cmd_vty));
-	if(vty == NULL)
-	{
-		debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd_vty_init, Not Enough Memory For vty%s", CMD_ENTER);
-		return NULL;
-	}
-
+	vty->valid = 0;
+	vty->view_id = VIEW_USER;
 	memcpy(vty->prompt, CMD_PROMPT_DEFAULT, sizeof(CMD_PROMPT_DEFAULT));
 	vty->prompt[strlen(CMD_PROMPT_DEFAULT)] = '\0';
 	vty->buf_len = CMD_BUFFER_SIZE;
 	vty->used_len = vty->cur_pos = 0;
 	vty->hpos = vty->hindex = 0;
 
-	return vty;
+	vty->inputMachine_prev = CMD_KEY_CODE_NOTCARE;
+	vty->inputMachine_now = CMD_KEY_CODE_NOTCARE;
+	memset(vty->tabbingString, 0, CMD_MAX_CMD_ELEM_SIZE);
+	memset(vty->tabString, 0, CMD_MAX_CMD_ELEM_SIZE);
+	vty->tabStringLenth = 0;
+
+	vty->user.socket = INVALID_SOCKET;
+	vty->user.state = 0;
+	vty->user.terminal_debugging = OS_NO;
+	memset(vty->user.user_name, 0, sizeof(vty->user.user_name));
+	vty->user.lastAccessTime = time(NULL);
+	
+	return ;
 }
 
 void cmd_vty_deinit(struct cmd_vty *vty)
@@ -234,7 +242,10 @@ void cmd_vty_deinit(struct cmd_vty *vty)
 	for (i = 0; i < HISTORY_MAX_SIZE; i++)
 	{
 		if (vty->history[i] != NULL)
+		{
 			free(vty->history[i]);
+			vty->history[i] = NULL;
+		}
 	}
 
 	free(vty);
@@ -282,7 +293,7 @@ int cmd_vector_fetch(cmd_vector_t *v)
 		v->data = (void**)realloc(v->data, sizeof(void *) * v->size * 2);
 		if (!v->data)
 		{
-			debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd_vector_fetch, Not Enough Memory For data");
+			CMD_debug(DEBUG_TYPE_ERROR, "In cmd_vector_fetch, Not Enough Memory For data");
 			return -1;
 		}
 
@@ -309,7 +320,7 @@ cmd_vector_t *cmd_vector_init(int size)
 	v->data = (void**)calloc(1, sizeof(void *) * size);
 	if (v->data == NULL)
 	{
-		debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd_vector_init, Not Enough Memory For data");
+		CMD_debug(DEBUG_TYPE_ERROR, "In cmd_vector_init, Not Enough Memory For data");
 		free(v);
 		return NULL;
 	}
@@ -435,7 +446,7 @@ cmd_vector_t *str2vec(char *string)
 		token = (char *)malloc(sizeof(char) * (str_len + 1));
 		if (NULL == token)
 		{
-			debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In str2vec, There is no memory for param token.");
+			CMD_debug(DEBUG_TYPE_ERROR, "In str2vec, There is no memory for param token.");
 			return NULL;
 		}
 
@@ -572,21 +583,24 @@ void cmd_output_missmatch(cmd_vty *vty, int nomath_pos)
 {
 	int i = 0;
 	int n = 0;
+	int view_len = cmd_view_getaislenth(vty);
+	int pos_arrow = strlen(g_sysname) + view_len + 1;
 
-	/* 输出箭头位置 1 is > */
-	int pos_arrow = 1 + strlen(g_sysname);
+	/* 系统名与视图之间有一个链接符- */
+	if (view_len > 0)
+	{
+		pos_arrow += 1;
+	}
 
 	(void)cmd_get_nth_elem_pos(vty->buffer, nomath_pos, &n);
 	pos_arrow += n;
 
 	for (i=0;i<pos_arrow;i++)
 	{
-		cmd_outstring(" ");
+		vty_printf(vty, " ");
 	}
 
-	cmd_outstring("^\r\n");
-
-	cmd_outstring("Error: Unrecognized command at '^' position.\r\n");
+	vty_printf(vty, "^\r\nError: Unrecognized command at '^' position.\r\n");
 
 }
 
@@ -633,7 +647,7 @@ cmd_vector_t *cmd2vec(char *string, char *doc)
 		token = (char*)malloc(len + 1);
 		if (NULL == token)
 		{
-			debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd2vec, There is no memory for param token.");
+			CMD_debug(DEBUG_TYPE_ERROR, "In cmd2vec, There is no memory for param token.");
 			return NULL;
 		}
 
@@ -662,7 +676,7 @@ cmd_vector_t *cmd2vec(char *string, char *doc)
 			d_token = (char*)malloc(d_len + 1);
 			if (NULL == d_token)
 			{
-				debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd2vec, There is no memory for param d_token.");
+				CMD_debug(DEBUG_TYPE_ERROR, "In cmd2vec, There is no memory for param d_token.");
 				free(token);
 				return NULL;
 			}
@@ -674,7 +688,7 @@ cmd_vector_t *cmd2vec(char *string, char *doc)
 		desc = (struct para_desc *)calloc(1, sizeof(struct para_desc));
 		if (desc == NULL)
 		{
-			debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd2Vec, calloc for desc fail. (token=%s)", token);
+			CMD_debug(DEBUG_TYPE_ERROR, "In cmd2Vec, calloc for desc fail. (token=%s)", token);
 			free(token);
 			free(d_token);
 			return NULL;
@@ -683,7 +697,8 @@ cmd_vector_t *cmd2vec(char *string, char *doc)
 		/* BEGIN: Added by weizengke, 2013/10/4   PN:for regCmdElem  */
 		if (0 != cmd_get_elem_by_name(token, desc))
 		{
-			debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd2Vec, cmd_get_elem_by_name fail. (token=%s)", token);
+			CMD_DBGASSERT(0, "cmd2vec->cmd_get_elem_by_name, maybe element not exist.");
+			CMD_debug(DEBUG_TYPE_ERROR, "In cmd2Vec, cmd_get_elem_by_name fail. (token=%s)", token);
 			free(token);
 			free(d_token);
 			free(desc);
@@ -698,7 +713,7 @@ cmd_vector_t *cmd2vec(char *string, char *doc)
 	desc_cr = (struct para_desc *)calloc(1, sizeof(struct para_desc));
 	if (desc_cr == NULL)
 	{
-		debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd2Vec, calloc for desc_cr fail. (token=%s)", token);
+		CMD_debug(DEBUG_TYPE_ERROR, "In cmd2Vec, calloc for desc_cr fail. (token=%s)", token);
 		cmd_vector_deinit(allvec, 1);
 		return NULL;
 	}
@@ -706,7 +721,7 @@ cmd_vector_t *cmd2vec(char *string, char *doc)
 	/* BEGIN: Added by weizengke, 2013/10/4   PN:for regCmdElem  */
 	if (0 != cmd_get_elem_by_name((char*)CMD_END, desc_cr))
 	{
-		debug_print_ex(CMD_DEBUG_TYPE_ERROR, "In cmd2Vec, cmd_get_elem_by_name fail. (token=%s)", token);
+		CMD_debug(DEBUG_TYPE_ERROR, "In cmd2Vec, cmd_get_elem_by_name fail. (token=%s)", token);
 		free(desc_cr);
 		cmd_vector_deinit(allvec, 1);
 		return NULL;
@@ -773,7 +788,7 @@ int cmd_get_range_symbol(char *string, int *type, int *a, int *b)
 		*type = CMD_ELEM_TYPE_INTEGER;
 	}
 
-	//debug_print_ex(CMD_DEBUG_TYPE_MSG, "%s<%d-%d>",type_string, *a, *b);
+	//CMD_debug(DEBUG_TYPE_MSG, "%s<%d-%d>",type_string, *a, *b);
 
 	return CMD_OK;
 
@@ -792,12 +807,12 @@ int cmd_string_isdigit(char *string)
 	{
 		if (!isdigit(*(string + i)))
 		{
-			debug_print_ex(CMD_DEBUG_TYPE_ERROR, "cmd_string_isdigit return error.");
+			CMD_debug(DEBUG_TYPE_ERROR, "cmd_string_isdigit return error.");
 			return CMD_ERR;
 		}
 	}
 
-	debug_print_ex(CMD_DEBUG_TYPE_INFO, "cmd_string_isdigit return ok.");
+	CMD_debug(DEBUG_TYPE_INFO, "cmd_string_isdigit return ok.");
 	return CMD_OK;
 }
 
@@ -896,7 +911,7 @@ int match_lcd(struct para_desc **match, int size)
 	return lcd;
 }
 
-static int cmd_filter_command(char *cmd, cmd_vector_t *v, int index)
+static int cmd_filter_command(struct cmd_vty *vty, char *cmd, cmd_vector_t *v, int index)
 {
 	int i;
 	int match_cmd = CMD_ERR;
@@ -925,6 +940,16 @@ static int cmd_filter_command(char *cmd, cmd_vector_t *v, int index)
 	{
 		if ((elem = (struct cmd_elem_st*)cmd_vector_slot(v, i)) != NULL)
 		{
+			#if 1
+			//printf("\r\n@@@@%u, %u, %s", elem->view_id, vty->view_id, elem->string);
+			if (elem->view_id != VIEW_GLOBAL
+				&& elem->view_id != vty->view_id)
+			{
+				//printf("\r\n no.");
+				continue;
+			}
+			#endif
+			
 			if (index >= cmd_vector_max(elem->para_vec))
 			{
 				cmd_vector_slot(v, i) = NULL;
@@ -936,7 +961,7 @@ static int cmd_filter_command(char *cmd, cmd_vector_t *v, int index)
 			/* match STRING , INTEGER */
 			if (CMD_OK != cmd_match_special_string(cmd, desc->para))
 			{
-				if(strncmp(cmd, desc->para, strlen(cmd)) != 0)
+				if(strnicmp(cmd, desc->para, strlen(cmd)) != 0)
 				{
 					cmd_vector_slot(v, i) = NULL;
 					continue;
@@ -949,6 +974,10 @@ static int cmd_filter_command(char *cmd, cmd_vector_t *v, int index)
 		}
 	}
 
+	//printf("\r\n not match.");
+	
+	CMD_debug(DEBUG_TYPE_INFO, "cmd_filter_command. (cmd=%s, match_res=%u)", vty->buffer, match_cmd);
+	
 	return match_cmd;
 }
 
@@ -980,7 +1009,7 @@ int cmd_match_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty,
 	for (i = 0; i < isize; i++)
 	{
 		char *ipara = (char*)cmd_vector_slot(icmd_vec, i);
-		cmd_filter_command(ipara, cmd_vec_copy, i);
+		cmd_filter_command(vty, ipara, cmd_vec_copy, i);
 	}
 
 	// Step 2
@@ -997,6 +1026,12 @@ int cmd_match_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty,
  				continue;
  			}
 
+			if (elem->view_id != VIEW_GLOBAL
+				&& elem->view_id != vty->view_id)
+			{
+				continue;
+			}
+
 			if (isize >= cmd_vector_max(elem->para_vec))
 			{
 				cmd_vector_slot(cmd_vec_copy, i) = NULL;
@@ -1006,7 +1041,7 @@ int cmd_match_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty,
 			struct para_desc *desc = (struct para_desc *)cmd_vector_slot(elem->para_vec, isize);
 			char *str = (char*)cmd_vector_slot(icmd_vec, isize);
 
-			if (str == NULL || strncmp(str, desc->para, strlen(str)) == 0)
+			if (str == NULL || strnicmp(str, desc->para, strlen(str)) == 0)
 			{
 				if (match_unique_string(match, desc->para, size))
 					match[size++] = desc;
@@ -1099,7 +1134,7 @@ int cmd_complete_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty,
 	/* BEGIN: Modified by weizengke, 2013/10/4   PN:循环过滤每一个向量 */
 	for (i = 0; i < cmd_vector_max(icmd_vec); i++)
 	{
-		if (CMD_OK != cmd_filter_command((char*)cmd_vector_slot(icmd_vec, i), cmd_vec_copy, i))
+		if (CMD_OK != cmd_filter_command(vty, (char*)cmd_vector_slot(icmd_vec, i), cmd_vec_copy, i))
 		{
 			/* BEGIN: Added by weizengke, 2013/11/19 这里可以优化，不命中可以不需要再匹配了 */
 			/* 保存在第几个命令字无法匹配 */
@@ -1108,6 +1143,8 @@ int cmd_complete_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty,
 	}
 	/* END:   Modified by weizengke, 2013/10/4   PN:None */
 
+	CMD_debug(DEBUG_TYPE_FUNC, "cmd_complete_command, match_pos=%d", *match_pos);
+	
 	// Step 2
 	// insert matched command word into match_vec, only insert the next word
 	/* BEGIN: Added by weizengke, 2013/10/4   PN:only the last vector we need */
@@ -1120,6 +1157,14 @@ int cmd_complete_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty,
 			if (cmd_vector_max(icmd_vec) - 1 >= cmd_vector_max(elem->para_vec))
 			{
 				cmd_vector_slot(cmd_vec_copy, i) = NULL;
+				continue;
+			}
+
+			CMD_debug(DEBUG_TYPE_FUNC, "cmd_complete_command, view_id=%d, string=%s.", elem->view_id, elem->string);
+			
+			if (elem->view_id != VIEW_GLOBAL
+				&& elem->view_id != vty->view_id)
+			{
 				continue;
 			}
 
@@ -1141,8 +1186,8 @@ int cmd_complete_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty,
 			/* END:   Added by weizengke, 2013/11/19 */
 
 			/* match key */
-			if (strncmp(str, CMD_END, strlen(str)) == 0
-			    ||(strncmp(str, para_desc_->para, strlen(str)) == 0))
+			if (strnicmp(str, CMD_END, strlen(str)) == 0
+			    ||(strnicmp(str, para_desc_->para, strlen(str)) == 0))
 			{
 
 				if (match_unique_string(match, para_desc_->para, match_num))
@@ -1156,6 +1201,8 @@ int cmd_complete_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty,
 
 	cmd_vector_deinit(cmd_vec_copy, 0);	// free cmd_vec_copy, no longer use
 
+	CMD_debug(DEBUG_TYPE_FUNC, "cmd_complete_command, match_num=%d", match_num);
+	
 	/* BEGIN: Added by weizengke, 2013/10/27 sort for ? complete */
 	{
 		int j;
@@ -1164,9 +1211,9 @@ int cmd_complete_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty,
 			for (j = i; j < match_num; j++)
 			{
 				struct para_desc *para_desc__ = NULL;
-				if (0 == strncmp(match[i]->para, CMD_END, strlen(match[i]->para))
-					|| ( 1 == strcmp(match[i]->para, match[j]->para)
-					&& 0 != strncmp(match[j]->para, CMD_END, strlen(match[j]->para)))
+				if (0 == strnicmp(match[i]->para, CMD_END, strlen(match[i]->para))
+					|| ( 1 == stricmp(match[i]->para, match[j]->para)
+					&& 0 != strnicmp(match[j]->para, CMD_END, strlen(match[j]->para)))
 					)
 				{
 					para_desc__ = match[i];
@@ -1190,19 +1237,21 @@ int cmd_execute_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct para
 
 	struct cmd_elem_st *match_elem = NULL;
 	int match_num = 0;
-
+	
 	/*
 	Two steps to find matched commands in 'cmd_vec'
 	 1. for input command vector 'icmd_vec', check if it is matching cmd_vec
 	 2. check last matching command parameter in cmd_vec match cmd_vec
 	*/
-
+	
 	*nomatch_pos = -1;
 
+	CMD_debug(DEBUG_TYPE_INFO, "cmd_execute_command. (cmd=%s, view_id=%u)", vty->buffer, vty->view_id);
+	
 	/* Step 1 */
 	for (i = 0; i < cmd_vector_max(icmd_vec); i++)
 	{
-		if (CMD_OK != cmd_filter_command((char*)cmd_vector_slot(icmd_vec, i), cmd_vec_copy, i))
+		if (CMD_OK != cmd_filter_command(vty, (char*)cmd_vector_slot(icmd_vec, i), cmd_vec_copy, i))
 		{
 			/* BEGIN: Added by weizengke, 2013/11/19 不命中可以不需要再匹配了 */
 			/* 保存在第几个命令字无法匹配 */
@@ -1226,6 +1275,12 @@ int cmd_execute_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct para
 			elem = (struct cmd_elem_st *)cmd_vector_slot(cmd_vec_copy, i);
 			if(elem != NULL)
 			{
+				if (elem->view_id != VIEW_GLOBAL
+				&& elem->view_id != vty->view_id)
+				{
+					continue;
+				}
+							
 				str = (char*)cmd_vector_slot(icmd_vec, cmd_vector_max(icmd_vec) - 1);
 				desc = (struct para_desc *)cmd_vector_slot(elem->para_vec, cmd_vector_max(icmd_vec) - 1);
 
@@ -1234,7 +1289,7 @@ int cmd_execute_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct para
 				{
 					/* BEGIN: Added by weizengke, 2013/10/5   PN:for support STRING<a-b> & INTEGER<a-b> */
 					if (CMD_OK == cmd_match_special_string(str, desc->para) ||
-						str != NULL && strncmp(str, desc->para, strlen(str)) == 0)
+						str != NULL && strnicmp(str, desc->para, strlen(str)) == 0)
 					{
 						/* BEGIN: Added by weizengke, 2013/10/6   PN:command exec ambigous, return the last elem (not the <CR>) */
 						match[match_num] = (struct para_desc *)cmd_vector_slot(elem->para_vec, cmd_vector_max(icmd_vec) - 2);
@@ -1254,6 +1309,8 @@ int cmd_execute_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct para
 
 	cmd_vector_deinit(cmd_vec_copy, 0);
 
+	CMD_debug(DEBUG_TYPE_INFO, "cmd_execute_command. (cmd=%s, match_num=%u)", vty->buffer, match_num);
+	
 	/* check if exactly match */
 	if (match_num == 0)
 	{
@@ -1309,21 +1366,26 @@ int cmd_execute_command(cmd_vector_t *icmd_vec, struct cmd_vty *vty, struct para
 	return CMD_FULL_MATCH;
 }
 
-void install_element(struct cmd_elem_st *elem)
+void install_command(VIEW_ID_EN view, struct cmd_elem_st *elem)
 {
 	if (cmd_vec == NULL)
 	{
-		debug_print_ex(CMD_DEBUG_TYPE_ERROR, "Command Vector Not Exist");
-		exit(1);
+		CMD_debug(DEBUG_TYPE_ERROR, "Command Vector Not Exist");
+		return;
 	}
 
-	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "install_element, string(%s), doc(%s).", elem->string, elem->doc);
+	CMD_debug(DEBUG_TYPE_FUNC, "install_command, view(%d), string(%s), doc(%s).", view, elem->string, elem->doc);
 
-	cmd_vector_insert(cmd_vec, elem);
+	elem->view_id = view;
+    cmd_vector_insert(cmd_vec, elem);
 	elem->para_vec = cmd2vec(elem->string, elem->doc);
+    if (NULL == elem->para_vec)
+    {
+        return;
+    }
 	elem->para_num = cmd_vector_max(elem->para_vec);
 
-	debug_print_ex(CMD_DEBUG_TYPE_FUNC, "install_element ok, string(%s), generate para_num(%d). ", elem->string, elem->para_num);
+	CMD_debug(DEBUG_TYPE_FUNC, "install_command ok, string(%s), generate para_num(%d). ", elem->string, elem->para_num);
 
 }
 /* end cmd */
@@ -1400,7 +1462,7 @@ void cmd_delete_word_ctrl_W_ex(struct cmd_vty *vty)
 	int pos = vty->cur_pos;
 
 
-	debug_print_ex(CMD_DEBUG_TYPE_INFO, "\r\nctrl_W:cur_poscur_pos = %d buffer_len = %d \r\n", pos, len);
+	CMD_debug(DEBUG_TYPE_INFO, "ctrl_W:cur_poscur_pos = %d buffer_len = %d", pos, len);
 
 	if (pos == 0)
 	{
@@ -1421,26 +1483,28 @@ void cmd_delete_word_ctrl_W_ex(struct cmd_vty *vty)
 
 		if (pos == 0)
 		{
-			return;
+			start_pos = 0;
 		}
-
-		/* 继续往回找第一个空格或命令头 */
-		while (pos  >= 0 && vty->buffer[pos] != ' ')
+		else
 		{
-			pos--;
-		}
+			/* 继续往回找第一个空格或命令头 */
+			while (pos	>= 0 && vty->buffer[pos] != ' ')
+			{
+				pos--;
+			}
+			
+			start_pos = pos + 1;
 
-		start_pos = pos + 1;
+		}
 
 	}
 	else
 	{
 		/* 分别往左右找空格 */
-		pos++;
-		while (vty->buffer[pos] != ' ')
+		while (vty->buffer[pos + 1] != ' ')
 		{
 			/* BEGIN: Added by weizengke, 2014/4/5 当光标位于命令行最后一个元素中间，再执行CTRL+W，出现异常显示 https://github.com/weizengke/jungle/issues/2 */
-			if (vty->buffer[pos] == '\0') break;
+			if (vty->buffer[pos + 1] == '\0') break;
 			/* END:   Added by weizengke, 2014/4/5 */
 
 			pos++;
@@ -1464,11 +1528,12 @@ void cmd_delete_word_ctrl_W_ex(struct cmd_vty *vty)
 	memcpy(&vty->buffer[start_pos], &vty->buffer[end_pos], strlen(&vty->buffer[end_pos]));
 	memset(&vty->buffer[start_pos + len_last], 0, sizeof(vty->buffer)-(start_pos + len_last));
 
+	
 	vty->cur_pos -= (vty->cur_pos - start_pos);
 	vty->used_len -= (end_pos - start_pos);
 
-	debug_print_ex(CMD_DEBUG_TYPE_INFO, "\r\nctrl+w end:start_pos=%d end_pos=%d len_last=%d cur_pos=%d used_len=%d\r\n",
-		start_pos,end_pos,len_last,vty->cur_pos, vty->used_len);
+	CMD_debug(DEBUG_TYPE_INFO, "ctrl+w end: buffer=%s, start_pos=%d end_pos=%d len_last=%d cur_pos=%d used_len=%d",
+		vty->buffer,start_pos,end_pos,len_last,vty->cur_pos, vty->used_len);
 
 }
 
@@ -1490,39 +1555,97 @@ static inline void free_matched(char **matched)
 }
 
 
+int cmd_run(struct cmd_vty *vty)
+{
+	cmd_vector_t *v = NULL;
+	struct para_desc *match[CMD_MAX_MATCH_SIZE] = {0};	// matched string
+	int match_size = 0;
+	int match_type = CMD_NO_MATCH;
+	int nomath_pos = -1;
+
+	//printf("enter(%d %d %s)\r\n", vty->used_len, vty->buf_len, vty->buffer);
+
+	v = str2vec(vty->buffer);
+	if (v == NULL) {
+		return 1;
+	}
+
+	/* BEGIN: Added by weizengke, 2013/10/5   PN:for cmd end with <CR> */
+	cmd_vector_insert_cr(v);
+	/* END:   Added by weizengke, 2013/10/5   PN:None */
+
+	// do command
+	match_type = cmd_execute_command(v, vty, match, &match_size, &nomath_pos);
+	// add executed command into history
+
+	CMD_debug(DEBUG_TYPE_INFO, "cmd_run. (cmd=%s, match_type=%u)", vty->buffer, match_type);
+	
+	if (CMD_FULL_MATCH != match_type)
+	{
+		return 1;
+	}
+
+	return 0;
+}
+
 
 void cmd_read(struct cmd_vty *vty)
 {
 	int key_type;
+	extern ULONG g_TelnetServerEnable;
 
-	g_InputMachine_prev = CMD_KEY_CODE_NOTCARE;
-	g_InputMachine_now = CMD_KEY_CODE_NOTCARE;
-
-	while ((vty->c = cmd_getch()) != EOF)
+	if (NULL == vty)
 	{
+		return ;
+	}
+
+	while((vty->c = vty_getch(vty)) != EOF)
+	{	
+		/* telnet用户检查是否telnet使能 */
+		if (1 == vty->user.type
+			&& OS_NO == g_TelnetServerEnable)
+		{
+			break;
+		}
+		
+		/* 更新最后活动时间 */
+		vty->user.lastAccessTime = time(NULL);
+				
 		/* step 1: get input key type */
-		key_type = cmd_resolve(vty->c);
-
-		g_InputMachine_now = key_type;
-
+		if (0 == vty->user.type)
+		{
+			key_type = cmd_resolve(vty);
+		}
+		else
+		{
+			key_type = cmd_resolve_vty(vty);
+		}
+		
+		CMD_debug(DEBUG_TYPE_INFO, "cmd_read. (key_type=%d)", key_type);
+		
+		vty->inputMachine_now = key_type;
+		
 		if (key_type <= CMD_KEY_CODE_NONE || key_type > CMD_KEY_CODE_NOTCARE)
 		{
-			debug_print_ex(CMD_DEBUG_TYPE_ERROR, "Unidentify Key Type, c = %c, key_type = %d\n", vty->c, key_type);
+			CMD_debug(DEBUG_TYPE_ERROR, "Unidentify Key Type, c = %c, key_type = %d\n", vty->c, key_type);
 			continue;
 		}
-
+		
 		/* step 2: take actions according to input key */
 		key_resolver[key_type].key_func(vty);
-		g_InputMachine_prev = g_InputMachine_now;
-
-		if (g_InputMachine_now != CMD_KEY_CODE_TAB)
+		vty->inputMachine_prev = vty->inputMachine_now;
+		
+		if (vty->inputMachine_now != CMD_KEY_CODE_TAB)
 		{
-			memset(g_tabString,0,sizeof(g_tabString));
-			memset(g_tabbingString,0,sizeof(g_tabbingString));
-			g_tabStringLenth = 0;
+			memset(vty->tabString,0,sizeof(vty->tabString));
+			memset(vty->tabbingString,0,sizeof(vty->tabbingString));
+			vty->tabStringLenth = 0;
 		}
 
 	}
+
+	return ;
+
 }
 
 /* Note: Added by weizengke, 2013/10 clear current line by cur-pos */
@@ -1533,15 +1656,15 @@ void cmd_clear_line(struct cmd_vty *vty)
 	CMD_DBGASSERT(size >= 0, "cmd_clear_line");
 	while (size--)
 	{
-		cmd_put_one(' ');
+		cmd_put_one(vty, ' ');
 	}
 
 	while (vty->used_len)
 	{
 		vty->used_len--;
-		cmd_back_one();
-		cmd_put_one(' ');
-		cmd_back_one();
+		cmd_back_one(vty);
+		cmd_put_one(vty, ' ');
+		cmd_back_one(vty);
 	}
 
 	memset(vty->buffer, 0, HISTORY_MAX_SIZE);
@@ -1552,22 +1675,309 @@ void cmd_outcurrent()
 {
 	int i;
 
-	if (NULL == vty)
+	if (NULL == g_con_vty)
 	{
 		return ;
 	}
 
-	cmd_outstring("%s", CMD_ENTER);
-	cmd_outprompt(vty->prompt);
-	cmd_outstring("%s", vty->buffer);
+	vty_printf(g_con_vty,"%s", CMD_ENTER);
+	cmd_outprompt(g_con_vty);
+	vty_printf(g_con_vty,"%s", g_con_vty->buffer);
 
 	/* BEGIN: Added by weizengke, 2014/3/23 support delete word form cur_pos */
-	for (i = 0; i < strlen(vty->buffer) - vty->cur_pos; i++)
+	for (i = 0; i < strlen(g_con_vty->buffer) - g_con_vty->cur_pos; i++)
 	{
-		cmd_back_one();
+		cmd_back_one(g_con_vty);
 	}
 	/* END:   Added by weizengke, 2014/3/23 */
 
+}
+
+struct cmd_vty* cmd_get_idlevty()
+{
+	int i = 0;
+
+	for (i == 0; i < CMD_VTY_MAXUSER_NUM; i++)
+	{
+		if (g_vty[i].valid == 0)
+		{
+			g_vty[i].valid = 1;
+
+			return &g_vty[i];
+		}
+	}
+
+	return NULL;
+}
+
+void cmd_vty_offline(struct cmd_vty *vty)
+{
+	int i = 0;
+
+	CMD_debug(DEBUG_TYPE_FUNC, "cmd_vty_offline. (user_name=%s, socket=%d)", vty->user.user_name, vty->user.socket);
+	
+	closesocket(vty->user.socket);
+	
+	for (i = 0; i < HISTORY_MAX_SIZE; i++)
+	{
+		if (vty->history[i] != NULL)
+		{
+			free(vty->history[i]);
+			vty->history[i] = NULL;
+		}
+	}
+
+	cmd_vty_init(vty);
+}
+
+void cmd_outprompt(struct cmd_vty *vty)
+{
+	//cmd_outstring("<%s-%s>", g_sysname, prompt);
+
+	CMD_debug(DEBUG_TYPE_INFO, "cmd_outprompt. (view_id=%d, g_sysname=%s)", vty->view_id, g_sysname);
+	
+	if (vty->view_id == VIEW_USER)
+	{
+		vty_printf(vty, "%s>", g_sysname);
+		return;
+	}
+
+	if (vty->view_id == VIEW_SYSTEM)
+	{
+		vty_printf(vty, "%s]", g_sysname);
+		return;
+	}
+
+	view_node_st * view = NULL;
+	view = cmd_view_lookup(view_list, vty->view_id);
+	if (view == NULL)
+	{	
+		vty_printf(vty, "%s>", g_sysname);
+		return ;
+	}
+
+	vty_printf(vty, "%s-%s]", g_sysname, view->view_ais_name);
+	
+}
+
+int cmd_view_getaislenth(struct cmd_vty *vty)
+{
+	view_node_st * view = NULL;
+
+	view = cmd_view_lookup(view_list, vty->view_id);
+	if (view == NULL)
+	{	
+		return 0;
+	}
+
+	return strlen(view->view_ais_name);
+}
+
+char* cmd_view_getAis(VIEW_ID_EN view_id)
+{
+	view_node_st * view = NULL;
+
+	view = cmd_view_lookup(view_list, view_id);
+	if (view == NULL)
+	{	
+		return NULL;
+	}
+
+	return view->view_ais_name;
+}
+
+char* cmd_view_getViewName(VIEW_ID_EN view_id)
+{
+	view_node_st * view = NULL;
+
+	view = cmd_view_lookup(view_list, view_id);
+	if (view == NULL)
+	{	
+		return NULL;
+	}
+
+	return view->view_name;
+}
+
+VIEW_ID_EN vty_view_getParentViewId(VIEW_ID_EN view_id)
+{	
+	view_node_st * view = NULL;
+	view_node_st * prev_view = NULL;
+	
+	view = cmd_view_lookup(view_list, view_id);
+	if (view == NULL)
+	{	
+		return VIEW_NULL;
+	}
+
+	prev_view = view->pParent;
+	if (prev_view == NULL)
+	{
+		return VIEW_NULL;
+	}
+
+	CMD_debug(DEBUG_TYPE_FUNC, "vty_view_getParentViewId. (prev_view=%s, view_id=%u)", prev_view->view_name, prev_view->view_id);
+	
+	return prev_view->view_id;
+}
+
+view_node_st * cmd_view_lookup(view_node_st *view, VIEW_ID_EN view_id)
+{	
+	view_node_st * view_son = NULL;
+	view_node_st * view_ = NULL;
+
+	if (NULL == view)
+	{
+		CMD_debug(DEBUG_TYPE_FUNC, "cmd_view_lookup NULL. (view_id=%d)", view_id);
+		return view;
+	}
+	
+	CMD_debug(DEBUG_TYPE_FUNC, "cmd_view_lookup. (view(%d, view_name=%s, sons=%d), view_id=%d)", view->view_id, view->view_name, view->view_son_num, view_id);
+
+	if (view->view_id == view_id)
+	{
+		CMD_debug(DEBUG_TYPE_FUNC, "cmd_view_lookup found. (view_id=%d, view_name=%s, sons=%d)", view->view_id, view->view_name, view->view_son_num);
+		return view;
+	}
+
+	for(int i = 0; i < view->view_son_num; i++)
+	{
+		view_son  = view->ppSons[i];
+		
+		CMD_debug(DEBUG_TYPE_FUNC, "cmd_view_lookup sons. (view_son->view_id=%d, view_son->view_name=%s)", view_son->view_id, view_son->view_name);
+		view_ = cmd_view_lookup(view_son, view_id);
+		if (NULL != view_)
+		{
+			return view_;
+		}
+	}
+
+	CMD_debug(DEBUG_TYPE_FUNC, "cmd_view_lookup not found. (view_id=%d)", view_id);
+	
+	return NULL;
+}
+
+void vty_view_set(struct cmd_vty *vty, VIEW_ID_EN view_id)
+{
+	view_node_st * view = NULL;
+
+	view = cmd_view_lookup(view_list, view_id);
+	if (view == NULL)
+	{	
+		return;
+	}
+
+	CMD_debug(DEBUG_TYPE_FUNC, "vty_view_set. (view_id=%d)", view_id);
+
+	if (view_id < VIEW_USER)
+	{
+		/* telnet 用户下线 */
+		if (0 != vty->user.type)
+		{
+			cmd_vty_offline(vty);
+		}
+		
+		return;
+	}
+
+	vty->view_id = view_id;
+}
+
+
+void vty_view_quit(struct cmd_vty *vty)
+{	
+	view_node_st * view = NULL;
+	view_node_st * prev_view = NULL;
+	
+	view = cmd_view_lookup(view_list, vty->view_id);
+	if (view == NULL)
+	{	
+		/* 用户离线 */
+		cmd_vty_offline(vty);
+		return;
+	}
+
+	prev_view = view->pParent;
+	if (prev_view == NULL)
+	{
+		cmd_vty_offline(vty);
+		return;
+	}
+
+	vty_view_set(vty, prev_view->view_id);
+	
+}
+
+view_node_st * cmd_view_malloc(char *view_name, char *view_ais, VIEW_ID_EN view_id, view_node_st *pParent)
+{
+	view_node_st * view = NULL;
+	view_node_st * pSons = NULL;
+	
+	view = (view_node_st *)malloc(sizeof(view_node_st));
+	if (NULL == view)
+	{
+		CMD_DBGASSERT(0, "cmd_view_malloc");
+		return NULL;
+	}
+	memset(view, 0, sizeof(view_node_st));
+	view->view_id = view_id;
+	strcpy(view->view_name, view_name);
+	strcpy(view->view_ais_name, view_ais);
+
+	view->ppSons = (view_node_st **)malloc(CMD_VIEW_SONS_NUM * sizeof(view_node_st));
+	if (NULL == view->ppSons)
+	{
+		CMD_DBGASSERT(0, "cmd_view_malloc sons");
+		free(view);
+		return NULL;
+	}
+	memset(view->ppSons, 0, CMD_VIEW_SONS_NUM * sizeof(view_node_st));
+
+	view->view_son_num = 0;
+	view->pParent = pParent;
+	
+	if (NULL != pParent)
+	{	
+		if (pParent->view_son_num >= CMD_VIEW_SONS_NUM)
+		{
+			CMD_DBGASSERT(0, "cmd_view_malloc sons num more than 100");
+			free(view);
+			free(view->ppSons);
+			return NULL;
+		}
+		
+		pParent->ppSons[pParent->view_son_num++] = view;
+	}
+	
+	return view;
+}
+
+/*
+视图能力
+user(>)
+  -system(])
+     - aaa(aaa)
+     - user-vty(user-vty)
+     - diagnose(diagnose)
+*/
+
+
+void cmd_view_regist()
+{
+	view_node_st * view_user = NULL;
+	view_node_st * view_system = NULL;
+	view_node_st * view_user_vty = NULL;
+	view_node_st * view_diagnose = NULL;
+	view_node_st * view_aaa = NULL;
+	
+	view_list = cmd_view_malloc("global", "", VIEW_GLOBAL, NULL);
+	view_user = cmd_view_malloc("user-view", "", VIEW_USER, view_list);
+	view_system = cmd_view_malloc("system-view", "", VIEW_SYSTEM, view_user);
+	view_user_vty = cmd_view_malloc("user-vty-view", "user-vty", VIEW_USER_VTY, view_system);
+	view_aaa = cmd_view_malloc("aaa-view", "aaa", VIEW_AAA, view_system);
+	view_diagnose = cmd_view_malloc("diagnose-view", "diagnose", VIEW_DIAGNOSE, view_system);
+	
+	
 }
 
 int cmd_init()
@@ -1575,31 +1985,42 @@ int cmd_init()
 	/* initial cmd vector */
 	cmd_vec = cmd_vector_init(1);
 
+	/* 视图注册 */
+	cmd_view_regist();
+	
 	/* install cmd */
 	cmd_install();
 
-	/* initial vty */
-	vty = cmd_vty_init();
-	if (vty == NULL)
+	/* initial com_vty */
+	g_con_vty = (struct cmd_vty *)calloc(1, sizeof(struct cmd_vty));
+	if(g_con_vty == NULL)
 	{
 		return OS_ERR;
 	}
-
+	cmd_vty_init(g_con_vty);
+	g_con_vty->valid = 1;
+	g_con_vty->user.type = 0;
+	g_con_vty->user.state = 1;
+	
+	for (int i = 0; i < CMD_VTY_MAXUSER_NUM; i++)
+	{
+		cmd_vty_init(&g_vty[i]);
+		g_vty[i].user.type = 1;
+	}
+	
 	return OS_OK;
 }
 
 
 unsigned _stdcall  cmd_main_entry(void *pEntry)
 {
-	/*
-		cmd_outprompt(vty->prompt);
-	*/
+
 	for (;;)
 	{
-		cmd_read(vty);
+		cmd_read(g_con_vty);
 	}
 
-	cmd_vty_deinit(vty);
+	cmd_vty_deinit(g_con_vty);
 
 	return 0;
 }

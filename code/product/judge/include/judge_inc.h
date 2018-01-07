@@ -17,7 +17,7 @@
 /* END:   Added by weizengke, 2013/11/15 */
 
 #include "osp\common\include\osp_common_def.h"
-
+#include "osp\debug\include\debug_center_inc.h"
 #include "osp\event\include\event_pub.h"
 
 #include "product\judge\include\judge_def.h"

@@ -48,7 +48,7 @@ echo 进入目录%ROOT_DIR%
 cd %ROOT_DIR%
 
 @ECHO on
-g++.exe -static -o  %BIN_DIR%/%BIN_NAME% -L"%LIB_DIR%" %OBJ_LIST% -l wsock32 %LIB_LIST%
+g++.exe -static -s -o  %BIN_DIR%/%BIN_NAME% -L"%LIB_DIR%" %OBJ_LIST% -l wsock32 %LIB_LIST%
 @ECHO off
 
 echo 进入目录%ROOT_DIR%%BIN_DIR%

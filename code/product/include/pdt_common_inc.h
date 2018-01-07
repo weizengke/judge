@@ -16,9 +16,28 @@
 
 #define APP_NAME_SIZE 64
 
-#define SOLFWARE_VERSION "V100R001C00B010"
+#define SOLFWARE_VERSION "V100R001C00B060"
 
 #define STARTUP_CFG "conf\\config.ini"
+
+/* 模块id定义 */
+enum MID_ID_EM
+{
+	MID_NULL = 0,
+	MID_OS = 1,
+	MID_JUDGE,
+	MID_SQL,
+	MID_DEBUG,
+	MID_CMD,
+	MID_EVENT,
+	MID_NDP,
+
+	MID_TELNET,
+
+	/* 同步修改模块名数组: char *szModuleName[32] */
+	MID_ID_END
+};
+
 
 typedef struct tagAPP_INFO_S
 {
@@ -34,7 +53,6 @@ extern int RegistAppInfo(APP_INFO_S *pstAppInfo);
 extern void RunDelay(int t);
 extern void MSGQueueMain();
 extern void pdt_debug_print(const char *format, ...);
-extern void pdt_debug_print_ex(int level, const char *format, ...);
 
 extern void MSG_StartDot();
 extern void MSG_StopDot();
@@ -42,6 +60,8 @@ extern void MSG_StopDot();
 
 extern char INI_filename[];
 extern HWND g_hWnd;
+
+#define PDT_Debug(x, args...) debugcenter_print(MID_OS, x, args)
 
 
 #endif _PDT_COMMON_INC_

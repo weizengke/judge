@@ -57,7 +57,7 @@ UCHAR gaucHDULanguageName[][VJUDGE_MAX_LANG_SIZE] = {
 
 
 /* HDU VJUDGE */
-
+char hdu_domain[256] = "http://acm.hdu.edu.cn";
 char hdu_username[1000]="weizengke";
 char hdu_password[1000]="********";
 char hdu_judgerIP[20]="127.0.0.1";
@@ -349,11 +349,16 @@ int HDU_loginEx(char *uname, char *pdw)
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
 		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &process_data);
         curl_easy_setopt(curl, CURLOPT_COOKIEJAR, "hdu.cookie");
-        curl_easy_setopt(curl, CURLOPT_URL, "http://acm.hdu.edu.cn/userloginex.php?action=login");
+        char url[255] = {0};
+		sprintf(url, "%s/userloginex.php?action=login",hdu_domain);
+        curl_easy_setopt(curl, CURLOPT_URL, url);
         string post=(string)"username="+uname+"&userpass="+pdw+"&login=Sign+In";
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post.c_str());
 
 		res = curl_easy_perform(curl);
+        
+        Judge_Debug(DEBUG_TYPE_FUNC, "Post request to HDU. (url=%s, parama:%s, res=%d)", 
+                        url, post.c_str(), res);
 
 		curl_easy_cleanup(curl);
     }
@@ -391,12 +396,17 @@ ULONG HDU_login()
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
 		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &process_data);
         curl_easy_setopt(curl, CURLOPT_COOKIEJAR, "hdu.cookie");
-        curl_easy_setopt(curl, CURLOPT_URL, "http://acm.hdu.edu.cn/userloginex.php?action=login");
+        char url[255] = {0};
+		sprintf(url, "%s/userloginex.php?action=login",hdu_domain);
+        curl_easy_setopt(curl, CURLOPT_URL, url);
         string post=(string)"username="+hdu_username+"&userpass="+hdu_password+"&login=Sign+In";
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post.c_str());
 
 		res = curl_easy_perform(curl);
 
+        Judge_Debug(DEBUG_TYPE_FUNC, "Post request to HDU. (url=%s, parama:%s, res=%d)", 
+                        url, post.c_str(), res);
+        
 		curl_easy_cleanup(curl);
     }
 
@@ -499,13 +509,18 @@ ULONG HDU_submit(string pid, string lang, string source)
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
 		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &process_data);
         curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "hdu.cookie");
-        curl_easy_setopt(curl, CURLOPT_URL, "http://acm.hdu.edu.cn/submit.php?action=submit");
-
+        char url[255] = {0};
+		sprintf(url, "%s/submit.php?action=submit",hdu_domain);
+        curl_easy_setopt(curl, CURLOPT_URL, url);
 		string post= (string)"check=0&problemid=" + pid + "&language=" + lang + "&usercode=" + escapeURL(source);
 		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post.c_str());
 		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headerlist);
 
         res = curl_easy_perform(curl);
+
+        Judge_Debug(DEBUG_TYPE_FUNC, "Post request to HDU. (url=%s, res=%d)", 
+                        url, res);
+        
         curl_easy_cleanup(curl);
     }
 
@@ -544,14 +559,19 @@ string getCEinfo(string runid)
     {
 		curl_easy_setopt( curl, CURLOPT_VERBOSE, 0L );
 		curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "hdu.cookie");
-        string url=(string)"http://acm.hdu.edu.cn/viewerror.php?rid="+runid;
-        //cout<<url;
-        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+        char url[255] = {0};
+        sprintf(url, "%s/viewerror.php?rid=%s", 
+		hdu_domain,runid.c_str());
+        curl_easy_setopt(curl, CURLOPT_URL, url);
 
 		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &process_data);
 		curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
 
         res = curl_easy_perform(curl);
+
+        Judge_Debug(DEBUG_TYPE_FUNC, "Post request to HDU. (url=%s, res=%d)", 
+                        url, res);
+        
         curl_easy_cleanup(curl);
     }
 
@@ -589,15 +609,15 @@ int getStatusEx(char *hdu_username)
 		curl_easy_setopt( curl, CURLOPT_VERBOSE, 0L );
 		curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "hdu.cookie");
 		char url[255] = {0};
-		sprintf(url, "http://acm.hdu.edu.cn/status.php?first=&pid=&user=%s&lang=&status=0", hdu_username);
-
-		//MSG_OUPUT_DBG(url);
-
+		sprintf(url, "%s/status.php?first=&pid=&user=%s&lang=&status=0", 
+		hdu_domain,hdu_username);
 		curl_easy_setopt( curl, CURLOPT_URL, url);
 		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &process_data);
 		curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
 
 		res = curl_easy_perform( curl );
+        Judge_Debug(DEBUG_TYPE_FUNC, "Post request to HDU. (url=%s, res=%d)", 
+                        url, res);        
 		curl_easy_cleanup(curl);
 
 		fclose(fp);
@@ -675,7 +695,8 @@ ULONG getStatus(string hdu_username, string pid,string lang, string &runid, stri
 		curl_easy_setopt( curl, CURLOPT_VERBOSE, 0L );
 		curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "hdu.cookie");
 		char url[255] = {0};
-		sprintf(url, "http://acm.hdu.edu.cn/status.php?first=&pid=%s&user=%s&lang=&status=0", pid.c_str(), hdu_username.c_str());
+		sprintf(url, "%s/status.php?first=&pid=%s&user=%s&lang=&status=0",
+            hdu_domain,pid.c_str(), hdu_username.c_str());
 
 		//MSG_OUPUT_DBG(url);
 
@@ -684,6 +705,10 @@ ULONG getStatus(string hdu_username, string pid,string lang, string &runid, stri
 		curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
 
 		res = curl_easy_perform( curl );
+
+        Judge_Debug(DEBUG_TYPE_FUNC, "Post request to HDU. (url=%s, res=%d)", 
+                        url, res);
+        
 		curl_easy_cleanup(curl);
 
 		fclose(fp);
@@ -1020,24 +1045,13 @@ int getProblemInfo_Brief(string pid)
 		if (OS_TRUE == checkStringExsit(g_Vjudgetfilename, "No such problem")
 			|| OS_TRUE == checkStringExsit(g_Vjudgetfilename, "<DIV>Invalid Parameter.</DIV>"))
 		{
-			pdt_debug_print("No such problem %s on hdu-judge", pid.c_str());
+			Judge_Debug(DEBUG_TYPE_ERROR, "No such problem %s on hdu-judge", pid.c_str());
 
 			return OS_FALSE;
 		}
 	}
 
-	/*
 
-	pdt_debug_print("Time\r\n%s", g_HDU_problem_string[PROBLEM_TIME].c_str());
-	pdt_debug_print("Memory\r\n%s", g_HDU_problem_string[PROBLEM_MEMORY].c_str());
-	pdt_debug_print("Title\r\n%s", g_HDU_problem_string[PROBLEM_TITLE].c_str());
-	pdt_debug_print("Description\r\n%s", g_HDU_problem_string[PROBLEM_DESCRIPTION].c_str());
-	pdt_debug_print("Input\r\n%s", g_HDU_problem_string[PROBLEM_INPUT].c_str());
-	pdt_debug_print("Output\r\n%s", g_HDU_problem_string[PROBLEM_OUTPUT].c_str());
-	pdt_debug_print("Sample Input\r\n%s", g_HDU_problem_string[PROBLEM_SAMPLE_INPUT].c_str());
-	pdt_debug_print("Sample Output\r\n%s", g_HDU_problem_string[PROBLEM_SAMPLE_OUTPUT].c_str());
-	pdt_debug_print("Author\r\n%s", g_HDU_problem_string[PROBLEM_AUTHOR].c_str());
-*/
 
 	SQL_updateProblemInfo("HDU",pid);
 
@@ -1064,7 +1078,7 @@ ULONG getProblemInfo(string pid)
 		curl_easy_setopt( curl, CURLOPT_VERBOSE, 0L );
 		curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "hdu.cookie");
 		char url[255] = {0};
-		sprintf(url, "http://acm.hdu.edu.cn/showproblem.php?pid=%s", pid.c_str());
+		sprintf(url, "%s/showproblem.php?pid=%s", hdu_domain,pid.c_str());
 		//cout<<url;
 		curl_easy_setopt( curl, CURLOPT_URL, url);
 		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &process_data);
@@ -1210,10 +1224,15 @@ int Judge_Via_CurlLib(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 		ret = DLL_HDULogin();
 		if (OS_TRUE != ret)
 		{
-			pdt_debug_print("Error: Login hdu-judge failed.");
+			Judge_Debug(DEBUG_TYPE_ERROR, "Error: Login hdu-judge failed.");
+            write_log(JUDGE_ERROR, "HDU login failed. (solutionId=%u)",
+				pstJudgeSubmission->stSolution.solutionId);
 			return OS_ERR;
 		}
 
+        write_log(JUDGE_INFO, "HDU login ok. (solutionId=%u)",
+				pstJudgeSubmission->stSolution.solutionId);
+	
 		/* get source , just get 0xFFFFFF size */
 		string source_ = "";
 		int lang_id = getHDULangID(pstJudgeSubmission->stSolution.languageId);
@@ -1228,13 +1247,23 @@ int Judge_Via_CurlLib(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 
 	    fclose(fp);
 
+        write_log(JUDGE_INFO, "HDU get source ok. (solutionId=%u)",
+				pstJudgeSubmission->stSolution.solutionId);
+
 		ret = DLL_HDUSubmit(pstJudgeSubmission->stProblem.virtualPID, lang_id, source_);
 		if (OS_TRUE != ret)
 		{
-			pdt_debug_print("Error: Submit solution to hdu-judge failed.");
+			Judge_Debug(DEBUG_TYPE_ERROR, "Error: Submit solution to hdu-judge failed.");
+            write_log(JUDGE_INFO, "HDU submit failed. (solutionId=%u, virtualPID=%u)",
+				pstJudgeSubmission->stSolution.solutionId,
+				pstJudgeSubmission->stProblem.virtualPID);
 			return OS_ERR;
 		}
 
+        write_log(JUDGE_INFO, "HDU submit ok. (solutionId=%u, virtualPID=%u)",
+				pstJudgeSubmission->stSolution.solutionId,
+				pstJudgeSubmission->stProblem.virtualPID);
+        
 		/* get status */
 		string runid, result,ce_info,tu,mu;
 		int tryTime = 6;
@@ -1254,9 +1283,18 @@ int Judge_Via_CurlLib(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 				|| result.find("Compiling")!=string::npos
 				|| result.find("Running")!=string::npos)
 			{
-				pdt_debug_print("Get Status, Queuing or Compiling or Running , try again...");
-				ret = OS_FALSE;
+				Judge_Debug(DEBUG_TYPE_FUNC, "Get Status, Queuing or Compiling or Running , try again...");
+                write_log(JUDGE_INFO, "HDU get status failed. (solutionId=%u, virtualPID=%u)",
+                        pstJudgeSubmission->stSolution.solutionId,
+                        pstJudgeSubmission->stProblem.virtualPID);
+
+                ret = OS_FALSE;
 			}
+
+            write_log(JUDGE_INFO, "HDU get status ok. (solutionId=%u, virtualPID=%u)",
+                    pstJudgeSubmission->stSolution.solutionId,
+                    pstJudgeSubmission->stProblem.virtualPID);
+                
 
 			if (result.find("Compilation Error")!=string::npos)
 			{
@@ -1276,7 +1314,7 @@ int Judge_Via_CurlLib(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 		if (OS_FALSE == ret)
 		{
 			MSG_OUPUT_DBG("Get Status Error...");
-			pstJudgeSubmission->stSolution.verdictId = V_SE;
+			pstJudgeSubmission->stSolution.verdictId = V_SK;
 		}
 		else
 		{
@@ -1324,7 +1362,7 @@ int Judge_Via_CurlLib(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 			}
 			else
 			{
-				pstJudgeSubmission->stSolution.verdictId = V_SE;
+				pstJudgeSubmission->stSolution.verdictId = V_SK;
 			}
 		}
 
@@ -1385,7 +1423,6 @@ int Judge_Via_python()
 				|| result.find("Compiling")!=string::npos
 				|| result.find("Running")!=string::npos)
 			{
-				pdt_debug_print("Get Status, Queuing or Compiling or Running , try again...");
 				ret = OS_FALSE;
 			}
 
@@ -1478,7 +1515,7 @@ int Judge_Via_python()
 int HDU_VJudge(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 {
 
-	pdt_debug_print("virtua-judge Local HDU.");
+	Judge_Debug(DEBUG_TYPE_FUNC, "virtua-judge Local HDU.");
 
 	return Judge_Via_CurlLib(pstJudgeSubmission);
 

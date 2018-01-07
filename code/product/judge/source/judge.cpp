@@ -13,6 +13,13 @@
 		⁄œæ°ﬂÒ–Í”»…˙¿·£¨
 		√ºº‰–ƒ…œΩ‘À∆◊Ì°£
 
+
+	Œ¥¿¥∑÷≤º Ω≤ø Àº¬∑
+	1) client…œœﬂ∫Û£¨serverŒ¨ª§client–≈œ¢(ip,socket,≈–Ã‚ƒ‹¡¶)
+	2) server¥Ú∞¸∑¢ÀÕdataŒƒº˛∏¯client(client…œœﬂ «¥•∑¢°¢dataƒø¬ºŒƒº˛±‰ªØ ±¥•∑¢)
+	3) clientœ¬œﬂ∫ÛÕ®÷™server
+	4) server∂® ±ping client –ƒÃ¯Œ¨≥÷£¨»Ù≥§ ±º‰Œﬁªÿ”¶‘Ú…æ≥˝client
+
 */
 
 #include <windows.h>
@@ -28,6 +35,7 @@
 
 #include "tlhelp32.h"
 
+#include"product\thirdpart32\cjson\cJSON.h"
 
 #include "product\judge\include\judge_inc.h"
 
@@ -39,57 +47,20 @@ char INI_filename[] = STARTUP_CFG;
 
 int isDeleteTemp=0;
 int isRestrictedFunction=0;
-int  limitJudge=50;
 DWORD OutputLimit=10000;
 char workPath[MAX_PATH];
 char judgeLogPath[MAX_PATH];
 int JUDGE_LOG_BUF_SIZE = 200;
 char dataPath[MAX_PATH];
-char logPath[MAX_PATH]="log\\";
-char judgePath[MAX_PATH];
 
-#define PORT 5000
 #define BUFFER 1024
 
-int g_sock_port=PORT;
-
-typedef struct tagJudge_Data_S
-{
-	int solutionId;
-
-}JUDGE_DATA_S;
-
-#if 0
-typedef enum tagMsg_Type_E
-{
-	MSG_TYPE_NULL = 0,
-	MSG_TYPE_JUDGE_REQUEST,
-	MSG_TYPE_JUDGE_DATA,
-
-	MSG_TYPE_MAX
-}MSG_TYPE_E;
-
-typedef struct tagMBuff_S
-{
-	sockaddr_in  sock_addr_des;
-	sockaddr_in  sock_addr_src;
-
-	int priority;
-
-	int module_id_des;
-	int module_id_src;
-
-	int msg_type;
-
-	int data_length;
-	char * pszData;
-
-}MBUF_S;
-#endif
+int g_judge_mode = JUDGE_MODE_ACM;
+int g_judge_timer_enable = OS_NO;
+int g_judge_auto_detect_interval = 10;
+time_t g_lastjudgetime = 0;
 
 queue <JUDGE_DATA_S> g_JudgeQueue; /* »´æ÷∂”¡– */
-
-extern void pdt_debug_print(const char *format, ...);
 
 ULONG Judge_DebugSwitch(ULONG st)
 {
@@ -101,7 +72,7 @@ ULONG Judge_DebugSwitch(ULONG st)
 #if(JUDGE_VIRTUAL == VOS_YES)
 int Judge_IsVirtualJudgeEnable()
 {
-	if (GL_vjudge_enable == OS_YES)
+	if (g_vjudge_enable == OS_YES)
 	{
 		return OS_YES;
 	}
@@ -109,138 +80,7 @@ int Judge_IsVirtualJudgeEnable()
 	return OS_NO;
 }
 #endif
-/* #pragma comment(linker, "/subsystem:windows /ENTRY:mainCRTStartup") */
 
-int Judge_InitSocket()
-{
-	write_log(JUDGE_INFO,"Start initialization of Socket...");
-
-	WSADATA wsaData;
-    WORD sockVersion = MAKEWORD(2, 2);
-
-	if(WSAStartup(sockVersion, &wsaData) != 0)
-		return 0;
-
-	g_sListen = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-	if(g_sListen == INVALID_SOCKET)
-	{
-		write_log(JUDGE_SYSTEM_ERROR,"create socket error");
-		return 0;
-	}
-
-	sockaddr_in sin;
-	sin.sin_family = AF_INET;
-	sin.sin_port = htons(g_sock_port);
-	sin.sin_addr.S_un.S_addr = INADDR_ANY;
-
-
-	int trybind=50;
-	int ret=0;
-
-	ret = bind(g_sListen,(LPSOCKADDR)&sin,sizeof(sin));
-
-	while(ret == SOCKET_ERROR && trybind > 0)
-	{
-		bind(g_sListen,(LPSOCKADDR)&sin,sizeof(sin));
-		//write_log(JUDGE_SYSTEM_ERROR,"bind failed:%d , it will try later...",WSAGetLastError());
-		trybind--;
-		Sleep(100);
-	}
-
-	if(ret<0)
-	{
-		while (ret == SOCKET_ERROR)
-		{
-			g_sock_port++;
-			sin.sin_port = htons(g_sock_port);
-			ret =  bind(g_sListen,(LPSOCKADDR)&sin,sizeof(sin));
-			if (ret != SOCKET_ERROR)
-			{
-				char szPort[10] = {0};
-				(void)itoa(g_sock_port, szPort ,10);
-				WritePrivateProfileString("System","sock_port",szPort,INI_filename);
-			}
-			Sleep(10);
-		}
-	}
-
-	pdt_debug_print("Info: Socket bind port(%u) ok.", g_sock_port);
-
-	write_log(JUDGE_INFO,"Bind success...");
-
-	//Ω¯»Îº‡Ã˝◊¥Ã¨
-	int trylisten=50; //÷ÿ ‘listen¥Œ ˝
-	while((ret=listen(g_sListen,20))==SOCKET_ERROR&&trylisten)
-	{
-		write_log(JUDGE_SYSTEM_ERROR,"listen failed:%d , it will try later..",WSAGetLastError());
-		trylisten--;
-		Sleep(100);
-	}
-
-	if(ret<0)
-	{
-		write_log(JUDGE_SYSTEM_ERROR,"Listen failed...");
-		pdt_debug_print("Error: Listen port(%u) failed......[code:%u]", g_sock_port, GetLastError());
-
-		closesocket(g_sListen);
-		WSACleanup();
-		return 0;
-	}
-
-	pdt_debug_print("Info: Socket listen ok.");
-	write_log(JUDGE_INFO,"Listen success...");
-
-	return 1;
-}
-//////////////////////////////////////////////////////////////end socket
-
-void Judge_Destroy()
-{
-	closesocket(g_sListen);
-}
-
-void Judge_InitConfigData()
-{
-	g_sock_port=GetPrivateProfileInt("System","sock_port",PORT,INI_filename);
-	GetPrivateProfileString("System","JudgePath","",judgePath,sizeof(judgePath),INI_filename);
-
-	isDeleteTemp=GetPrivateProfileInt("Judge","DeleteTemp",0,INI_filename);
-	limitJudge=GetPrivateProfileInt("Judge","LimitJudge",20,INI_filename);
-	OutputLimit=GetPrivateProfileInt("Judge","OutputLimit",10000,INI_filename);
-	JUDGE_LOG_BUF_SIZE=GetPrivateProfileInt("Judge","judge_logbuf_size",500,INI_filename);
-	GL_vjudge_enable=GetPrivateProfileInt("Judge","vjudge_enable",OS_NO,INI_filename);
-	isRestrictedFunction=GetPrivateProfileInt("Judge","isRestrictedFunction",0,INI_filename);
-	GetPrivateProfileString("Judge","WorkingPath","",workPath,sizeof(workPath),INI_filename);
-	GetPrivateProfileString("Judge","DataPath","",dataPath,sizeof(dataPath),INI_filename);
-
-	GetPrivateProfileString("Judge","JudgeLogPath","",judgeLogPath,sizeof(judgeLogPath),INI_filename);
-
-	GetPrivateProfileString("MySQL","url","",Mysql_url,sizeof(Mysql_url),INI_filename);
-	GetPrivateProfileString("MySQL","username","NULL",Mysql_username,sizeof(Mysql_username),INI_filename);
-	GetPrivateProfileString("MySQL","password","NULL",Mysql_password,sizeof(Mysql_password),INI_filename);
-	GetPrivateProfileString("MySQL","table","",Mysql_table,sizeof(Mysql_table),INI_filename);
-	Mysql_port=GetPrivateProfileInt("MySQL","port",0,INI_filename);
-
-	/* BEGIN: Added by weizengke,for hdu-vjudge*/
-	GetPrivateProfileString("HDU","username","NULL",hdu_username,sizeof(hdu_username),INI_filename);
-	GetPrivateProfileString("HDU","password","NULL",hdu_password,sizeof(hdu_password),INI_filename);
-	GetPrivateProfileString("HDU","judgerIP","127.0.0.1",hdu_judgerIP,sizeof(hdu_judgerIP),INI_filename);
-	hdu_sockport=GetPrivateProfileInt("HDU","sock_port",6606,INI_filename);
-	hdu_remote_enable=GetPrivateProfileInt("HDU","remote_enable",OS_NO,INI_filename);
-	hdu_vjudge_enable=GetPrivateProfileInt("HDU","vjudge_enable",OS_NO,INI_filename);
-
-	/* BEGIN: Added by weizengke, for guet-dept3-vjudge */
-	GetPrivateProfileString("GUET_DEPT3","username","NULL",guet_username,sizeof(guet_username),INI_filename);
-	GetPrivateProfileString("GUET_DEPT3","password","NULL",guet_password,sizeof(guet_password),INI_filename);
-	GetPrivateProfileString("GUET_DEPT3","judgerIP","127.0.0.1",guet_judgerIP,sizeof(guet_judgerIP),INI_filename);
-	guet_sockport=GetPrivateProfileInt("GUET_DEPT3","sock_port",7706,INI_filename);
-	guet_remote_enable=GetPrivateProfileInt("GUET_DEPT3","remote_enable",OS_NO,INI_filename);
-	guet_vjudge_enable=GetPrivateProfileInt("GUET_DEPT3","vjudge_enable",OS_NO,INI_filename);
-
-	write_log(JUDGE_INFO,"Socketport:%d, Data:%s, Workpath:%s",g_sock_port,dataPath,workPath);
-	write_log(JUDGE_INFO,"MySQL:%s %s %s %s %d",Mysql_url,Mysql_username,Mysql_password,Mysql_table,Mysql_port);
-
-}
 
 void Judge_InitJudgePath(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 {
@@ -322,6 +162,8 @@ void Judge_InitJudgePath(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 
 	sprintf(pstJudgeSubmission->judge_log_filename,"%sjudge-log-%d.log",judgeLogPath,pstJudgeSubmission->stSolution.solutionId);
 
+    write_log(JUDGE_INFO, "Judge_InitJudgePath %d ok.", pstJudgeSubmission->stSolution.solutionId);
+        
 }
 
 void Judge_InitSubmissionData(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
@@ -468,7 +310,7 @@ unsigned _stdcall Judge_CompileThread(void *pData)
 
 	write_log(JUDGE_INFO,"Enter Judge_CompileThread...");
 
-	SQL_updateSolution(pstJudgeSubmission->stSolution.solutionId, V_C, 0, 0, 0);
+	SQL_updateSolution(pstJudgeSubmission->stSolution.solutionId, V_C, 0, 0, 0, 0);
 
 	system(pstJudgeSubmission->compileCmd);
 
@@ -592,9 +434,22 @@ unsigned _stdcall Judge_RunProgramThread(void *pData) //ac
 	saAttr.bInheritHandle = TRUE;
 	saAttr.lpSecurityDescriptor = NULL;
 
-	CreatePipe(&ChildIn_Read, &ChildIn_Write, &saAttr, 0);
+	if(! CreatePipe(&ChildIn_Read, &ChildIn_Write, &saAttr, 0))
+	{
+		write_log(JUDGE_ERROR,"Judge_RunProgramThread ERROR, input CreatePipe failed....");
+		return 0;
+	}
+	
 	SetHandleInformation(ChildIn_Write, HANDLE_FLAG_INHERIT, 0);
-	CreatePipe(&ChildOut_Read, &ChildOut_Write, &saAttr, 0);
+	
+	if(! CreatePipe(&ChildOut_Read, &ChildOut_Write, &saAttr, 0))
+	{
+		write_log(JUDGE_ERROR,"Judge_RunProgramThread ERROR, output CreatePipe failed....");
+		CloseHandle(ChildIn_Read);
+		CloseHandle(ChildIn_Write);	
+		return 0;
+	}
+	
 	SetHandleInformation(ChildOut_Read, HANDLE_FLAG_INHERIT, 0);
 
 	SetErrorMode(SEM_NOGPFAULTERRORBOX );
@@ -649,13 +504,12 @@ unsigned _stdcall Judge_RunProgramThread(void *pData) //ac
 					if (!flag){ break;}
 				}
 
-				CloseHandle(pstJudgeSubmission->hInputFile);
-				pstJudgeSubmission->hInputFile=NULL;
-				CloseHandle(ChildIn_Write);
-				CloseHandle(ChildOut_Write);
+				CloseHandle(pstJudgeSubmission->hInputFile);pstJudgeSubmission->hInputFile=NULL;
+				CloseHandle(ChildIn_Write);ChildIn_Write=NULL;
+				CloseHandle(ChildOut_Write);ChildOut_Write=NULL;
 
 				write_log(JUDGE_INFO,"CreateFile outFileName(%s)", pstJudgeSubmission->outFileName);
-
+				
 				/* ∂¡»°◊”Ω¯≥Ãµƒ±Í◊º ‰≥ˆ£¨≤¢Ω´∆‰¥´µ›∏¯Œƒº˛ ‰≥ˆ */
 				pstJudgeSubmission->hOutputFile= CreateFile(pstJudgeSubmission->outFileName, GENERIC_WRITE, 0,
 															NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -672,17 +526,28 @@ unsigned _stdcall Judge_RunProgramThread(void *pData) //ac
 				{
 					char buffer[BUFSIZE] = {0};
 					DWORD BytesRead, BytesWritten;
+
 					flag = ReadFile(ChildOut_Read, buffer, BUFSIZE, &BytesRead, NULL);
-					if (!flag || (BytesRead == 0)) break;
+					if (!flag || (BytesRead == 0))
+					{
+						write_log(JUDGE_INFO,"ReadFile over.");
+						break;
+					}
+
+					//write_log(JUDGE_INFO,"ReadFile over. buffer=%s", buffer);
+					
 					flag = WriteFile(pstJudgeSubmission->hOutputFile, buffer, BytesRead, &BytesWritten, NULL);
-					if (!flag) break;
+					if (!flag) 
+					{
+						write_log(JUDGE_ERROR,"WriteFile error.");
+						break;
+					}
 
 					limit_output+=BytesWritten;
 					if(limit_output>OutputLimit)
 					{
 						write_log(JUDGE_INFO,"OLE");
 						pstJudgeSubmission->stSolution.verdictId = V_OLE;
-						//CloseHandle(pi.hProcess);
 						break;
 					}
 				}
@@ -696,11 +561,14 @@ unsigned _stdcall Judge_RunProgramThread(void *pData) //ac
 				write_log(JUDGE_INFO,"Judge_RunProgramThread test OK..inFileName(%s)",pstJudgeSubmission->inFileName);
 
 				return 1;
-			}else{
+			}
+			else
+			{
 				write_log(JUDGE_SYSTEM_ERROR,"ProcessToSandBox Error:%s",GetLastError());
 			}
 		}
-		else{
+		else
+		{
 			write_log(JUDGE_SYSTEM_ERROR,"Judge_CreateSandBox Error:%s",GetLastError());
 		}
 	}
@@ -711,6 +579,11 @@ unsigned _stdcall Judge_RunProgramThread(void *pData) //ac
 
 	pstJudgeSubmission->stSolution.verdictId = V_SE;
 
+ 	if (ChildIn_Read == NULL) CloseHandle(ChildIn_Read);
+	if (ChildIn_Write == NULL) CloseHandle(ChildIn_Write);
+	if (ChildOut_Read == NULL) CloseHandle(ChildOut_Read);
+	if (ChildOut_Write == NULL) CloseHandle(ChildOut_Write);
+	
 	return 0;
 }
 
@@ -720,7 +593,7 @@ int Judge_SpecialJudge(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 	int judge ;
 	char spj_path[MAX_PATH];
 
-	sprintf(spj_path,"%s%d\\spj_%d.exe %s %s",
+	sprintf(spj_path,"%s\\%d\\spj_%d.exe %s %s",
 			dataPath,pstJudgeSubmission->stProblem.problemId,
 			pstJudgeSubmission->stProblem.problemId,
 			pstJudgeSubmission->inFileName, pstJudgeSubmission->outFileName);
@@ -743,39 +616,48 @@ int Judge_SpecialJudge(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 int Judge_RunLocalSolution(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 {
 	long caseTime=0;
-	int i,case_;
+	int i;
+	int icases = 0;
 	char srcPath[MAX_PATH];
 	char ansPath[MAX_PATH];
 	char buf[40960];
+	cJSON *json = cJSON_CreateObject();
+	cJSON *array = cJSON_CreateArray();
+	cJSON *testcase = NULL;
+	char *pjsonBuf = NULL;
 
-	if (NULL == pstJudgeSubmission)
+	if (NULL == pstJudgeSubmission
+		|| NULL == json
+		|| NULL == array)
 	{
 		write_log(JUDGE_ERROR,"Judge_RunLocalSolution ERROR, pstJudgeSubmission is NULL....");
 		return 0;
 	}
 
+	cJSON_AddNumberToObject(json,"solutionId", pstJudgeSubmission->stSolution.solutionId);
+	cJSON_AddNumberToObject(json,"problemId",pstJudgeSubmission->stSolution.problemId);
+	cJSON_AddStringToObject(json,"username",pstJudgeSubmission->stSolution.username);
+	cJSON_AddStringToObject(json,"language",pstJudgeSubmission->languageName);
+	
 	pstJudgeSubmission->dwProStatusCode = 0;
+	pstJudgeSubmission->stSolution.time_used = 0;
+	pstJudgeSubmission->stSolution.memory_used = 0;
 
-	for(i=0;;++i)
+	reset_file(pstJudgeSubmission->judge_log_filename);
+	
+	for(i=1; ;++i)
 	{
-		case_=i;
-
-		if(i==0)
-		{
-			case_=1;
-		}
-
-		sprintf(pstJudgeSubmission->inFileName, "%s%d\\data%d.in",
-				dataPath, pstJudgeSubmission->stProblem.problemId, case_);
+		sprintf(pstJudgeSubmission->inFileName, "%s\\%d\\data%d.in",
+				dataPath, pstJudgeSubmission->stProblem.problemId, i);
 		sprintf(pstJudgeSubmission->outFileName,"%s%s%d.out",
-				workPath,pstJudgeSubmission->subPath,case_);
+				workPath,pstJudgeSubmission->subPath,i);
 
 		sprintf(srcPath, "%s", pstJudgeSubmission->outFileName);
-		sprintf(ansPath, "%s%d\\data%d.out",
-				dataPath, pstJudgeSubmission->stProblem.problemId, case_);
+		sprintf(ansPath, "%s\\%d\\data%d.out",
+				dataPath, pstJudgeSubmission->stProblem.problemId, i);
 
-		write_log(JUDGE_INFO,"TEST(%d)\r\n inFileName:%s\r\n outFileName:%s\r\n srcPath:%s\r\n ansPath:%s\r\n",
-					i, pstJudgeSubmission->inFileName, pstJudgeSubmission->outFileName, srcPath, ansPath);
+		write_log(JUDGE_INFO,"TEST(%d) verdictId:%s\r\n inFileName:%s\r\n outFileName:%s\r\n srcPath:%s\r\n ansPath:%s\r\n",
+					i, VERDICT_NAME[pstJudgeSubmission->stSolution.verdictId], pstJudgeSubmission->inFileName, pstJudgeSubmission->outFileName, srcPath, ansPath);
 
 		if( (_access(pstJudgeSubmission->inFileName, 0 )) == -1 )
 		{
@@ -783,11 +665,13 @@ int Judge_RunLocalSolution(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 			break ;
 		}
 
-		pstJudgeSubmission->stSolution.testcase = case_;
+		icases = i;
+		pstJudgeSubmission->stSolution.testcase = i;
 
 		SQL_updateSolution(pstJudgeSubmission->stSolution.solutionId ,
 							V_RUN,
-							case_,
+							i,
+							pstJudgeSubmission->stSolution.failcase,
 							pstJudgeSubmission->stSolution.time_used - pstJudgeSubmission->stSolution.time_used%10,
 							pstJudgeSubmission->stSolution.memory_used);
 
@@ -796,15 +680,16 @@ int Judge_RunLocalSolution(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 		if(hThread_run == NULL)
 		{
 			write_log(JUDGE_ERROR,"Create thread error");
-			CloseHandle(hThread_run);
 		}
 
-		write_log(JUDGE_ERROR,"Create Judge_RunProgramThread ok...");
+		write_log(JUDGE_INFO,"Create Judge_RunProgramThread ok...");
 
-		DWORD status_ = WaitForSingleObject(hThread_run, pstJudgeSubmission->stProblem.time_limit + 2000);   /* ∑≈øÌ ±œﬁ2S,∑µªÿ÷µ¥Û”⁄¡„Àµ√˜≥¨ ±. */
+		DWORD status_ = WaitForSingleObject(hThread_run, pstJudgeSubmission->stProblem.time_limit + 10);   /* ∑≈øÌ ±œﬁ10mS,∑µªÿ÷µ¥Û”⁄¡„Àµ√˜≥¨ ±. */
 		if(status_>0)
 		{
-			write_log(JUDGE_INFO,"hThread_run TIME LIMIT");
+			write_log(JUDGE_INFO,"case %u WaitForSingleObject TIME LIMIT, verdictId:%s.", i, VERDICT_NAME[pstJudgeSubmission->stSolution.verdictId]);
+
+			caseTime = pstJudgeSubmission->stProblem.time_limit;
 			pstJudgeSubmission->stSolution.time_used = pstJudgeSubmission->stProblem.time_limit;
 
 			if(pstJudgeSubmission->stSolution.verdictId == V_AC)
@@ -841,20 +726,31 @@ int Judge_RunLocalSolution(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 		}
 		else if(pstJudgeSubmission->dwProStatusCode == STILL_ACTIVE)
 		{
-			puts("TIME LIMIT");
+			write_log(JUDGE_INFO,"case %u STILL_ACTIVE, to TIME LIMIT, verdictId:%s. ", i, VERDICT_NAME[pstJudgeSubmission->stSolution.verdictId]);
+
 			TerminateProcess(pstJudgeSubmission->pProRunInfo.hProcess, 0);
+			
 			if(pstJudgeSubmission->stSolution.verdictId == V_AC)
 			{
 				pstJudgeSubmission->stSolution.verdictId = V_TLE;
+				caseTime = pstJudgeSubmission->stProblem.time_limit;
 				pstJudgeSubmission->stSolution.time_used = pstJudgeSubmission->stProblem.time_limit;
 				goto l;
 			}
 		}
 
-		caseTime = pstJudgeSubmission->endt - pstJudgeSubmission->startt;
-		if(caseTime < 0)
+		if (pstJudgeSubmission->stSolution.verdictId != V_TLE)
 		{
-			caseTime = pstJudgeSubmission->stProblem.time_limit;
+			caseTime = pstJudgeSubmission->endt - pstJudgeSubmission->startt;
+
+			write_log(JUDGE_INFO,"case %u , verdictId:%s, time(%u = %u - %u).",
+							i, VERDICT_NAME[pstJudgeSubmission->stSolution.verdictId], caseTime, pstJudgeSubmission->endt, pstJudgeSubmission->startt);
+
+			if(caseTime < 0)
+			{
+
+				caseTime = pstJudgeSubmission->stProblem.time_limit;
+			}
 		}
 
 		TerminateJobObject(pstJudgeSubmission->hJob,0);
@@ -864,19 +760,19 @@ int Judge_RunLocalSolution(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 
 		pstJudgeSubmission->stSolution.time_used = (caseTime>pstJudgeSubmission->stSolution.time_used)?caseTime:pstJudgeSubmission->stSolution.time_used;
 
-		if(pstJudgeSubmission->stSolution.time_used >= pstJudgeSubmission->stProblem.time_limit)
+		if(caseTime >= pstJudgeSubmission->stProblem.time_limit)
 		{
 			pstJudgeSubmission->stSolution.verdictId = V_TLE;
 			pstJudgeSubmission->stSolution.time_used = pstJudgeSubmission->stProblem.time_limit;
 			goto l;
 		}
-		if(pstJudgeSubmission->stSolution.memory_used >= pstJudgeSubmission->stProblem.memory_limit)
+		
+		if(tmp_memory >= pstJudgeSubmission->stProblem.memory_limit)
 		{
 			pstJudgeSubmission->stSolution.verdictId = V_MLE;
 			pstJudgeSubmission->stSolution.memory_used = pstJudgeSubmission->stProblem.memory_limit;
 			goto l;
 		}
-
 
 		if(pstJudgeSubmission->stSolution.verdictId != V_AC)
 		{
@@ -901,76 +797,101 @@ l:		write_log(JUDGE_INFO,"ID:%d Test%d ,%s ,%d(%d)ms %d(%d)kb ,Return code:%u",
 					caseTime, pstJudgeSubmission->stSolution.time_used,
 					tmp_memory, pstJudgeSubmission->stSolution.memory_used,
 					pstJudgeSubmission->dwProStatusCode);
+       
+		/* save jsonResult */	
+		if (JUDGE_MODE_OI == g_judge_mode)
+		{
+			testcase = cJSON_CreateObject();
+			if (NULL != testcase)
+			{
+				cJSON_AddItemToArray(array, testcase);
+				cJSON_AddNumberToObject(testcase, "case", i);
+				cJSON_AddStringToObject(testcase, "verdict", VERDICT_NAME[pstJudgeSubmission->stSolution.verdictId]);
+				cJSON_AddNumberToObject(testcase, "timeused", caseTime - caseTime%10);
+				cJSON_AddNumberToObject(testcase, "memused", tmp_memory);
+			}
+		}
 
 		/* write judge-log */
+		write_buffer(pstJudgeSubmission->judge_log_filename,
+					"Test: #%d, time: %d ms, memory: %d kb, exit code: %d,verdict: %s",
+					i, caseTime - caseTime%10, tmp_memory, pstJudgeSubmission->dwProStatusCode,
+					VERDICT_NAME[pstJudgeSubmission->stSolution.verdictId]);
 
-		if (i == 0)
-		{
-			reset_file(pstJudgeSubmission->judge_log_filename);
-			if (pstJudgeSubmission->stSolution.verdictId!=V_AC)
+		memset(buf,0,sizeof(buf));
+		read_buffer(pstJudgeSubmission->inFileName, buf, JUDGE_LOG_BUF_SIZE);
+		write_buffer(pstJudgeSubmission->judge_log_filename,"\nInput\n");
+		write_buffer(pstJudgeSubmission->judge_log_filename,buf);
+
+		memset(buf,0,sizeof(buf));
+		read_buffer(pstJudgeSubmission->outFileName, buf, JUDGE_LOG_BUF_SIZE);
+		write_buffer(pstJudgeSubmission->judge_log_filename,"\nOutput\n");
+		write_buffer(pstJudgeSubmission->judge_log_filename,buf);
+
+		memset(buf,0,sizeof(buf));
+		read_buffer(ansPath, buf, JUDGE_LOG_BUF_SIZE);
+		write_buffer(pstJudgeSubmission->judge_log_filename,"\nAnswer\n");
+		write_buffer(pstJudgeSubmission->judge_log_filename,buf);
+
+		write_buffer(pstJudgeSubmission->judge_log_filename,"\n------------------------------------------------------------------\n");
+
+		if(pstJudgeSubmission->stSolution.verdictId != V_AC)
+		{			
+			pstJudgeSubmission->stSolution.failcase++;
+				
+			if (JUDGE_MODE_OI == g_judge_mode)
 			{
-				i  = 1;
-				write_buffer(pstJudgeSubmission->judge_log_filename,
-							"Test: #%d, time: %d ms, memory: %d kb, exit code: %d,verdict: %s",
-							i, pstJudgeSubmission->stSolution.time_used - pstJudgeSubmission->stSolution.time_used%10,
-							tmp_memory, pstJudgeSubmission->dwProStatusCode,
-							VERDICT_NAME[pstJudgeSubmission->stSolution.verdictId]);
-
-				memset(buf,0,sizeof(buf));
-				read_buffer(pstJudgeSubmission->inFileName, buf, JUDGE_LOG_BUF_SIZE);
-				write_buffer(pstJudgeSubmission->judge_log_filename,"\nInput\n",i);
-				write_buffer(pstJudgeSubmission->judge_log_filename,buf);
-
-				memset(buf,0,sizeof(buf));
-				read_buffer(pstJudgeSubmission->outFileName, buf, JUDGE_LOG_BUF_SIZE);
-				write_buffer(pstJudgeSubmission->judge_log_filename,"\nOutput\n",i);
-				write_buffer(pstJudgeSubmission->judge_log_filename,buf);
-
-				memset(buf,0,sizeof(buf));
-				read_buffer(ansPath, buf, JUDGE_LOG_BUF_SIZE);
-				write_buffer(pstJudgeSubmission->judge_log_filename,"\nAnswer\n");
-				write_buffer(pstJudgeSubmission->judge_log_filename,buf);
-
-				write_buffer(pstJudgeSubmission->judge_log_filename,"\n------------------------------------------------------------------\n");
+				#if 0
+				if (JUDGE_ISJUDGE_STOP(pstJudgeSubmission->stSolution.verdictId))
+				{
+					break;
+				}
+				#endif
+				
+				pstJudgeSubmission->stSolution.verdictId = V_AC;
+				continue;
+			}
+			else
+			{
 				break;
 			}
 		}
+	}
+
+	
+	cJSON_AddNumberToObject(json,"testcases", pstJudgeSubmission->stSolution.testcase);
+	cJSON_AddItemToObject(json,"cases", array);
+		
+	if (JUDGE_MODE_OI == g_judge_mode)
+	{
+		/* ¥Ê‘⁄¥ÌŒÛ”√¿˝◊™Œ™WA */
+		if (pstJudgeSubmission->stSolution.failcase > 0)
+		{
+			pstJudgeSubmission->stSolution.verdictId = V_WA;
+		}
+
+		pjsonBuf = cJSON_Print(json);
+
+		write_log(JUDGE_ERROR, "jsonBuf-len=%u.", strlen(pjsonBuf));
+		
+		if (strlen(pjsonBuf) < JSONBUFSIZE)
+		{
+			memcpy(pstJudgeSubmission->pszjudgeResult_Json, pjsonBuf, strlen(pjsonBuf));
+		}
 		else
 		{
-			write_buffer(pstJudgeSubmission->judge_log_filename,
-						"Test: #%d, time: %d ms, memory: %d kb, exit code: %d,verdict: %s",
-						i, caseTime - caseTime%10, tmp_memory, pstJudgeSubmission->dwProStatusCode,
-						VERDICT_NAME[pstJudgeSubmission->stSolution.verdictId]);
-
-			memset(buf,0,sizeof(buf));
-			read_buffer(pstJudgeSubmission->inFileName, buf, JUDGE_LOG_BUF_SIZE);
-			write_buffer(pstJudgeSubmission->judge_log_filename,"\nInput\n");
-			write_buffer(pstJudgeSubmission->judge_log_filename,buf);
-
-			memset(buf,0,sizeof(buf));
-			read_buffer(pstJudgeSubmission->outFileName, buf, JUDGE_LOG_BUF_SIZE);
-			write_buffer(pstJudgeSubmission->judge_log_filename,"\nOutput\n");
-			write_buffer(pstJudgeSubmission->judge_log_filename,buf);
-
-			memset(buf,0,sizeof(buf));
-			read_buffer(ansPath, buf, JUDGE_LOG_BUF_SIZE);
-			write_buffer(pstJudgeSubmission->judge_log_filename,"\nAnswer\n");
-			write_buffer(pstJudgeSubmission->judge_log_filename,buf);
-
-			write_buffer(pstJudgeSubmission->judge_log_filename,"\n------------------------------------------------------------------\n");
+			write_log(JUDGE_ERROR, "judgeResult_Json is not enough memory. (JSONBUFSIZE=%u, strlen=%u)", JSONBUFSIZE, strlen(pjsonBuf));
 		}
 
-		if(pstJudgeSubmission->stSolution.verdictId != V_AC)
-		{
-			break;
-		}
-
-		if(i==0)
-		{
-			pstJudgeSubmission->stSolution.time_used = 0;
-			pstJudgeSubmission->stSolution.memory_used = 0;
-		}
+		SQL_updateSolutionJsonResult(pstJudgeSubmission->stSolution.solutionId, pjsonBuf);
+		
+		free(pjsonBuf);
+		
 	}
+
+	/* µ¸¥˙…æ≥˝json ˝æ› */
+	cJSON_Delete(json);	
+	
 	return 0;
 
 }
@@ -992,7 +913,20 @@ int Judge_Local(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 	}
 	else
 	{
-		write_log(JUDGE_INFO,"Start Run...");
+		write_log(JUDGE_INFO,"Start Run solution %u...", pstJudgeSubmission->stSolution.solutionId);
+
+        {
+            /* Ë∑ùÁ¶ª‰∏ä‰∏ÄÊ¨°Âà§È¢òË∂ÖËøá60sÔºåÈúÄË¶ÅÂÜçÊâßË°å‰∏ÄÈÅç */
+            time_t s_t = 0;            
+            time(&s_t);
+            
+            if (getdiftime(s_t,g_lastjudgetime) > 60)
+            {
+                Judge_PushQueue(pstJudgeSubmission->stSolution.solutionId);
+            }
+            g_lastjudgetime = s_t;
+        }
+        
 		Judge_RunLocalSolution(pstJudgeSubmission);
 	}
 
@@ -1024,11 +958,12 @@ int Judge_SendToJudger(int solutionId, int port,char *ip)
 {
 
 	SOCKET sClient_hdu;
-
+	char buff[128] = {0};
+	
     sClient_hdu = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if(sClient_hdu == INVALID_SOCKET)
 	{
-		pdt_debug_print("Judge_SendToJudger socket error");
+		Judge_Debug(DEBUG_TYPE_ERROR, "Judge_SendToJudger socket error");
 		return OS_ERR;
 	}
 
@@ -1039,12 +974,14 @@ int Judge_SendToJudger(int solutionId, int port,char *ip)
 
 	if(connect(sClient_hdu,(sockaddr*)&servAddr,sizeof(servAddr))==SOCKET_ERROR)
 	{
-		pdt_debug_print("Judge_SendToJudger connect error");
+		Judge_Debug(DEBUG_TYPE_ERROR, "Judge_SendToJudger connect error");
 		closesocket(sClient_hdu);
 		return OS_ERR;
 	}
 
-	send(sClient_hdu,(const char*)&solutionId,sizeof(solutionId),0);
+	sprintf(buff, "judge solution %u", solutionId);
+	
+	send(sClient_hdu,(const char*)buff, sizeof(buff),0);
 
 	closesocket(sClient_hdu);
 
@@ -1056,22 +993,25 @@ int Judge_Remote(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 {
 	int ret = OS_OK;
 
+	write_log(JUDGE_INFO, "Start vjudge remote. (solutionId=%u, szVirJudgerName=%s)",
+				pstJudgeSubmission->stSolution.solutionId, pstJudgeSubmission->stProblem.szVirJudgerName);
+	
 	do
 	{
 		if (0 == strcmp(pstJudgeSubmission->stProblem.szVirJudgerName,"HDU"))
 		{
-			pdt_debug_print("virtual-judge HDU.(vjudge_enable=%u,remote_enable=%d)",
-							hdu_vjudge_enable, hdu_remote_enable);
+			Judge_Debug(DEBUG_TYPE_FUNC, "virtual-judge HDU.(domain=%s, vjudge_enable=%u,remote_enable=%d)",
+							hdu_domain, hdu_vjudge_enable, hdu_remote_enable);
 
 			if (hdu_vjudge_enable == OS_NO)
 			{
-				pdt_debug_print("Error: hdu-judge is not enable.");
+				Judge_Debug(DEBUG_TYPE_ERROR, "Error: hdu-judge is not enable.");
 				return OS_ERR;
 			}
 
 			if (OS_YES == hdu_remote_enable)
 			{
-				pdt_debug_print("Send to remote judger(%s:%d).", hdu_judgerIP, hdu_sockport);
+				Judge_Debug(DEBUG_TYPE_FUNC, "Send to remote judger(%s:%d).", hdu_judgerIP, hdu_sockport);
 
 				ret = Judge_SendToJudger(pstJudgeSubmission->stSolution.solutionId, hdu_sockport, hdu_judgerIP);
 				if (OS_OK == ret)
@@ -1093,18 +1033,18 @@ int Judge_Remote(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 
 		if (0 == strcmp(pstJudgeSubmission->stProblem.szVirJudgerName,"GUET_DEPT3"))
 		{
-			pdt_debug_print("virtual-judge GUET_DEPT3.(vjudge_enable=%u,remote_anable=%d)",
+			Judge_Debug(DEBUG_TYPE_FUNC, "virtual-judge GUET_DEPT3.(vjudge_enable=%u,remote_anable=%d)",
 							guet_vjudge_enable, guet_remote_enable);
 
 			if (guet_vjudge_enable == OS_NO)
 			{
-				pdt_debug_print("Error: guet-judge is not enable.");
+				Judge_Debug(DEBUG_TYPE_ERROR, "Error: guet-judge is not enable.");
 				return OS_ERR;
 			}
 
 			if (OS_YES == guet_remote_enable)
 			{
-				pdt_debug_print("Send to remote judger(%s:%d).", guet_judgerIP, guet_sockport);
+				Judge_Debug(DEBUG_TYPE_FUNC, "Send to remote judger(%s:%d).", guet_judgerIP, guet_sockport);
 
 				ret = Judge_SendToJudger(pstJudgeSubmission->stSolution.solutionId, guet_sockport, guet_judgerIP);
 				if (OS_OK == ret)
@@ -1124,6 +1064,13 @@ int Judge_Remote(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 			break;
 		}
 
+		Judge_Debug(DEBUG_TYPE_ERROR, "virtua-judge is not support (%s).",
+						pstJudgeSubmission->stProblem.szVirJudgerName);
+		
+		write_log(JUDGE_INFO, "virtua-judge is not support (%s).",
+						pstJudgeSubmission->stProblem.szVirJudgerName);
+		
+		return OS_ERR;
 	}while(0);
 
 	return ret;
@@ -1135,11 +1082,20 @@ unsigned _stdcall  Judge_Proc(void *pData)
 	int ret = OS_OK;
 	int isExist = OS_NO;
 	int solutionId = *(int *)pData;
-
+	char *pJsonBuf = NULL;
 	JUDGE_SUBMISSION_ST stJudgeSubmission;
 
-	memset(&stJudgeSubmission, 0, sizeof(stJudgeSubmission));
+	pJsonBuf = (char*)malloc(JSONBUFSIZE);
+	if (NULL == pJsonBuf)
+	{
+		return OS_ERR;
+	}
 
+	memset(pJsonBuf, 0, JSONBUFSIZE);
+	memset(&stJudgeSubmission, 0, sizeof(stJudgeSubmission));
+	
+	stJudgeSubmission.pszjudgeResult_Json = pJsonBuf;
+		
 	stJudgeSubmission.stSolution.solutionId = solutionId;
 	Judge_InitSubmissionData(&stJudgeSubmission);
 
@@ -1148,31 +1104,35 @@ unsigned _stdcall  Judge_Proc(void *pData)
 	ret = SQL_getSolutionByID(stJudgeSubmission.stSolution.solutionId, &(stJudgeSubmission.stSolution), &isExist);
 	if (OS_ERR == ret || OS_NO == isExist)
 	{
-		pdt_debug_print("No such solution %d.", stJudgeSubmission.stSolution.solutionId);
+		Judge_Debug(DEBUG_TYPE_ERROR, "No such solution %d.", stJudgeSubmission.stSolution.solutionId);
+		free(pJsonBuf);
 		return OS_ERR;
 	}
 
 	Judge_InitJudgePath(&stJudgeSubmission);
-
+    
 	ret = SQL_getSolutionSource(&stJudgeSubmission);
 	if (OS_OK != ret)
 	{
-		pdt_debug_print("SQL_getSolutionSource failed.(solutionId=%d)", stJudgeSubmission.stSolution.solutionId);
+		free(pJsonBuf);
+		Judge_Debug(DEBUG_TYPE_ERROR, "SQL_getSolutionSource failed.(solutionId=%d)", stJudgeSubmission.stSolution.solutionId);
 		write_log(JUDGE_INFO,"SQL_getSolutionSource failed.(solutionId=%d)", stJudgeSubmission.stSolution.solutionId);
 		return OS_ERR;
 	}
-
-	write_log(JUDGE_INFO,"Do SQL_getSolutionSource ok. (solutionId=%d)", stJudgeSubmission.stSolution.solutionId);
-
+    
 	stJudgeSubmission.stProblem.problemId = stJudgeSubmission.stSolution.problemId;
 
 	ret = SQL_getProblemInfo(&(stJudgeSubmission.stProblem));
 	if (OS_OK != ret)
 	{
-		pdt_debug_print("SQL_getProblemInfo failed.(solutionId=%d)", stJudgeSubmission.stSolution.solutionId);
+		free(pJsonBuf);
+		Judge_Debug(DEBUG_TYPE_ERROR, "SQL_getProblemInfo failed.(solutionId=%d)", stJudgeSubmission.stSolution.solutionId);
 		write_log(JUDGE_INFO,"SQL_getProblemInfo failed.(solutionId=%d)", stJudgeSubmission.stSolution.solutionId);
 		return OS_ERR;
 	}
+
+	write_log(JUDGE_INFO,"Prepare judge ok. (solutionId=%d, problemId=%u, isVirtualJudge=%u)",
+		stJudgeSubmission.stSolution.solutionId, stJudgeSubmission.stSolution.problemId, stJudgeSubmission.stProblem.isVirtualJudge);
 
 	if (OS_YES == stJudgeSubmission.stProblem.isVirtualJudge)
 	{
@@ -1183,18 +1143,18 @@ unsigned _stdcall  Judge_Proc(void *pData)
 			if (OS_OK != ret)
 			{
 				stJudgeSubmission.stSolution.verdictId = V_SK;
-				pdt_debug_print("virtua-judge is fail...");
+				Judge_Debug(DEBUG_TYPE_ERROR, "virtua-judge is fail...");
 			}
 		}
 		else
 		{
-			pdt_debug_print("Error: virtual-judge is not enable.");
+			Judge_Debug(DEBUG_TYPE_ERROR, "Error: virtual-judge is not enable.");
 			stJudgeSubmission.stSolution.verdictId = V_SK;
 		}
 
 		#else
 		stJudgeSubmission.stSolution.verdictId = V_SK;
-		pdt_debug_print("virtua-judge is not support.");
+		Judge_Debug(DEBUG_TYPE_ERROR, "virtua-judge is not support.");
 		#endif
 
 		stJudgeSubmission.dwProStatusCode = 0;
@@ -1208,14 +1168,16 @@ unsigned _stdcall  Judge_Proc(void *pData)
 
 		ret = Judge_Local(&stJudgeSubmission);
 	}
-
+	
 	write_log(JUDGE_INFO,"Do Judge finish. (solutionId=%d)", stJudgeSubmission.stSolution.solutionId);
 
 	SQL_updateSolution(stJudgeSubmission.stSolution.solutionId,
 					   stJudgeSubmission.stSolution.verdictId,
 					   stJudgeSubmission.stSolution.testcase,
+					   stJudgeSubmission.stSolution.failcase,
 					   stJudgeSubmission.stSolution.time_used - stJudgeSubmission.stSolution.time_used%10,
 					   stJudgeSubmission.stSolution.memory_used);
+	
 
 	SQL_updateProblem(stJudgeSubmission.stSolution.problemId);
 	SQL_updateUser(stJudgeSubmission.stSolution.username);
@@ -1242,10 +1204,9 @@ unsigned _stdcall  Judge_Proc(void *pData)
 		SQL_updateProblem_contest(stJudgeSubmission.stSolution.contestId, stJudgeSubmission.stSolution.problemId);
 	}
 
-	DeleteFile(stJudgeSubmission.sourcePath);
-	DeleteFile(stJudgeSubmission.DebugFile);
-	DeleteFile(stJudgeSubmission.exePath);
-
+	//DeleteFile(stJudgeSubmission.sourcePath);
+	//DeleteFile(stJudgeSubmission.DebugFile);
+	//DeleteFile(stJudgeSubmission.exePath);
 
 	string time_string_;
 	API_TimeToString(time_string_, stJudgeSubmission.stSolution.submitDate);
@@ -1254,32 +1215,59 @@ unsigned _stdcall  Judge_Proc(void *pData)
 				"\r\n -----------------------"
 				"\r\n SolutionId   : %3d"
 				"\r\n ProblemId    : %3d"
-				"\r\n Pasted cases : %3d"
+				"\r\n Lang.        : %3s"
+				"\r\n Run cases    : %3d"
+				"\r\n Failed cases : %3d"
 				"\r\n Time-used    : %3d ms"
 				"\r\n Memory-used  : %3d kb"
 				"\r\n Return code  : %3u"
 				"\r\n Verdict      : %3s"
 				"\r\n Submit Date  : %3s"
 				"\r\n Username     : %3s"
+				"\r\n Json Result  : %s"
 				"\r\n -----------------------\r\n",
 					stJudgeSubmission.stSolution.solutionId,
 					stJudgeSubmission.stProblem.problemId,
+					stJudgeSubmission.languageName,
 					stJudgeSubmission.stSolution.testcase,
+					stJudgeSubmission.stSolution.failcase,
 					stJudgeSubmission.stSolution.time_used - stJudgeSubmission.stSolution.time_used%10,
 					stJudgeSubmission.stSolution.memory_used,
 					stJudgeSubmission.dwProStatusCode,
 					VERDICT_NAME[stJudgeSubmission.stSolution.verdictId],
-					time_string_.c_str(), stJudgeSubmission.stSolution.username);
+					time_string_.c_str(), stJudgeSubmission.stSolution.username,
+					stJudgeSubmission.pszjudgeResult_Json);
 
+	free(pJsonBuf);
+	
 	return OS_OK;
 }
 
 void Judge_PushQueue(int solutionId)
 {
 	JUDGE_DATA_S jd = {0};
-
+	
 	jd.solutionId = solutionId;
-	g_JudgeQueue.push(jd);
+	
+	if (OS_YES == g_judge_enable)
+	{
+		Judge_Debug(DEBUG_TYPE_MSG, "Recieve judge request. (solution=%d).",solutionId);
+		write_log(JUDGE_INFO,"Recieve judge request. (solution=%d).",solutionId);
+		g_JudgeQueue.push(jd);
+	}
+	else
+	{
+		Judge_Debug(DEBUG_TYPE_MSG, "Recieve judge request, but judger is disable. (solution=%d).",solutionId);
+		write_log(JUDGE_INFO,"Recieve judge request, but judger is disable. (solution=%d).",solutionId);
+	
+		SQL_updateSolution(solutionId,
+					V_SK,
+					0,
+					0,
+					0,
+					0); 			
+	}
+	
 }
 
 /* virtual-judge & local-judge ”¶∑÷¡Ω∏ˆ∂”¡– */
@@ -1289,73 +1277,84 @@ unsigned _stdcall Judge_DispatchThread(void *pEntry)
 
 	for (;;)
 	{
-		if(g_JudgeQueue.size()>limitJudge)
-		{
-			return 0;
-		}
-
 		if(!g_JudgeQueue.empty())
 		{
 				jd = g_JudgeQueue.front();
 
 				/* ∆Ù∂Ø∆¿≈– */
 				Judge_Proc((void*)&(jd.solutionId));
-				//_beginthreadex(NULL, NULL, Judge_Proc, (void*)&(jd.solutionId), 0, NULL);
-
+	
 				g_JudgeQueue.pop();
 		}
 
-		Sleep(1);
+		Sleep(1000);
 	}
 
 	return 0;
 }
 
 
-unsigned _stdcall Judge_ListenThread(void *pEntry)
+void Judge_AutoJudgeTimer()
 {
-	sockaddr_in remoteAddr;
-	SOCKET sClient;
-	int nAddrLen = sizeof(remoteAddr);
-	JUDGE_DATA_S j;
+	int n = 0;
+	JUDGE_DATA_S *pJudgeData = NULL;
 
-	while(TRUE)
+	Judge_Debug(DEBUG_TYPE_FUNC, "Judge_AutoJudgeTimer.");
+	
+	pJudgeData = (JUDGE_DATA_S*)malloc(JUDGE_MAX_AUTOJUDGE * sizeof(JUDGE_DATA_S));
+	if (NULL == pJudgeData)
 	{
-		sClient = accept(g_sListen, (SOCKADDR*)&remoteAddr, &nAddrLen);
-		if(sClient == INVALID_SOCKET)
-		{
-			write_log(JUDGE_ERROR,"Accept() Error");
-			continue;
-		}
-
-		int ret=recv(sClient,(char*)&j,sizeof(j),0);
-		if(ret>0)
-		{
-			write_log(JUDGE_INFO,"Push SolutionId:%d into Judge Queue....",j.solutionId);
-			g_JudgeQueue.push(j);
-		}
-		Sleep(1);
+		return ;
 	}
 
-	write_log(JUDGE_ERROR,"ListenThread Crash");
-	closesocket(sClient);
+	SQL_getUnJudgeSolutions(pJudgeData, &n, JUDGE_MAX_AUTOJUDGE);
+
+	for (int i = 0; i < n; i++)
+	{
+		Judge_PushQueue(pJudgeData->solutionId);
+		pJudgeData++;
+	}
+
+	free(pJudgeData);
+
+	return;
+}
+
+unsigned _stdcall Judge_TimerThread(void *pEntry)
+{
+	ULONG ulLoop = 0;
+
+	for (;;)
+	{		
+        Sleep(1000);
+        
+		/* 60s */
+		if (0 == ulLoop % 60)
+		{   
+            /* ÂÆöÊó∂Ê£ÄÊü• */
+            if( (_access(dataPath, 0 )) == -1 )
+            {
+            	Judge_Debug(DEBUG_TYPE_ERROR, "Warning: Data path '%s' is not exist, "
+                    "please check. Use the command judge data-path <path> to configure.", dataPath);
+            	write_log(JUDGE_ERROR,"Warning: Data path '%s' is not exist, please check.", dataPath);
+            }  
+		}
+
+		/* 60*10s */
+		if (OS_YES == g_judge_timer_enable)
+		{
+			if (0 == ulLoop % (60 * g_judge_auto_detect_interval))
+			{
+				Judge_AutoJudgeTimer();
+			}
+		}
+
+		ulLoop++;
+	}
 
 	return 0;
 }
 
-long WINAPI Judge_ExceptionFilter(EXCEPTION_POINTERS * lParam)
-{
-	pdt_debug_print("Judge Thread Exit...[code:%u]", GetLastError());
-	write_log(JUDGE_ERROR,"Judge Thread Exit after 10 second...(GetLastError=%u)",GetLastError());
-	Sleep(1);
-
-	/* ShellExecuteA(NULL,"open",judgePath,NULL,NULL,SW_SHOWNORMAL); */
-
-	closesocket(g_sListen);
-	WSACleanup();
-
-	return EXCEPTION_EXECUTE_HANDLER;
-}
 
 int GetProcessThreadList()
 {
@@ -1392,19 +1391,100 @@ int GetProcessThreadList()
 	return 0;
 }
 
-int OJ_Init()
+ULONG Judge_BuildRun(CHAR **ppBuildrun)
 {
-	SetUnhandledExceptionFilter(Judge_ExceptionFilter);
- 	SetErrorMode(SEM_NOGPFAULTERRORBOX );
+	CHAR *pBuildrun = NULL;
 
-	if( (_access(logPath, 0 )) == -1 )
+	*ppBuildrun = (CHAR*)malloc(BDN_MAX_BUILDRUN_SIZE);
+	if (NULL == *ppBuildrun)
 	{
-		CreateDirectory(logPath,NULL);
+		return OS_ERR;
+	}
+	memset(*ppBuildrun, 0, BDN_MAX_BUILDRUN_SIZE);
+	
+	pBuildrun = *ppBuildrun;
+
+	if (OS_YES == g_judge_enable)
+	{
+		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN"judge enable");
+	}
+	else
+	{
+		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN"undo judge enable");
+	}
+	
+	
+	if (JUDGE_MODE_ACM == g_judge_mode)
+	{
+		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN"judge mode acm");
+	}
+	else if(JUDGE_MODE_OI == g_judge_mode)
+	{
+		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN"judge mode oi");
+	}
+	else
+	{
+
 	}
 
-	Judge_InitConfigData();
+	if (OS_YES == g_judge_timer_enable)
+	{
+		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN"judge auto-detect enable");
+		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN"judge auto-detect interval %d", g_judge_auto_detect_interval);
+	}
+	else
+	{
+		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN"undo judge auto-detect enable");
+	}
 
-	Judge_DebugSwitch(JUDGE_DEBUG_OFF);
+
+	pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN"judge data-path %s", dataPath);
+	
+	if (OS_YES == Judge_IsVirtualJudgeEnable())
+	{
+		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN"virtual-judge enable");
+	}
+	else
+	{
+		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN"undo virtual-judge enable");
+	}
+	
+	if (OS_YES == hdu_vjudge_enable)
+	{
+		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"hdu-judge enable");
+	}
+	else
+	{
+		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"undo hdu-judge enable");
+	}
+
+	pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_2"hdu-judge username %s password %s", hdu_username, hdu_password);
+	
+	if (OS_YES == hdu_remote_enable)
+	{
+		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_2"hdu-judge remote-judge enable");
+	}
+	else
+	{
+		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_2"undo hdu-judge remote-judge enable");
+	}
+
+	pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_3"hdu-judge ip %s port %u", hdu_judgerIP, hdu_sockport);
+
+#if 0
+	if (OS_YES == guet_vjudge_enable)
+	{
+		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_ONE"guet-judge enable");
+		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_ONE"guet-judge username %s password %s", guet_username, guet_password);
+		
+		if (OS_YES == guet_remote_enable)
+		{
+			pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_TWO"guet-judge remote-judge enable");
+			pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_TWO"guet-judge ip %s port %u", guet_judgerIP, guet_sockport);				
+		}
+	}		
+#endif
+
 
 	return OS_OK;
 }
@@ -1414,18 +1494,18 @@ int OJ_InitData()
 
 	if(SQL_InitMySQL()==0)
 	{
-		write_log(JUDGE_ERROR,"Init MySQL JUDGE_ERROR...");
-		pdt_debug_print("Error: Judge can not connect to MySQL.");
-	}
-
-	if(Judge_InitSocket()==0)
-	{
-		write_log(JUDGE_ERROR,"Init Socket JUDGE_ERROR...");
-		pdt_debug_print("Error: Judge task killed itself...[code:%u]", GetLastError());
+		write_log(JUDGE_ERROR,"Judge can not connect to MySQL(%s, %s, %s, %s, %d).",Mysql_url, Mysql_username, Mysql_password, Mysql_table, Mysql_port);
+		printf("Error: Judge can not connect to MySQL(%s, %s, %s, %s, %d).\r\n",Mysql_url, Mysql_username, Mysql_password, Mysql_table, Mysql_port);
 	}
 
 }
 
+int OJ_Init()
+{
+	(void)OJ_InitData();
+
+	return OS_OK;
+}
 
 /*
 unsigned long _beginthreadex( void *security,
@@ -1448,10 +1528,12 @@ unsigned _stdcall  OJ_TaskEntry(void *pEntry)
 {
 	write_log(JUDGE_INFO,"Running Judge Core...");
 
-	(void)OJ_InitData();
-
+	(void)BDN_RegistBuildRun(MID_JUDGE, BDN_PRIORITY_NORMAL, Judge_BuildRun);
+	
 	_beginthreadex(NULL, 0, Judge_DispatchThread, NULL, NULL, NULL);
-	_beginthreadex(NULL, 0, Judge_ListenThread, NULL, NULL, NULL);
+	
+    /* ÂêØÂä®ÂÆöÊó∂Âô®Á∫øÁ®ã */
+	_beginthreadex(NULL, 0, Judge_TimerThread, NULL, NULL, NULL);
 
 	//WaitForSingleObject(handle, INFINITE);
 	//CloseHandle(handle);
@@ -1482,25 +1564,25 @@ APP_INFO_S g_judgeAppInfo =
 #if 0
 int  Test1(int evtId, int cmdId, void *pData, void **ppInfo)
 {
-	pdt_debug_print("Do test1, evtId=%d, cmdId=%d..", evtId, cmdId);
+	Judge_Debug(DEBUG_TYPE_FUNC, "Do test1, evtId=%d, cmdId=%d..", evtId, cmdId);
 
 	return OS_OK;
 }
 
 int  Test2(int evtId, int cmdId, void *pData, void **ppInfo)
 {
-	pdt_debug_print("Do test2, evtId=%d, cmdId=%d..", evtId, cmdId);
+	Judge_Debug(DEBUG_TYPE_FUNC, "Do test2, evtId=%d, cmdId=%d..", evtId, cmdId);
 	return OS_OK;
 }
 
 int  Test3(int evtId, int cmdId, void *pData, void **ppInfo)
 {
-	pdt_debug_print("Do test3, evtId=%d, cmdId=%d..", evtId, cmdId);
+	Judge_Debug(DEBUG_TYPE_FUNC, "Do test3, evtId=%d, cmdId=%d..", evtId, cmdId);
 	return OS_OK;
 }
 int  Test4(int evtId, int cmdId, void *pData, void **ppInfo)
 {
-	pdt_debug_print("Do test4, evtId=%d, cmdId=%d..", evtId, cmdId);
+	Judge_Debug(DEBUG_TYPE_FUNC, "Do test4, evtId=%d, cmdId=%d..", evtId, cmdId);
 	return OS_OK;
 }
 #endif
