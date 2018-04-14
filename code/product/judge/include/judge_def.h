@@ -38,13 +38,6 @@ static const char* VERDICT_NAME[] = {"ALL", "Queuing", "Compiling", "Compilation
 									"Memory Limit Exceeded","Presentation Error","Output Limit Exceeded",
 									"Restricted Function","Out Of Comtest","System Error", "Skipped"};
 
-#define JUDGE_SYSTEM_ERROR 0
-#define JUDGE_WARNING 1
-#define JUDGE_ERROR 2
-#define JUDGE_FATAL 3
-#define JUDGE_INFO 4
-
-static const char* LEVEL_NAME[] = {"JUDGE_SYSTEM_ERROR", "JUDGE_WARNING", "JUDGE_ERROR", "JUDGE_FATAL", "JUDGE_INFO"};
 
 #define VOS_YES 1
 #define VOS_NO  0

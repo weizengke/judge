@@ -4,6 +4,23 @@
 #include "product\include\pdt_common_inc.h"
 
 
+#ifndef UCHAR
+#define UCHAR unsigned char
+#endif
+
+#ifndef ULONG
+#define ULONG unsigned long
+#endif
+
+#ifndef CHAR
+#define CHAR char
+#endif
+
+#ifndef VOID
+#define VOID void
+#endif
+
+
 #define M_DES(x,y) y
 
 #define BUFSIZE 65535
@@ -19,12 +36,19 @@
 #define BDN_BUILDRUN_INDENT_2	"\r\n  "
 #define BDN_BUILDRUN_INDENT_3	"\r\n   "
 
+/* assert(0) */
+#define OS_DBGASSERT(x,args...) \
+if (0 == x) {\
+	printf("\r\nAssert at %s:%d. ", __FILE__, __LINE__);\
+	printf(args);\
+}\
 
 extern void RunDelay(int t);
 extern void pdt_debug_print(const char *format, ...);
 
 extern void MSG_StartDot();
 extern void MSG_StopDot();
-extern ULONG BDN_RegistBuildRun(ULONG moduleId, ULONG  priority, ULONG  (*pfCallBackFunc)(CHAR **ppBuildrun));
+extern void write_log(int level, const char *fmt, ...);
+extern ULONG BDN_RegistBuildRun(ULONG moduleId, ULONG view_id, ULONG  priority, ULONG  (*pfCallBackFunc)(CHAR **ppBuildrun, ULONG ulIncludeDefault));
 #endif
 

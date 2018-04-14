@@ -8,15 +8,15 @@
 #define OS_OK   0
 #define OS_ERR  1
 
-#define OS_TRUE 0
-#define OS_FALSE 1
+#define OS_TRUE 1
+#define OS_FALSE 0
 
 #define OS_YES 1
 #define OS_NO  0
 
 #define APP_NAME_SIZE 64
 
-#define SOLFWARE_VERSION "V100R001C00B060"
+#define SOLFWARE_VERSION "V100R001C00B100"
 
 #define STARTUP_CFG "conf\\config.ini"
 
@@ -38,6 +38,19 @@ enum MID_ID_EM
 	MID_ID_END
 };
 
+
+enum CFG_SECTION_ID_EM
+{
+	CFG_SECTION_NULL = 0,
+	CFG_SECTION_GLOBAL = 1,
+	CFG_SECTION_USER,
+	CFG_SECTION_SYSTEM,
+	CFG_SECTION_JUDGE_MGR,
+	CFG_SECTION_VJUDGE_MGR,
+	CFG_SECTION_AAA,
+	CFG_SECTION_USER_VTY,
+	CFG_SECTION_DIAGNOSE,
+};
 
 typedef struct tagAPP_INFO_S
 {

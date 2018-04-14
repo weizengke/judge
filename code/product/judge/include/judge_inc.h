@@ -11,6 +11,7 @@
 #include <string>
 #include <sstream>
 
+#include "osp\command\include\icli.h"
 
 /* BEGIN: Added by weizengke, 2013/11/15 for debug center*/
 #include "product\include\pdt_common_inc.h"
@@ -28,6 +29,7 @@
 #include "product\judge\include\judge_sql.h"
 #include "product\judge\include\judge_hdu.h"
 #include "product\judge\include\judge_guet.h"
+#include "product\judge\include\judge_cmd.h"
 
 
 #ifdef _WIN32_

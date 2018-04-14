@@ -16,22 +16,17 @@
 #include <windows.h>
 #include <process.h>
 #include <stdlib.h>
-//#include <thread>
 #include <string>
-//#include <mutex>
 #include <ctype.h>
 #include <time.h>
 #include <stdio.h>
 #include <queue>
 
+#include "osp\command\include\icli.h"
 #include "osp\common\include\osp_common_def.h"
-
 #include "product\include\pdt_common_inc.h"
 #include "product\judge\include\judge_inc.h"
-#include "osp\command\include\command_inc.h"
-
 #include "product\thirdpart32\dbghelp\DbgHelp.h"
-
 
 using namespace std;
 
@@ -40,15 +35,37 @@ vector <APP_INFO_S*> g_vector_appInfo;
 #define APP_MAX_SYSNAME_SIZE 24
 #define SOCKET_PORT 5000
 
-char g_sysname[APP_MAX_SYSNAME_SIZE] = "Jungle";
+char g_sysname[APP_MAX_SYSNAME_SIZE] = "judger";
 char g_startup_config[256] = "config.cfg";
-int  g_pdt_recovering = OS_NO;
+int  g_pdt_recovered = OS_NO;
 HWND g_hWnd = NULL;
 
 SOCKET g_sListen;
 int g_sock_port = SOCKET_PORT;
 char judgePath[MAX_PATH];
 char logPath[MAX_PATH]="log\\";
+
+
+enum PDT_CMO_TBLID_EM {
+	PDT_CMO_TBL,		
+};
+
+enum PDT_CMO_ID_EM {
+	PDT_CMO_UNDO = CMD_ELEMID_DEF(MID_OS, PDT_CMO_TBL, 0),
+	PDT_CMO_VERSION,
+	PDT_CMO_SYSNAME_STRING,
+};
+
+/* 判断是否是配置恢复阶段 */
+ULONG PDT_IsCfgRecoverOver()
+{
+	return g_pdt_recovered;
+}
+
+char *PDT_GetSysname()
+{
+	return g_sysname;
+}
 
 int RegistAppInfo(APP_INFO_S *pstAppInfo)
 {
@@ -75,7 +92,7 @@ int RegistAppInfo(APP_INFO_S *pstAppInfo)
 
 }
 
-ULONG PDT_BuildRun(CHAR **ppBuildrun)
+ULONG PDT_BuildRun(CHAR **ppBuildrun, ULONG ulIncludeDefault)
 {
 	CHAR *pBuildrun = NULL;
 
@@ -97,11 +114,8 @@ ULONG PDT_BuildRun(CHAR **ppBuildrun)
 void PDT_CfgRecover()
 {
 	ULONG ulRet = OS_OK;
-	char cfgpath[256] = "config.cfg";
-	char line[1024] = {0};
-	struct cmd_vty vty = {0};
-	extern int cmd_pub_run(struct cmd_vty *vty, char *szCmdBuf);
-
+	CHAR cfgpath[256] = "config.cfg";
+	CHAR line[1024] = {0};
 
 	sprintf(cfgpath, "conf\\%s",g_startup_config);
 	
@@ -116,33 +130,30 @@ void PDT_CfgRecover()
 
 	write_log(JUDGE_INFO, "Recover configuration begin.");
 
-	g_pdt_recovering = OS_YES;
-
-	cmd_pub_run(g_con_vty,"system-view");
+	cmd_pub_run("system-view");
 	
 	while (fgets(line,1024,fp))
 	{
 		if ('#' != line[0])
 		{
-			(void)cmd_pub_run(g_con_vty, line);
-			//printf("\r\nRecover command:%s", line);
-			write_log(JUDGE_INFO, "Recover command:%s", line);
+			line[strlen(line) - 1] = '\0';
+			ulRet = cmd_pub_run(line);
+			//printf("\r\nRecover command:%s, ulRet=%u", line, ulRet);
+			//write_log(JUDGE_INFO, "Recover command(ulRet=%u):%s", ulRet, line);
 		}
 	}
-	
-	//cmd_pub_run(g_con_vty,"return");
 	
 	fclose(fp);
 	
 	printf("Eecover configuration end.\r\n");
 	write_log(JUDGE_INFO, "Eecover configuration end.");
 
-	g_pdt_recovering = OS_NO;
+	g_pdt_recovered = OS_YES;
 	
 	return;
 }
 
-void PDT_ShowCfg(CMD_VTY *vty)
+void PDT_ShowCfg(ULONG vtyId)
 {
 	ULONG ulRet = OS_OK;
 	char cfgpath[256] = "config.cfg";
@@ -160,10 +171,10 @@ void PDT_ShowCfg(CMD_VTY *vty)
 
 	while (fgets(line,1024,fp))
 	{
-		vty_printf(vty,"%s", line);
+		vty_printf(vtyId,"%s", line);
 	}
 
-	vty_printf(vty, "\r\n");
+	vty_printf(vtyId, "\r\n");
 
 	fclose(fp);
 
@@ -186,211 +197,6 @@ long WINAPI PDT_ExceptionFilter(EXCEPTION_POINTERS * excp)
 
 	return EXCEPTION_EXECUTE_HANDLER;
 }
-#if 0
-void dump_callstack( CONTEXT *context )
-{
-	STACKFRAME sf;
-	memset( &sf, 0, sizeof( STACKFRAME ) );
-
-	sf.AddrPC.Offset = context->Eip;
-	sf.AddrPC.Mode = AddrModeFlat;
-	sf.AddrStack.Offset = context->Esp;
-	sf.AddrStack.Mode = AddrModeFlat;
-	sf.AddrFrame.Offset = context->Ebp;
-	sf.AddrFrame.Mode = AddrModeFlat;
-
-	DWORD machineType = IMAGE_FILE_MACHINE_I386;
-
-	HANDLE hProcess = GetCurrentProcess();
-	HANDLE hThread = GetCurrentThread();
-
-	for( ; ; )
-	{
-		if( !StackWalk(machineType, hProcess, hThread, &sf, context, 0, SymFunctionTableAccess, SymGetModuleBase, 0 ) )
-		{
-			break;
-		}
-
-		if( sf.AddrFrame.Offset == 0 )
-		{
-			break;
-		}
-		BYTE symbolBuffer[ sizeof( SYMBOL_INFO ) + 1024 ];
-		PSYMBOL_INFO pSymbol = ( PSYMBOL_INFO ) symbolBuffer;
-
-		pSymbol->SizeOfStruct = sizeof( symbolBuffer );
-		pSymbol->MaxNameLen = 1024;
-
-		DWORD64 symDisplacement = 0;
-		if( SymFromAddr( hProcess, sf.AddrPC.Offset, 0, pSymbol ) )
-		{
-			printf( "Function : %s 0x%03x,0x%08x\n", pSymbol->Name,pSymbol->Address);
-		}
-		else
-		{
-			printf( "SymFromAdd failed!\n" );
-		}
-
-		IMAGEHLP_LINE lineInfo = { sizeof(IMAGEHLP_LINE) };
-		DWORD dwLineDisplacement;
-
-		if( SymGetLineFromAddr( hProcess, sf.AddrPC.Offset, &dwLineDisplacement, &lineInfo ) )
-		{
-			printf( "[Source File : %s]\n", lineInfo.FileName ); 
-			printf( "[Source Line : %u]\n", lineInfo.LineNumber ); 
-		}
-		else
-		{
-			printf( "SymGetLineFromAddr failed!\n" );
-		}
-	}
-}
-
-LONG WINAPI excep_filter( struct _EXCEPTION_POINTERS* ExceptionInfo)
-{
-	/// init dbghelp.dll
-	if( SymInitialize( GetCurrentProcess(), NULL, TRUE ) )
-	{
-		printf( "Init dbghelp ok.\n" );
-	}
-
-	dump_callstack( ExceptionInfo->ContextRecord );
-
-	if( SymCleanup( GetCurrentProcess() ) )
-	{
-		printf( "Cleanup dbghelp ok.\n" );
-	}
-
-	return EXCEPTION_EXECUTE_HANDLER;
-}
-
-
-LONG WINAPI MyUnhandledExceptionFilter(struct _EXCEPTION_POINTERS* ExceptionInfo)
-{
-    HANDLE lhDumpFile = CreateFile("DumpFile.dmp", GENERIC_WRITE, 0, NULL, CREATE_ALWAYS,FILE_ATTRIBUTE_NORMAL ,NULL);
-
-    MINIDUMP_EXCEPTION_INFORMATION loExceptionInfo;
-
-    loExceptionInfo.ExceptionPointers = ExceptionInfo;
-
-    loExceptionInfo.ThreadId = GetCurrentThreadId();
-
-    loExceptionInfo.ClientPointers = TRUE;
-
-    MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(),lhDumpFile, MiniDumpNormal, &loExceptionInfo, NULL, NULL);
-
-    CloseHandle(lhDumpFile);
-
-    return EXCEPTION_EXECUTE_HANDLER;
-}
-
-void dumpStack(void)  
-{  
-    const UINT max_name_length = 256;   // Max length of symbols' name.  
-  
-    CONTEXT context;            // Store register addresses.  
-    STACKFRAME64 stackframe;        // Call stack.  
-    HANDLE process, thread;         // Handle to current process & thread.  
-                        // Generally it can be subsitituted with 0xFFFFFFFF & 0xFFFFFFFE.  
-    PSYMBOL_INFO symbol;            // Debugging symbol's information.  
-    IMAGEHLP_LINE64 source_info;        // Source information (file name & line number)  
-    DWORD displacement;         // Source line displacement.  
-	
-    // Initialize PSYMBOL_INFO structure.  
-    // Allocate a properly-sized block.  
-    symbol = (PSYMBOL_INFO)malloc(sizeof(SYMBOL_INFO) + (max_name_length - 1) * sizeof(TCHAR));   
-    memset(symbol, 0, sizeof(SYMBOL_INFO) + (max_name_length - 1) * sizeof(TCHAR));  
-    symbol->SizeOfStruct = sizeof(SYMBOL_INFO);  // SizeOfStruct *MUST BE* set to sizeof(SYMBOL_INFO).  
-    symbol->MaxNameLen = max_name_length;  
-  
-    // Initialize IMAGEHLP_LINE64 structure.  
-    memset(&source_info, 0, sizeof(IMAGEHLP_LINE64));  
-    source_info.SizeOfStruct = sizeof(IMAGEHLP_LINE64);  
-      
-    // Initialize STACKFRAME64 structure.  
-    RtlCaptureContext(&context);            // Get context.  
-    memset(&stackframe, 0, sizeof(STACKFRAME64));  
-    stackframe.AddrPC.Offset = context.Eip;     // Fill in register addresses (EIP, ESP, EBP).  
-    stackframe.AddrPC.Mode = AddrModeFlat;  
-    stackframe.AddrStack.Offset = context.Esp;  
-    stackframe.AddrStack.Mode = AddrModeFlat;  
-    stackframe.AddrFrame.Offset = context.Ebp;  
-    stackframe.AddrFrame.Mode = AddrModeFlat;  
-  
-    process = GetCurrentProcess();  // Get current process & thread.  
-    thread = GetCurrentThread();  
-  
-    // Initialize dbghelp library.  
-    if(!SymInitialize(process, NULL, TRUE))  
-	{
-		printf("\r\nSymInitialize failed....");
-		return ;  
-    }
-	
-    puts("Call stack:\r\n");  
-  
-    // Enumerate call stack frame.  
-    while(StackWalk64(IMAGE_FILE_MACHINE_I386, process, thread, &stackframe,   
-        &context, NULL, SymFunctionTableAccess64, SymGetModuleBase64, NULL))  
-    {  
-        if(stackframe.AddrFrame.Offset == 0)    // End reaches.  
-            break;  
-          
-        if(SymFromAddr(process, stackframe.AddrPC.Offset, NULL, symbol))// Get symbol.  
-            printf(" > %s\n", symbol->Name);  
-  
-        if(SymGetLineFromAddr64(process, stackframe.AddrPC.Offset,   
-            &displacement, &source_info)) {             // Get source information.  
-                printf("\t[%s:%d] at addr 0x%08LX\n",   
-                    source_info.FileName,   
-                    source_info.LineNumber,  
-                    stackframe.AddrPC.Offset);  
-        } else {  
-            if(GetLastError() == 0x1E7) {       // If err_code == 0x1e7, no symbol was found.  
-                printf("\tNo debug symbol loaded for this function.\n");  
-            }  
-        }  
-    }  
-  
-    SymCleanup(process);    // Clean up and exit.  
-    free(symbol);  
-}  
-
-void func1( int i )
-{
-	dumpStack();
-}
-
-void func2( int i )
-{
-	func1( i - 1 );
-}
-
-void func3( int i )
-{
-	func2( i - 1 );
-}
-
-void test( int i )
-{
-	func3( i - 1 );
-}
-
-void test1()
-{
-	#ifdef _M_IX86  
-	printf("\r\n test1....");
-	#elif _M_X64
-	printf("\r\n test11....");
-	#elif _M_IA64 
-	printf("\r\n test111....");
-	#else  
-		#error "Platform not supported!"  
-	#endif  
-	test(10);
-	
-}
-#endif
 
 unsigned _stdcall PDT_ListenThread(void *pEntry)
 {
@@ -431,12 +237,9 @@ unsigned _stdcall PDT_ListenThread(void *pEntry)
 			PDT_Debug(DEBUG_TYPE_MSG, "Message:%s", buff);
 
 			/* 需要检查发送源的合法性 */
-			
-			extern int cmd_pub_run(struct cmd_vty *vty, char *szCmdBuf);
-			struct cmd_vty vty = {0};
-			cmd_vty_init(&vty);
-			cmd_pub_run(&vty,"system-view");
-			(void)cmd_pub_run(&vty, buff);
+	
+			(void)cmd_pub_run("system-view");
+			(void)cmd_pub_run(buff);
 		}
 
 	
@@ -614,14 +417,109 @@ void PDT_InitConfigData()
 
 }
 
+
+ULONG pdt_cfg_callback(VOID *pRcvMsg)
+{
+	ULONG ulRet = OS_OK;
+	ULONG iLoop = 0;
+	ULONG iElemNum = 0;
+	ULONG iElemID = 0;
+	VOID *pElem = NULL;
+	ULONG vtyId = 0;
+	ULONG isVersion = 0;
+	ULONG isSysname = 0;
+	
+	vtyId = cmd_get_vty_id(pRcvMsg);
+	iElemNum = cmd_get_elem_num(pRcvMsg);
+
+	for (iLoop = 0; iLoop < iElemNum; iLoop++)
+	{	
+		pElem = cmd_get_elem_by_index(pRcvMsg, iLoop);
+		iElemID = cmd_get_elemid(pElem);
+
+		switch(iElemID)
+		{
+			case PDT_CMO_VERSION:
+				isVersion = OS_YES;
+				break;
+				
+			case PDT_CMO_SYSNAME_STRING:
+				cmd_copy_string_param(pElem, g_sysname);
+				isSysname = OS_YES;
+				break;
+				
+			default:
+				break;
+		}
+	}
+	
+	if (OS_YES == isVersion)
+	{
+		vty_printf(vtyId, 
+			" Kernel version: %s, released at %s %s. \r\n Copyright @ 2011-2018 debugforces.com. All Rights Reserved. \r\n",
+			SOLFWARE_VERSION,
+			__TIME__,
+			__DATE__);
+		
+		return OS_OK;
+	}
+
+	if (OS_YES == isSysname)
+	{
+		::SetConsoleTitle(g_sysname);
+		return OS_OK;
+	}	
+	
+	return ulRet;
+
+}
+
+ULONG pdt_cmd_callback(VOID *pRcvMsg)
+{
+	ULONG iRet = 0;
+	ULONG iTBLID = 0;
+	
+	iTBLID = cmd_get_first_elem_tblid(pRcvMsg);
+		
+	switch(iTBLID)
+	{
+		case PDT_CMO_TBL:
+			iRet = pdt_cfg_callback(pRcvMsg);
+			break;
+
+		default:
+			break;
+	}
+
+	return iRet;
+}
+
+ULONG pdt_reg_cmd()
+{
+	CMD_VECTOR_S * vec = NULL;
+
+	/* 命令行注册四部曲1: 申请命令行向量 */
+	CMD_VECTOR_NEW(vec);
+
+	/* 命令行注册四部曲2: 定义命令字 */
+	cmd_regelement_new(PDT_CMO_VERSION,					CMD_ELEM_TYPE_KEY,	  "version",		   "Version", vec);
+	cmd_regelement_new(CMD_ELEMID_NULL,					CMD_ELEM_TYPE_KEY,	  "sysname",		   "Change System Name", vec);
+	cmd_regelement_new(PDT_CMO_SYSNAME_STRING,			CMD_ELEM_TYPE_STRING, "STRING<1-24>",	   "System Name",   vec);
+
+	/* 命令行注册四部曲3: 注册命令行 */
+	cmd_install_command(MID_OS, VIEW_DIAGNOSE,  " 1 ", vec);
+	cmd_install_command(MID_OS, VIEW_SYSTEM,    " 2 3 ", vec);
+
+	/* 命令行注册四部曲4: 释放命令行向量 */
+	CMD_VECTOR_FREE(vec);
+
+	return OS_OK;
+}
+
+
 void pdt_init()
 {
 	SetUnhandledExceptionFilter(PDT_ExceptionFilter);
-
-	//SetUnhandledExceptionFilter(MyUnhandledExceptionFilter);
-
-	//SetUnhandledExceptionFilter(excep_filter);
-	
  	SetErrorMode(SEM_NOGPFAULTERRORBOX );
 
 	if( (_access(logPath, 0 )) == -1 )
@@ -693,8 +591,19 @@ int main()
 		write_log(JUDGE_ERROR,"Init Socket JUDGE_ERROR...");
 	}
 
-	(void)BDN_RegistBuildRun(MID_OS, BDN_PRIORITY_HIGH + 4094, PDT_BuildRun);
+	(void)BDN_RegistBuildRun(MID_OS, VIEW_SYSTEM, BDN_PRIORITY_HIGH + 4094, PDT_BuildRun);
 
+	{
+		extern ULONG CMD_ADP_Init();
+		CMD_ADP_Init();
+	}
+
+	pdt_reg_cmd();
+	
+	(VOID)cmd_regcallback(MID_OS, pdt_cmd_callback);	
+
+	Sleep(1000);
+	
 	/* 配置恢复处理 */
 	PDT_CfgRecover();
 

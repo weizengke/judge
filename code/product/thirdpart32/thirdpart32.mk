@@ -1,7 +1,5 @@
-THIRDPART_OBJ=$(OBJ_DIR)/cJSON.o 
+include $(PRODUCT_ROOT)/thirdpart32/cjson/cjson.mk
+include $(PRODUCT_ROOT)/thirdpart32/crypt/crypt.mk
 
-all:$(THIRDPART_OBJ)
-
-$(THIRDPART_OBJ):$(OBJ_DIR)/%.o:$(PRODUCT_ROOT)/thirdpart32/cjson/%.cpp
-
-	$(CC) $(CCFLAGS) $< $(CFLAGS) $@
+THIRDPART_OBJ=$(CJSON_OBJ)\
+	$(CRYPT_OBJ)

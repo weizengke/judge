@@ -13,22 +13,28 @@
 #include "tlhelp32.h"
 
 #include "osp\common\include\osp_common_def.h"
-#include "osp\command\include\command_inc.h"
+#include "osp\command\include\icli.h"
 
 typedef struct BDN_EVENT_Ntf_Node
 {
 	ULONG  moduleId;
+	ULONG  view_id;
 	ULONG  priority;
-	ULONG  (*pfCallBackFunc)(CHAR **ppBuildrun);  /* 回调函数内申请内存，由调用者释放 */
+	ULONG  (*pfCallBackFunc)(CHAR **ppBuildrun, ULONG ulIncludeDefault);  /* 回调函数内申请内存，由调用者释放 */
 
 	struct BDN_EVENT_Ntf_Node *pNext;
 };
 
 struct BDN_EVENT_Ntf_Node *g_pstBDNEventNtfList;
 
+extern VOID vty_printf(VOID *vty, CHAR *format, ...);
 
-ULONG BDN_RegistBuildRun(ULONG moduleId, ULONG  priority,
-								ULONG  (*pfCallBackFunc)(CHAR **ppBuildrun))
+/*
+moduleId: 模块id
+view_id : 归属视图id
+*/
+ULONG BDN_RegistBuildRun(ULONG moduleId, ULONG view_id, ULONG  priority,
+								ULONG  (*pfCallBackFunc)(CHAR **ppBuildrun, ULONG ulIncludeDefault))
 {
 	struct BDN_EVENT_Ntf_Node * pstNow = NULL;
 	struct BDN_EVENT_Ntf_Node * pstPre = NULL;
@@ -40,6 +46,8 @@ ULONG BDN_RegistBuildRun(ULONG moduleId, ULONG  priority,
 		return OS_ERR;
 	}
 
+	pstEvtNtfNodeNew->moduleId = moduleId;
+	pstEvtNtfNodeNew->view_id = view_id;
 	pstEvtNtfNodeNew->pfCallBackFunc = pfCallBackFunc;
 	pstEvtNtfNodeNew->priority = priority;
 
@@ -89,9 +97,7 @@ ULONG BDN_RegistBuildRun(ULONG moduleId, ULONG  priority,
 		{
 			pstPre->pNext = pstEvtNtfNodeNew;
 		}
-
 	}
-
 
 	return OS_OK;
 }
@@ -116,15 +122,18 @@ ULONG BDN_SystemBuildRun(CHAR **ppBuildrun)
 	{
 		
 		pBuildrun = NULL;
-		ret = pstHead->pfCallBackFunc(&pBuildrun);
+		ret = pstHead->pfCallBackFunc(&pBuildrun, OS_NO);
 		if (OS_OK != ret)
 		{
 		}
 
 		if (NULL != pBuildrun)
 		{			
-			strcat(*ppBuildrun, pBuildrun);
-			strcat(*ppBuildrun, "\r\n#");
+			if (0 != strlen(pBuildrun))
+			{
+				strcat(*ppBuildrun, pBuildrun);
+				strcat(*ppBuildrun, "\r\n#");
+			}
 			
 			free(pBuildrun);
 			pBuildrun = NULL;
@@ -140,7 +149,7 @@ ULONG BDN_SystemBuildRun(CHAR **ppBuildrun)
 }
 
 
-void BDN_ShowBuildRun(CMD_VTY *vty)
+void BDN_ShowBuildRun(ULONG vtyId)
 {
 	ULONG ulRet = OS_OK;
 	CHAR *pBuildrun = NULL;
@@ -151,11 +160,67 @@ void BDN_ShowBuildRun(CMD_VTY *vty)
 		return;
 	}
 	
-	vty_printf(vty, "%s\r\n", pBuildrun);
+	vty_printf(vtyId, "%s\r\n", pBuildrun);
 
 	free(pBuildrun);
 }
 
+void BDN_ShowCurrentViewBuildRun(ULONG vtyId, ULONG ulIncludeDefault)
+{
+	int index  = 0;
+	int ret = OS_OK;	
+	CHAR *pBuildrun = NULL;
+	CHAR *pBuildrunTmp = NULL;
+	ULONG view_id = VIEW_NULL;
+	
+	view_id = vty_get_current_viewid(vtyId);
+		
+	pBuildrun = (CHAR*)malloc(BDN_MAX_BUILDRUN_SIZE);
+	if (NULL == pBuildrun)
+	{
+		return;
+	}
+
+	memset(pBuildrun,0,BDN_MAX_BUILDRUN_SIZE);
+	
+	struct BDN_EVENT_Ntf_Node * pstHead =  g_pstBDNEventNtfList;
+
+	strcat(pBuildrun, "#");
+	
+	while (NULL != pstHead)
+	{
+		if (pstHead->view_id != view_id)
+		{
+			pstHead = pstHead->pNext;
+			continue;
+		}
+		
+		pBuildrunTmp = NULL;
+		ret = pstHead->pfCallBackFunc(&pBuildrunTmp, ulIncludeDefault);
+		if (OS_OK != ret)
+		{
+			
+		}
+
+		if (NULL != pBuildrunTmp)
+		{	
+			strcat(pBuildrun, pBuildrunTmp);
+			strcat(pBuildrun, "\r\n#");
+			
+			free(pBuildrunTmp);
+			pBuildrunTmp = NULL;
+		}
+
+		pstHead = pstHead->pNext;	
+	}
+
+	strcat(pBuildrun, "\r\nreturn");
+	strcat(pBuildrun, "\r\n#");
+
+	vty_printf(vtyId, "%s\r\n", pBuildrun);
+
+	free(pBuildrun);
+}
 
 
 

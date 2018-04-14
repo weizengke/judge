@@ -25,8 +25,9 @@
 
 #include "tlhelp32.h"
 
+#include "osp\command\include\icli.h"
+
 #include "product\include\pdt_common_inc.h"
-#include "osp\command\include\command_inc.h"
 #include "osp\common\include\osp_common_def.h"
 #include "osp\event\include\event_pub.h"
 #include "osp\debug\include\debug_center.h"
@@ -88,6 +89,7 @@ typedef list<NDP_NEIGHBORS_ST *> NDP_NEIGHBORS_LIST;
 NDP_NEIGHBORS_LIST g_NdpNeighborsList;
 
 #define NDP_Debug(x, args...) debugcenter_print(MID_NDP, x, args)
+
 
 char* GetIpFromULong(ULONG uIp)   
 {   
@@ -180,17 +182,17 @@ void NDP_NeighborsAge()
 	}
 }
 
-void NDP_ShowAllNeighbors(struct cmd_vty *vty)
+void NDP_ShowAllNeighbors(ULONG vtyId)
 {
-	vty_printf(vty, "Neighbors (%u):\r\n", g_NdpNeighborsList.size());
-	vty_printf(vty, " Sysname        IP               Port     Age(s)\r\n");
-	vty_printf(vty, " -----------------------------------------------\r\n");
+	vty_printf(vtyId, "Neighbors (%u):\r\n", g_NdpNeighborsList.size());
+	vty_printf(vtyId, " Sysname        IP               Port     Age(s)\r\n");
+	vty_printf(vtyId, " -----------------------------------------------\r\n");
 		
 	for(NDP_NEIGHBORS_LIST::iterator UserIterator = g_NdpNeighborsList.begin();
 			UserIterator != g_NdpNeighborsList.end();
 			++UserIterator)
 	{
-		vty_printf(vty, " %-13s  %-16s %-8u %-4u\r\n", (*UserIterator)->szSysName, GetIpFromULong(htonl((*UserIterator)->ulIp)), (*UserIterator)->ulPort, (*UserIterator)->ulAgeTime);
+		vty_printf(vtyId, " %-13s  %-16s %-8u %-4u\r\n", (*UserIterator)->szSysName, GetIpFromULong(htonl((*UserIterator)->ulIp)), (*UserIterator)->ulPort, (*UserIterator)->ulAgeTime);
 	}
 }
 
@@ -569,6 +571,50 @@ unsigned _stdcall NDP_TimerThread(void *pEntry)
 	return 0;
 }
 
+
+ULONG NDP_BuildRun(CHAR **ppBuildrun, ULONG ulIncludeDefault)
+{
+	CHAR *pBuildrun = NULL;
+
+	*ppBuildrun = (CHAR*)malloc(BDN_MAX_BUILDRUN_SIZE);
+	if (NULL == *ppBuildrun)
+	{
+		return OS_ERR;
+	}
+	memset(*ppBuildrun, 0, BDN_MAX_BUILDRUN_SIZE);
+	
+	pBuildrun = *ppBuildrun;
+
+	if (OS_YES == g_ulNdpServerEnable)
+	{
+		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN"ndp server enable");		
+		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN"ndp server bind port %u", g_ulNdpServerPort);
+	}
+	else
+	{
+		if (OS_YES == ulIncludeDefault)
+		{
+			pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN"undo ndp server enable");
+		}
+	}
+
+	if (OS_YES == g_ulNdpClientEnable)
+	{
+		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN"ndp client enable");		
+		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN"ndp server ip %s port %u", g_szNdpPeerIP, g_ulNdpPeerPort);
+	}
+	else
+	{
+		if (OS_YES == ulIncludeDefault)
+		{
+			pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN"undo ndp client enable");
+		}
+	}
+
+	return OS_OK;
+}
+
+
 int NDP_Init()
 {
 
@@ -580,6 +626,8 @@ unsigned _stdcall  NDP_TaskEntry(void *pEntry)
 {
 	ULONG ulRet = OS_OK;
 
+	(void)BDN_RegistBuildRun(MID_NDP, VIEW_SYSTEM, BDN_PRIORITY_NORMAL, NDP_BuildRun);
+	
 	/* 启动定时器线程 */
 	_beginthreadex(NULL, 0, NDP_TimerThread, NULL, NULL, NULL);
 	

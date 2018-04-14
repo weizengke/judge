@@ -1,6 +1,32 @@
 #ifndef _COMMAND_DEF_H_
 #define _COMMAND_DEF_H_
 
+#ifdef UCHAR
+#undef UCHAR
+#define UCHAR unsigned char
+#endif
+
+#ifndef ULONG
+#undef ULONG
+#define ULONG unsigned long
+#endif
+
+#ifndef CHAR
+#undef CHAR
+#define CHAR char
+#endif
+
+#ifndef VOID
+#undef VOID
+#define VOID void
+#endif
+
+#ifndef CMD_NULL_DWORD
+#undef CMD_NULL_DWORD
+#define CMD_NULL_DWORD 0xFFFFFFFF
+#endif
+
+
 /* config */
 // log info level
 
@@ -10,29 +36,8 @@
 
 #define CMD_LOG_LEVEL	LOG_DEBUG
 
-// maximum number of command to remember
-#define HISTORY_MAX_SIZE	20
-
-// maximum number of commands that can matched
-#define CMD_MAX_MATCH_SIZE	100
-
-// maximum number of command arguments
-#define CMD_MAX_CMD_NUM		32
-
-#define CMD_MAX_CMD_ELEM_SIZE 24
-
 
 #define CMD_ELEM_SPACE_SIZE  CMD_MAX_CMD_ELEM_SIZE + 1
-
-#define CMD_MAX_VIEW_SIZE   24
-
-#define CMD_MAX_PROMPT_SIZE 24
-
-// when interacting, the prompt like "jungle>"
-#define CMD_PROMPT_DEFAULT	"config"
-
-// size of input buffer size
-#define CMD_BUFFER_SIZE		1024
 
 // enter may be '\n' or '\r\n'
 #define CMD_ENTER			"\r\n"
@@ -45,24 +50,24 @@
 
 #define CMD_ERR 1
 #define CMD_OK  0
-
 #define CMD_YES 1
 #define CMD_NO  0
 
-/* assert(0) */
-#define CMD_DBGASSERT(x,args...) \
-if (0 == x) {\
-	printf("\r\nAssert at %s:%d. ", __FILE__, __LINE__);\
-	printf(args);\
-}\
-
 #define CMD_NOUSED(x) ((x) = (x))
-
 
 #define CMD_END         "<cr>"
 #define CMD_INTEGER 	"INTEGER"
 #define CMD_STRING  	"STRING"
 
+#define BUFSIZE 65535
+
+#define CMD_DBGASSERT(x,args...) \
+		if (0 == x) {\
+			printf("\r\nAssert at %s:%d. ", __FILE__, __LINE__);\
+			printf(args);\
+			write_log(0, "Assert at %s:%d.", __FILE__, __LINE__);\
+			write_log(0, args);\
+		}\
 
 #define cmd_vector_slot(v, i)	    ((v)->data[(i)])
 #define cmd_vector_max(v)		    ((v)->used_size)
@@ -101,6 +106,7 @@ if (0 == x) {\
 #define CMD_KEY_BACKSPACE  0x08
 #define CMD_KEY_SPACE   0x20
 #define CMD_KEY_CTRL_H	(0x1f | 0x7f)
+#endif
 
 #define CMD_KEY_CTRL_W	0x17
 #define CMD_KEY_CR	    0xd  /* '\r' */
@@ -108,11 +114,14 @@ if (0 == x) {\
 #define CMD_KEY_TAB	    0x9  /* '\n' */
 #define CMD_KEY_QUEST	0x3f /* '?'  */
 
-
 #define CMD_KEY_DELETE_VTY 0x7f
 
+#define CMD_SYSNAME_SIZE    24
+
+#define CMD_DEBUG_ERROR DEBUG_TYPE_ERROR
+#define CMD_DEBUG_FUNC  DEBUG_TYPE_FUNC
+#define CMD_DEBUG_INFO  DEBUG_TYPE_INFO
+#define CMD_DEBUG_MSG   DEBUG_TYPE_MSG.
+
 #endif
 
-#define CMD_VTY_MAXUSER_NUM 32
-
-#endif

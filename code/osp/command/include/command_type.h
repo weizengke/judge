@@ -3,18 +3,15 @@
 
 /* BEGIN: Added by weizengke, 2013/10/27  for debug switch*/
 
+#ifndef INVALID_SOCKET
+#define INVALID_SOCKET	(ULONG)(~0)
+#endif
 
-enum CMD_ELEM_TYPE_EM
-{
-	CMD_ELEM_TYPE_VALID,
-	CMD_ELEM_TYPE_KEY,
-	CMD_ELEM_TYPE_INTEGER,
-	CMD_ELEM_TYPE_STRING,
+#ifndef SOCKET_ERROR
+#define SOCKET_ERROR	(-1)
+#endif
 
-	CMD_ELEM_TYPE_END,  /* <CR> */
-	CMD_ELEM_TYPE_MAX,
 
-};
 
 // command match type
 enum CMD_MATCH_STATUS {
@@ -123,9 +120,13 @@ enum CMD_ELEM_ID_EM {
 	CMD_ELEM_ID_MODE_NONE,
 
 	CMD_ELEM_ID_LOCAL_USER,
-	
+	CMD_ELEM_ID_SECURITY,
+	CMD_ELEM_ID_JUDGE_MGR,
+	CMD_ELEM_ID_VJUDGE_MGR,
+	CMD_ELEM_ID_THIS,
+	CMD_ELEM_ID_INC_DEFAULT,
 	CMD_ELEM_ID_MAX,
-	
+
 };
 
 
@@ -148,160 +149,60 @@ enum CMD_KEY_CODE_EM {
 		CMD_KEY_CODE_MAX
 };
 
-
-enum VIEW_ID_EN {
-	VIEW_NULL = 0,
-	VIEW_GLOBAL = 1,
-	VIEW_USER,
-	VIEW_SYSTEM,
-	VIEW_AAA,
-	VIEW_USER_VTY,
-	VIEW_DIAGNOSE,
-};
-
-struct vty_user_s {
-	int level;
-	int type;  /* 0:com, 1:telnet */
-	int state;  /* 0:idle, 1:access */
-	int terminal_debugging;
-	SOCKET socket;
-	char user_name[32];
-	char user_psw[32];
-	time_t lastAccessTime;
-	
-};
-
-/**
- * A virtual tty used by CMD
- *
- * @param prompt prompt string, such as cmd, then you see 'cmd>'
- * @param buffer buffer to store user input
- * @param buf_len buffer max_length
- * @param used_len buffer actually used length
- * @param cur_pos current cursor point in which position in buffer
- * @param c latest input key word
- * @param history to record user input command
- * @param hpos history current position
- * @param hindex history end index
- * */
-typedef struct cmd_vty {
-	int valid;
-	VIEW_ID_EN view_id; /* 当前所在视图 */
-	vty_user_s user;
-	int buf_len;
-	int used_len;
-	int cur_pos;
-	char c;
-	char res[3];
-	char prompt[CMD_MAX_PROMPT_SIZE];
-	char buffer[CMD_BUFFER_SIZE];
-
-	/* BEGIN: Added by weizengke, for support TAB agian and agian */
-	int inputMachine_prev;
-	int inputMachine_now;
-	char tabbingString[CMD_MAX_CMD_ELEM_SIZE];	/* 最初始用来补全查找的字串*/
-	char tabString[CMD_MAX_CMD_ELEM_SIZE];		/* 最后一次补全的命令 */
-	int tabStringLenth;
-	/* END: Added by weizengke, for support TAB agian and agian */
-	
-	int hpos;
-	int hindex;
-	char *history[HISTORY_MAX_SIZE];
-}CMD_VTY;
-
- 
-
-/**
- * struct to store command string
- *
- * @param size total size of vector
- * @param used_size already allocated size
- * @param data point to data
- */
-typedef struct cmd_vector {
-	int size;
-	int used_size;
-	void **data;
-} cmd_vector_t;
-
-/*
- * A struct cmd_node relative to some command of special prompt
-*/
-typedef struct cmd_node {
-	char prompt[CMD_MAX_PROMPT_SIZE];
-    cmd_vector_t cmd_vector;
-
-}cmd_node_st;
-
-
-/**
- * A struct cmd_elem_st relative to One command
- *
- * @param string command string, such as 'show vlan'
- * @param doc command refenrence, each command word has one
- * @param func excute when command called
- * @param para_vec command string in para_vec form
- * @param para_size command parameter number
- */
 struct cmd_elem_st {
-	VIEW_ID_EN view_id;
-	char *string;
-	char *doc;
-	int (*func)(struct cmd_elem_st *, struct cmd_vty *, int , char **);
-	cmd_vector_t *para_vec;
-	int para_num;
-
-	//char prompt[CMD_MAX_PROMPT_SIZE];
-	
-	int cmd_id; /* for comand function callback */
+	ULONG mid;
+	ULONG view_id;
+	ULONG para_num;
+	CMD_VECTOR_S *para_vec;
 };
 
-/**
- * A struct para_desc relative to One command parameter
- *
- * @param para command parameter, such as 'show' of 'show vlan'
- * @param desc command parameter reference
- */
-struct para_desc {
-	CMD_ELEM_TYPE_EM  elem_tpye;
-	int  elem_id;
-	char *para;
-	char *desc;
-};
+typedef struct para_desc {
+	CMD_ELEM_TYPE_E  elem_tpye;
+	ULONG  elem_id;  /* 命令字元素id */
+	CHAR *para;    /* 命令字元素名 */
+	CHAR *desc;    /* 命令字帮助信息 */
+}CMD_ELEM_S;
 
 #define CMD_VIEW_SONS_NUM 100
 
 typedef struct cmd_view_node {
-	VIEW_ID_EN  view_id;
-	char view_name[CMD_MAX_VIEW_SIZE];
-    char view_ais_name[CMD_MAX_VIEW_SIZE];
+	ULONG  view_id;
+	CHAR view_name[CMD_MAX_VIEW_SIZE];
+    CHAR view_ais_name[CMD_MAX_VIEW_SIZE];
 
 	struct cmd_view_node *pParent;
-	
 	struct cmd_view_node **ppSons;
-	int view_son_num;
-	
+	ULONG view_son_num;
+
 }view_node_st;
 
 
+typedef struct CMD_RUN_Ntf_Node
+{
+	ULONG  mId;
+	ULONG  (*pfCallBackFunc)(VOID *pRcvMsg); /* 回调函数内申请内存，由调用者释放 */
+
+	struct CMD_RUN_Ntf_Node *pNext;
+};
+
+typedef struct tagCMD_RUNMSG_ELEM_S
+{
+	ULONG cmd_elemId;
+	CHAR cmd_param[128];
+}CMD_RUNMSG_ELEM_S;
+
+typedef struct tagCMD_RUNMSG_S
+{
+	ULONG vtyId;
+	ULONG argc;
+	CMD_RUNMSG_ELEM_S *argv;
+}CMD_RUNMSG_S;
+
+
 typedef struct key_handler {
-	int key_value;
-	void (*key_func)(struct cmd_vty *);
+	ULONG key_value;
+	VOID (*key_func)(struct cmd_vty *);
 } key_handler_t;
-
-
-/* CMD_DEFINE for vty command interafce. */
-#define CMD_DEFINE(cmdname, cmdstr, helpstr, funcname) \
-	int funcname (struct cmd_elem_st *, struct cmd_vty *, int, char **); \
-	struct cmd_elem_st cmdname = \
-	{ \
-		VIEW_GLOBAL, \
-		cmdstr, \
-		helpstr, \
-		funcname \
-	}; \
-	int funcname \
-	(struct cmd_elem_st *self, struct cmd_vty *vty, int argc, char **argv)
 
 #endif
 

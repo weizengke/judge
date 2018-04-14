@@ -3,6 +3,7 @@
 
 #include "osp\common\include\osp_common_def.h"
 #include "osp\debug\include\debug_center.h"
+#include "osp\command\include\icli.h"
 
 
 #endif

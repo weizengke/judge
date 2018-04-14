@@ -47,7 +47,7 @@ char INI_filename[] = STARTUP_CFG;
 
 int isDeleteTemp=0;
 int isRestrictedFunction=0;
-DWORD OutputLimit=10000;
+DWORD OutputLimit=6553500;
 char workPath[MAX_PATH];
 char judgeLogPath[MAX_PATH];
 int JUDGE_LOG_BUF_SIZE = 200;
@@ -211,7 +211,7 @@ void Judge_ShowCfgContent()
 	hFile= CreateFile(STARTUP_CFG, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_READONLY, NULL);
 	if (hFile <= 0)
 	{
-		write_log(JUDGE_ERROR,"CreateFile inFileName(%s) Error:%s", STARTUP_CFG, GetLastError());
+		write_log(JUDGE_ERROR,"CreateFile inFileName(%s) Error:%d", STARTUP_CFG, GetLastError());
 	}
 
 	BOOL flag = FALSE;
@@ -230,6 +230,37 @@ void Judge_ShowCfgContent()
 	CloseHandle(hFile);
 
 }
+
+int Judge_DisableAllPriv(HANDLE ProcessHandle)
+{
+	HANDLE hToken;
+	TOKEN_PRIVILEGES tp;
+	LUID luid;
+	//´ò¿ª½ø³ÌÁîÅÆ»·
+	if(!OpenProcessToken(ProcessHandle,
+		TOKEN_ADJUST_PRIVILEGES|TOKEN_QUERY,
+		&hToken) )
+	{
+		printf("OpenProcessToken error\n");
+		return 1;
+	}
+	//»ñµÃ½ø³Ì±¾µØÎ¨Ò»ID
+	if(!LookupPrivilegeValue(NULL,SE_DEBUG_NAME,&luid))
+	{
+		printf("LookupPrivilege error!\n");
+	}
+	tp.PrivilegeCount = 1;
+	tp.Privileges[0].Attributes =SE_PRIVILEGE_ENABLED;
+	tp.Privileges[0].Luid = luid;
+	//µ÷Õû½ø³ÌÈ¨ÏŞ
+	if(!AdjustTokenPrivileges(hToken,TRUE,&tp,sizeof(TOKEN_PRIVILEGES),NULL,NULL) )
+	{
+		printf("AdjustTokenPrivileges error!\n");
+		return 1;
+	}
+	return 0;
+}
+
 
 HANDLE Judge_CreateSandBox(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 {
@@ -277,6 +308,7 @@ HANDLE Judge_CreateSandBox(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 
 bool Judge_ProcessToSandbox(HANDLE job,PROCESS_INFORMATION p)
 {
+	return true;
 	if(AssignProcessToJobObject(job,p.hProcess))
 	{
 		/* Ë³±ãµ÷Õû±¾½ø³ÌÓÅÏÈ¼¶Îª¸ß */
@@ -288,11 +320,14 @@ bool Judge_ProcessToSandbox(HANDLE job,PROCESS_INFORMATION p)
 		}
 		CloseHandle(hPS);
 		*/
+
+		Judge_DisableAllPriv(p.hProcess);
+		
 		return true;
 	}
 	else
 	{
-		write_log(JUDGE_SYSTEM_ERROR,"AssignProcessToJobObject Error:%s",GetLastError());
+		write_log(JUDGE_SYSTEM_ERROR,"AssignProcessToJobObject Error:%d",GetLastError());
 	}
 
 	return false;
@@ -413,177 +448,218 @@ BOOL Judge_ExistException(DWORD dw)
 	}
 }
 
-unsigned _stdcall Judge_RunProgramThread(void *pData) //ac
+
+/* È«¾ÖAPIKooh±ê¼Ç */
+ULONG g_ulNeedApiHookFlag = OS_TRUE;
+char szApiHookDllPath[MAX_PATH] = "hook.dll"; 
+
+int EnableDebugPriv(const char * name)
 {
-	/* cmd/c solution.exe <data.in >data.out 2>error.txt */
-	/* ChildIn_WriteÊÇ×Ó½ø³ÌµÄÊäÈë¾ä±ú£¬ChildIn_ReadÊÇ¸¸½ø³ÌÓÃÓÚĞ´Èë×Ó½ø³ÌÊäÈëµÄ¾ä±ú */
-	HANDLE ChildIn_Read, ChildIn_Write;
-	/*ChildOut_WriteÊÇ×Ó½ø³ÌµÄÊä³ö¾ä±ú£¬ChildOut_ReadÊÇ¸¸½ø³ÌÓÃÓÚ¶ÁÈ¡×Ó½ø³ÌÊä³öµÄ¾ä±ú*/
-	HANDLE ChildOut_Read, ChildOut_Write;
+	HANDLE hToken;
+	TOKEN_PRIVILEGES tp;
+	LUID luid;
+	//´ò¿ª½ø³ÌÁîÅÆ»·
+	if(!OpenProcessToken(GetCurrentProcess(),
+		TOKEN_ADJUST_PRIVILEGES|TOKEN_QUERY,
+		&hToken) )
+	{
+		write_log(JUDGE_ERROR,"OpenProcessToken error\n");
+		return 1;
+	}
+	//»ñµÃ½ø³Ì±¾µØÎ¨Ò»ID
+	if(!LookupPrivilegeValue(NULL,name,&luid))
+	{
+		write_log(JUDGE_ERROR,"LookupPrivilege error!\n");
+	}
+	tp.PrivilegeCount = 1;
+	tp.Privileges[0].Attributes =SE_PRIVILEGE_ENABLED;
+	tp.Privileges[0].Luid = luid;
+	//µ÷Õû½ø³ÌÈ¨ÏŞ
+	if(!AdjustTokenPrivileges(hToken,0,&tp,sizeof(TOKEN_PRIVILEGES),NULL,NULL) )
+	{
+		write_log(JUDGE_ERROR,"AdjustTokenPrivileges error!\n");
+		return 1;
+	}
+	return 0;
+}
 
-	SECURITY_ATTRIBUTES saAttr = {0};
+BOOL InjectAPIHookDll(DWORD dwProcessID, char* dllPath)
+{
+    FARPROC FuncAddr = NULL;  
 
+	if( (_access(dllPath, 0 )) == -1 )
+	{
+		write_log(JUDGE_ERROR,"InjectAPIHookDll failed, the file %s is not exist.", dllPath);
+		return FALSE;
+	}
+
+	if(EnableDebugPriv(SE_DEBUG_NAME))
+	{
+		write_log(JUDGE_ERROR,"add privilege error %u", GetLastError());
+		return FALSE;
+	}
+	
+    HMODULE hdll = LoadLibrary(TEXT("Kernel32.dll"));
+    if (hdll != NULL)
+	{  
+        FuncAddr = GetProcAddress(hdll, "LoadLibraryA");
+        if (FuncAddr == NULL)
+		{
+			write_log(JUDGE_ERROR,"GetProcAddress error %u", GetLastError());
+			return FALSE;  
+        }
+    }  
+  
+    HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, dwProcessID);
+    if (hProcess == NULL)
+	{
+		write_log(JUDGE_ERROR,"OpenProcess error %u", GetLastError());
+		return FALSE;  
+    }
+	
+    DWORD dwSize = strlen(dllPath) + 1;  
+    LPVOID RemoteBuf = VirtualAllocEx(hProcess, NULL, dwSize, MEM_COMMIT, PAGE_READWRITE);
+    if (NULL == RemoteBuf)
+    {
+		write_log(JUDGE_ERROR,"VirtualAllocEx error %u", GetLastError());
+		return FALSE;  
+	}
+	
+    DWORD dwRealSize;  
+    if (WriteProcessMemory(hProcess, RemoteBuf, dllPath, dwSize, &dwRealSize))
+    {  
+        HANDLE hRemoteThread = CreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)FuncAddr, RemoteBuf, 0, NULL);
+        if (hRemoteThread == NULL)  
+        {  
+            VirtualFreeEx(hProcess, RemoteBuf, dwSize, MEM_COMMIT);  
+            CloseHandle(hProcess); 
+			write_log(JUDGE_ERROR,"CreateRemoteThread error %u", GetLastError());
+            return FALSE;  
+        }  
+		
+        /* ÊÍ·Å×ÊÔ´ */
+        WaitForSingleObject(hRemoteThread, INFINITE);  
+        CloseHandle(hRemoteThread);  
+        VirtualFreeEx(hProcess, RemoteBuf, dwSize, MEM_COMMIT);  
+        CloseHandle(hProcess);  
+        return TRUE;  
+    }  
+    else  
+    {  
+		write_log(JUDGE_ERROR,"WriteProcessMemory error %u", GetLastError());
+        VirtualFreeEx(hProcess, RemoteBuf, dwSize, MEM_COMMIT);  
+        CloseHandle(hProcess);  
+        return FALSE;  
+    }  
+}  
+
+unsigned _stdcall Judge_RunProgramThread(void *pData)
+{
 	JUDGE_SUBMISSION_ST *pstJudgeSubmission = (JUDGE_SUBMISSION_ST *)pData;
+	
 	if (NULL == pstJudgeSubmission)
 	{
 		write_log(JUDGE_ERROR,"Judge_RunProgramThread ERROR, pstJudgeSubmission is NULL....");
 		return 0;
 	}
 
-	saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
-	saAttr.bInheritHandle = TRUE;
-	saAttr.lpSecurityDescriptor = NULL;
-
-	if(! CreatePipe(&ChildIn_Read, &ChildIn_Write, &saAttr, 0))
-	{
-		write_log(JUDGE_ERROR,"Judge_RunProgramThread ERROR, input CreatePipe failed....");
-		return 0;
-	}
-	
-	SetHandleInformation(ChildIn_Write, HANDLE_FLAG_INHERIT, 0);
-	
-	if(! CreatePipe(&ChildOut_Read, &ChildOut_Write, &saAttr, 0))
-	{
-		write_log(JUDGE_ERROR,"Judge_RunProgramThread ERROR, output CreatePipe failed....");
-		CloseHandle(ChildIn_Read);
-		CloseHandle(ChildIn_Write);	
-		return 0;
-	}
-	
-	SetHandleInformation(ChildOut_Read, HANDLE_FLAG_INHERIT, 0);
-
 	SetErrorMode(SEM_NOGPFAULTERRORBOX );
 
-	STARTUPINFO StartupInfo = {0};
-	StartupInfo.cb = sizeof(STARTUPINFO);
-	//	StartupInfo.hStdError = h_ErrorFile;
-	StartupInfo.hStdOutput = ChildOut_Write;
-	StartupInfo.hStdInput = ChildIn_Read;
-	StartupInfo.dwFlags |= STARTF_USESTDHANDLES;
+	SECURITY_ATTRIBUTES sa = {0};
+	sa.nLength = sizeof(sa);  
+    sa.lpSecurityDescriptor = NULL;  
+    sa.bInheritHandle = TRUE; 
+	/* ´´½¨ÊäÈëÎÄ¼ş¾ä±ú */
+	pstJudgeSubmission->hInputFile = CreateFile(pstJudgeSubmission->inFileName,  
+					 GENERIC_READ,	
+					 0,  
+					 &sa,
+					 OPEN_EXISTING,
+					 FILE_ATTRIBUTE_NORMAL,
+					 NULL);  
+	if(pstJudgeSubmission->hInputFile == INVALID_HANDLE_VALUE)  
+	{	
+		write_log(JUDGE_ERROR,"Judge_RunProgramThread ERROR, CreateFile hInputFile failed...");
+		return 0;
+	}	
 
-	write_log(JUDGE_INFO,"CreateProcess(%s)", pstJudgeSubmission->runCmd);
+	/* ´´½¨Êä³öÎÄ¼ş¾ä±ú */
+	pstJudgeSubmission->hOutputFile  = CreateFile(pstJudgeSubmission->outFileName,	
+					 GENERIC_WRITE,  
+					 0,  
+					 &sa,
+					 CREATE_ALWAYS,
+					 FILE_ATTRIBUTE_NORMAL,
+					 NULL);  
+	if(pstJudgeSubmission->hOutputFile == INVALID_HANDLE_VALUE)	
+	{	
+		write_log(JUDGE_ERROR,"Judge_RunProgramThread ERROR, CreateFile hOutputFile failed...");
+		return 0;  
+	}	
 
-	/* |CREATE_NEW_CONSOLE */
-	if(CreateProcess(NULL, pstJudgeSubmission->runCmd, NULL, NULL, TRUE,
-					 CREATE_SUSPENDED, NULL, NULL, &StartupInfo, &pstJudgeSubmission->pProRunInfo))
-	{
-		write_log(JUDGE_INFO,"CreateProcess ok...");
+	
+	STARTUPINFO si = {sizeof(STARTUPINFO)};  
+	si.hStdInput = pstJudgeSubmission->hInputFile;  
+	si.hStdOutput= pstJudgeSubmission->hOutputFile;  
+	si.hStdError = pstJudgeSubmission->hOutputFile; 
+	si.dwFlags = STARTF_USESTDHANDLES;  
+	/* ´´½¨ÓÃ»§³ÌĞò½ø³Ì£¬ÏÈ¹ÒÆğ */
+	if(CreateProcess(NULL, 
+					pstJudgeSubmission->runCmd, 
+					NULL,
+					NULL,
+					TRUE,
+					CREATE_SUSPENDED,
+					NULL,
+					NULL,
+					&si,
+					&pstJudgeSubmission->pProRunInfo))  
+	{	
+		
+		Judge_DisableAllPriv(pstJudgeSubmission->pProRunInfo.hProcess);
 
-		pstJudgeSubmission->hJob = Judge_CreateSandBox(pstJudgeSubmission);
-		if(pstJudgeSubmission->hJob != NULL)
-		{
-			write_log(JUDGE_INFO,"Judge_CreateSandBox ok...");
+		write_log(JUDGE_INFO,"CreateProcess(%s) ok...", pstJudgeSubmission->runCmd);
 
-			if(Judge_ProcessToSandbox(pstJudgeSubmission->hJob, pstJudgeSubmission->pProRunInfo))
-			{
-				write_log(JUDGE_INFO,"Judge_ProcessToSandbox ok...");
-
-				ResumeThread(pstJudgeSubmission->pProRunInfo.hThread);
-				CloseHandle(pstJudgeSubmission->pProRunInfo.hThread);
-
-				write_log(JUDGE_INFO,"CreateFile inFileName(%s)", pstJudgeSubmission->inFileName);
-
-				pstJudgeSubmission->hInputFile = CreateFile(pstJudgeSubmission->inFileName,
-												            GENERIC_READ, FILE_SHARE_READ, NULL,
-												            OPEN_ALWAYS, FILE_ATTRIBUTE_READONLY, NULL);
-				if (pstJudgeSubmission->hInputFile <= 0)
-				{
-					write_log(JUDGE_ERROR,"CreateFile inFileName(%s) Error:%s",
-											pstJudgeSubmission->inFileName, GetLastError());
-				}
-
-				BOOL flag = FALSE;
-				while (true)
-				{
-					char buffer[BUFSIZE] = {0};
-					DWORD BytesRead, BytesWritten;
-					flag = ReadFile(pstJudgeSubmission->hInputFile, buffer, BUFSIZE, &BytesRead, NULL);
-					if (!flag || (BytesRead == 0)) break;
-					flag = WriteFile(ChildIn_Write, buffer, BytesRead, &BytesWritten, NULL);
-
-					if (!flag){ break;}
-				}
-
-				CloseHandle(pstJudgeSubmission->hInputFile);pstJudgeSubmission->hInputFile=NULL;
-				CloseHandle(ChildIn_Write);ChildIn_Write=NULL;
-				CloseHandle(ChildOut_Write);ChildOut_Write=NULL;
-
-				write_log(JUDGE_INFO,"CreateFile outFileName(%s)", pstJudgeSubmission->outFileName);
-				
-				/* ¶ÁÈ¡×Ó½ø³ÌµÄ±ê×¼Êä³ö£¬²¢½«Æä´«µİ¸øÎÄ¼şÊä³ö */
-				pstJudgeSubmission->hOutputFile= CreateFile(pstJudgeSubmission->outFileName, GENERIC_WRITE, 0,
-															NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-				if (NULL == pstJudgeSubmission->hOutputFile)
-				{
-					write_log(JUDGE_ERROR,"CreateFile outFileName(%s) Error:%s",
-										   pstJudgeSubmission->outFileName, GetLastError());
-				}
-
-				pstJudgeSubmission->startt = clock();
-
-				DWORD limit_output =0;
-				while (true)
-				{
-					char buffer[BUFSIZE] = {0};
-					DWORD BytesRead, BytesWritten;
-
-					flag = ReadFile(ChildOut_Read, buffer, BUFSIZE, &BytesRead, NULL);
-					if (!flag || (BytesRead == 0))
-					{
-						write_log(JUDGE_INFO,"ReadFile over.");
-						break;
-					}
-
-					//write_log(JUDGE_INFO,"ReadFile over. buffer=%s", buffer);
-					
-					flag = WriteFile(pstJudgeSubmission->hOutputFile, buffer, BytesRead, &BytesWritten, NULL);
-					if (!flag) 
-					{
-						write_log(JUDGE_ERROR,"WriteFile error.");
-						break;
-					}
-
-					limit_output+=BytesWritten;
-					if(limit_output>OutputLimit)
-					{
-						write_log(JUDGE_INFO,"OLE");
-						pstJudgeSubmission->stSolution.verdictId = V_OLE;
-						break;
-					}
-				}
-
-				pstJudgeSubmission->endt = clock();
-
-				CloseHandle(ChildIn_Read);ChildIn_Read=NULL;
-				CloseHandle(ChildOut_Read);ChildOut_Read=NULL;
-				CloseHandle(pstJudgeSubmission->hOutputFile);pstJudgeSubmission->hOutputFile=NULL;
-
-				write_log(JUDGE_INFO,"Judge_RunProgramThread test OK..inFileName(%s)",pstJudgeSubmission->inFileName);
-
-				return 1;
-			}
+		/* °²È«·À»¤api hook */
+		/* Begin add for apihook 2013/05/18 */
+		if (OS_TRUE == g_ulNeedApiHookFlag)		
+		{		
+			if (FALSE == InjectAPIHookDll(pstJudgeSubmission->pProRunInfo.dwProcessId, szApiHookDllPath))		
+			{		
+				write_log(JUDGE_ERROR,"InjectAPIHookDll Error, dwProcessId[%u]", pstJudgeSubmission->pProRunInfo.dwProcessId);			
+			}		
 			else
 			{
-				write_log(JUDGE_SYSTEM_ERROR,"ProcessToSandBox Error:%s",GetLastError());
+				write_log(JUDGE_INFO,"InjectAPIHookDll OK, dwProcessId[%u]", pstJudgeSubmission->pProRunInfo.dwProcessId);
 			}
-		}
-		else
-		{
-			write_log(JUDGE_SYSTEM_ERROR,"Judge_CreateSandBox Error:%s",GetLastError());
-		}
-	}
+		}		
+		/* End add for apihook 2013/05/18 */
+
+		/* »½ĞÑ½ø³Ì */
+		ResumeThread(pstJudgeSubmission->pProRunInfo.hThread);
+
+		/* ¼ÆÊ±µÈ´ı³ÌĞòÖ´ĞĞ½áÊø */
+		pstJudgeSubmission->startt = clock();
+		WaitForSingleObject(pstJudgeSubmission->pProRunInfo.hProcess, INFINITE);  
+		pstJudgeSubmission->endt = clock();
+
+		/* ÊÍ·Å¾ä±ú */
+		//CloseHandle(pstJudgeSubmission->pProRunInfo.hProcess);  pstJudgeSubmission->pProRunInfo.hProcess = NULL;
+		CloseHandle(pstJudgeSubmission->pProRunInfo.hThread); pstJudgeSubmission->pProRunInfo.hThread = NULL;		
+		CloseHandle(pstJudgeSubmission->hInputFile);  pstJudgeSubmission->hInputFile = NULL;
+		CloseHandle(pstJudgeSubmission->hInputFile);  pstJudgeSubmission->hInputFile = NULL;		 
+				
+		return 1;
+	}	
 	else
 	{
-		write_log(JUDGE_SYSTEM_ERROR,"CreateProcess       [Error:%d]\n",GetLastError());
+		write_log(JUDGE_ERROR,"CreateProcess(%s) pok. %u", pstJudgeSubmission->runCmd, GetTickCount());
+
+		pstJudgeSubmission->stSolution.verdictId = V_SE;
+		CloseHandle(pstJudgeSubmission->hInputFile);  pstJudgeSubmission->hInputFile = NULL;
+		CloseHandle(pstJudgeSubmission->hInputFile);  pstJudgeSubmission->hInputFile = NULL;				
 	}
-
-	pstJudgeSubmission->stSolution.verdictId = V_SE;
-
- 	if (ChildIn_Read == NULL) CloseHandle(ChildIn_Read);
-	if (ChildIn_Write == NULL) CloseHandle(ChildIn_Write);
-	if (ChildOut_Read == NULL) CloseHandle(ChildOut_Read);
-	if (ChildOut_Write == NULL) CloseHandle(ChildOut_Write);
-	
+ 	
 	return 0;
 }
 
@@ -651,10 +727,11 @@ int Judge_RunLocalSolution(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 				dataPath, pstJudgeSubmission->stProblem.problemId, i);
 		sprintf(pstJudgeSubmission->outFileName,"%s%s%d.out",
 				workPath,pstJudgeSubmission->subPath,i);
+		sprintf(pstJudgeSubmission->stdOutFileName,"%s\\%d\\data%d.out",
+				dataPath, pstJudgeSubmission->stProblem.problemId, i);
 
 		sprintf(srcPath, "%s", pstJudgeSubmission->outFileName);
-		sprintf(ansPath, "%s\\%d\\data%d.out",
-				dataPath, pstJudgeSubmission->stProblem.problemId, i);
+ 		sprintf(ansPath, "%s", pstJudgeSubmission->stdOutFileName);
 
 		write_log(JUDGE_INFO,"TEST(%d) verdictId:%s\r\n inFileName:%s\r\n outFileName:%s\r\n srcPath:%s\r\n ansPath:%s\r\n",
 					i, VERDICT_NAME[pstJudgeSubmission->stSolution.verdictId], pstJudgeSubmission->inFileName, pstJudgeSubmission->outFileName, srcPath, ansPath);
@@ -684,7 +761,7 @@ int Judge_RunLocalSolution(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 
 		write_log(JUDGE_INFO,"Create Judge_RunProgramThread ok...");
 
-		DWORD status_ = WaitForSingleObject(hThread_run, pstJudgeSubmission->stProblem.time_limit + 10);   /* ·Å¿íÊ±ÏŞ10mS,·µ»ØÖµ´óÓÚÁãËµÃ÷³¬Ê±. */
+		DWORD status_ = WaitForSingleObject(hThread_run, pstJudgeSubmission->stProblem.time_limit + 1000);   /* ·Å¿íÊ±ÏŞ1000mS,·µ»ØÖµ´óÓÚÁãËµÃ÷³¬Ê±. */
 		if(status_>0)
 		{
 			write_log(JUDGE_INFO,"case %u WaitForSingleObject TIME LIMIT, verdictId:%s.", i, VERDICT_NAME[pstJudgeSubmission->stSolution.verdictId]);
@@ -742,7 +819,6 @@ int Judge_RunLocalSolution(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 		if (pstJudgeSubmission->stSolution.verdictId != V_TLE)
 		{
 			caseTime = pstJudgeSubmission->endt - pstJudgeSubmission->startt;
-
 			write_log(JUDGE_INFO,"case %u , verdictId:%s, time(%u = %u - %u).",
 							i, VERDICT_NAME[pstJudgeSubmission->stSolution.verdictId], caseTime, pstJudgeSubmission->endt, pstJudgeSubmission->startt);
 
@@ -753,11 +829,9 @@ int Judge_RunLocalSolution(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 			}
 		}
 
-		TerminateJobObject(pstJudgeSubmission->hJob,0);
 		CloseHandle(pstJudgeSubmission->pProRunInfo.hProcess);
-		CloseHandle(pstJudgeSubmission->hJob);pstJudgeSubmission->hJob = NULL;
-
-
+		pstJudgeSubmission->pProRunInfo.hProcess = NULL;
+		
 		pstJudgeSubmission->stSolution.time_used = (caseTime>pstJudgeSubmission->stSolution.time_used)?caseTime:pstJudgeSubmission->stSolution.time_used;
 
 		if(caseTime >= pstJudgeSubmission->stProblem.time_limit)
@@ -916,7 +990,7 @@ int Judge_Local(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 		write_log(JUDGE_INFO,"Start Run solution %u...", pstJudgeSubmission->stSolution.solutionId);
 
         {
-            /* è·ç¦»ä¸Šä¸€æ¬¡åˆ¤é¢˜è¶…è¿‡60sï¼Œéœ€è¦å†æ‰§è¡Œä¸€é */
+			/* Ò»·ÖÖÓÄÚÃ»ÓĞÌá½»£¬ÖØ¸´Ò»±é£¬¹æ±Ü³¤Ê±¼äÃ»ÓĞjudgeµ¼ÖÂµÄÔËĞĞÊ±¼ä²»×¼ÎÊÌâ */
             time_t s_t = 0;            
             time(&s_t);
             
@@ -1220,7 +1294,7 @@ unsigned _stdcall  Judge_Proc(void *pData)
 				"\r\n Failed cases : %3d"
 				"\r\n Time-used    : %3d ms"
 				"\r\n Memory-used  : %3d kb"
-				"\r\n Return code  : %3u"
+				"\r\n Return code  : 0x%x"
 				"\r\n Verdict      : %3s"
 				"\r\n Submit Date  : %3s"
 				"\r\n Username     : %3s"
@@ -1391,7 +1465,7 @@ int GetProcessThreadList()
 	return 0;
 }
 
-ULONG Judge_BuildRun(CHAR **ppBuildrun)
+ULONG Judge_BuildRun(CHAR **ppBuildrun, ULONG ulIncludeDefault)
 {
 	CHAR *pBuildrun = NULL;
 
@@ -1406,21 +1480,64 @@ ULONG Judge_BuildRun(CHAR **ppBuildrun)
 
 	if (OS_YES == g_judge_enable)
 	{
-		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN"judge enable");
+		if (VOS_YES == ulIncludeDefault)
+		{
+			pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN"judge enable");
+		}
 	}
 	else
 	{
 		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN"undo judge enable");
+	
+	}
+
+	if (OS_YES == Judge_IsVirtualJudgeEnable())
+	{
+		if (VOS_YES == ulIncludeDefault)
+		{		
+			pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN"virtual-judge enable");
+		}
+	}
+	else
+	{
+		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN"undo virtual-judge enable");
+	}
+
+	if (0 == strlen(*ppBuildrun))
+	{
+		free(*ppBuildrun);
+		*ppBuildrun = NULL;
 	}
 	
+	return OS_OK;
+}
+
+ULONG Judge_MGR_BuildRun(CHAR **ppBuildrun, ULONG ulIncludeDefault)
+{
+	CHAR *pBuildrun = NULL;
+
+	*ppBuildrun = (CHAR*)malloc(BDN_MAX_BUILDRUN_SIZE);
+	if (NULL == *ppBuildrun)
+	{
+		return OS_ERR;
+	}
+	memset(*ppBuildrun, 0, BDN_MAX_BUILDRUN_SIZE);
 	
+	pBuildrun = *ppBuildrun;
+
+
+	pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN"judge-mgr");
+
 	if (JUDGE_MODE_ACM == g_judge_mode)
 	{
-		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN"judge mode acm");
+		if (VOS_YES == ulIncludeDefault)
+		{
+			pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"mode acm");
+		}
 	}
 	else if(JUDGE_MODE_OI == g_judge_mode)
 	{
-		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN"judge mode oi");
+		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"mode oi");
 	}
 	else
 	{
@@ -1429,58 +1546,104 @@ ULONG Judge_BuildRun(CHAR **ppBuildrun)
 
 	if (OS_YES == g_judge_timer_enable)
 	{
-		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN"judge auto-detect enable");
-		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN"judge auto-detect interval %d", g_judge_auto_detect_interval);
+		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"auto-detect enable");		
 	}
 	else
 	{
-		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN"undo judge auto-detect enable");
+		if (VOS_YES == ulIncludeDefault)
+		{
+			pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"undo auto-detect enable");
+		}
 	}
 
+	if (10 == g_judge_auto_detect_interval)
+	{
+		if (VOS_YES == ulIncludeDefault)
+		{
+			pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"auto-detect interval %u", g_judge_auto_detect_interval);
+		}
+	}
+	else
+	{
 
-	pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN"judge data-path %s", dataPath);
+		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"auto-detect interval %u", g_judge_auto_detect_interval);
+	}
 	
-	if (OS_YES == Judge_IsVirtualJudgeEnable())
+
+	if (OS_TRUE == g_ulNeedApiHookFlag)
 	{
-		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN"virtual-judge enable");
+		if (VOS_YES == ulIncludeDefault)
+		{		
+			pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"security enable");
+		}
 	}
 	else
 	{
-		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN"undo virtual-judge enable");
+
+		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"undo security enable");
+
 	}
+
+	pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"testcase-path %s", dataPath);
+	
+
+
+	return OS_OK;
+}
+
+ULONG Judge_VJUDGE_BuildRun(CHAR **ppBuildrun, ULONG ulIncludeDefault)
+{
+	CHAR *pBuildrun = NULL;
+
+	*ppBuildrun = (CHAR*)malloc(BDN_MAX_BUILDRUN_SIZE);
+	if (NULL == *ppBuildrun)
+	{
+		return OS_ERR;
+	}
+	memset(*ppBuildrun, 0, BDN_MAX_BUILDRUN_SIZE);
+	
+	pBuildrun = *ppBuildrun;
+
+	pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN"virtual-judge-mgr");
 	
 	if (OS_YES == hdu_vjudge_enable)
 	{
-		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"hdu-judge enable");
+		if (VOS_YES == ulIncludeDefault)
+		{
+			pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"hdu-judge enable");
+		}
 	}
 	else
 	{
 		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"undo hdu-judge enable");
 	}
 
-	pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_2"hdu-judge username %s password %s", hdu_username, hdu_password);
+	pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"hdu-judge username %s password %s", hdu_username, hdu_password);
 	
 	if (OS_YES == hdu_remote_enable)
 	{
-		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_2"hdu-judge remote-judge enable");
+		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"hdu-judge remote-judge enable");
 	}
 	else
 	{
-		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_2"undo hdu-judge remote-judge enable");
+		if (VOS_YES == ulIncludeDefault)
+		{
+			pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"undo hdu-judge remote-judge enable");
+		}
 	}
 
-	pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_3"hdu-judge ip %s port %u", hdu_judgerIP, hdu_sockport);
+	pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"hdu-judge ip %s port %u", hdu_judgerIP, hdu_sockport);
 
 #if 0
 	if (OS_YES == guet_vjudge_enable)
 	{
-		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_ONE"guet-judge enable");
-		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_ONE"guet-judge username %s password %s", guet_username, guet_password);
+		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"guet-judge enable");
+		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"guet-judge username %s password %s", guet_username, guet_password);
 		
 		if (OS_YES == guet_remote_enable)
 		{
-			pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_TWO"guet-judge remote-judge enable");
-			pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_TWO"guet-judge ip %s port %u", guet_judgerIP, guet_sockport);				
+			pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"guet-judge remote-judge enable");
+			pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"guet-judge ip %s port %u", guet_judgerIP, guet_sockport);				
 		}
 	}		
 #endif
@@ -1491,7 +1654,6 @@ ULONG Judge_BuildRun(CHAR **ppBuildrun)
 
 int OJ_InitData()
 {
-
 	if(SQL_InitMySQL()==0)
 	{
 		write_log(JUDGE_ERROR,"Judge can not connect to MySQL(%s, %s, %s, %s, %d).",Mysql_url, Mysql_username, Mysql_password, Mysql_table, Mysql_port);
@@ -1507,36 +1669,20 @@ int OJ_Init()
 	return OS_OK;
 }
 
-/*
-unsigned long _beginthreadex( void *security,
-								unsigned stack_size,
-								unsigned ( __stdcall *start_address )( void * ),
-								void *arglist,
-								unsigned initflag,
-								unsigned *thrdaddr );
-
-//µÚ1¸ö²ÎÊı£º°²È«ÊôĞÔ£¬NULLÎªÄ¬ÈÏ°²È«ÊôĞÔ
-//µÚ2¸ö²ÎÊı£ºÖ¸¶¨Ïß³Ì¶ÑÕ»µÄ´óĞ¡¡£Èç¹ûÎª0£¬ÔòÏß³Ì¶ÑÕ»´óĞ¡ºÍ´´½¨ËüµÄÏß³ÌµÄÏàÍ¬¡£Ò»°ãÓÃ0
-//µÚ3¸ö²ÎÊı£ºÖ¸¶¨Ïß³Ìº¯ÊıµÄµØÖ·£¬Ò²¾ÍÊÇÏß³Ìµ÷ÓÃÖ´ĞĞµÄº¯ÊıµØÖ·(ÓÃº¯ÊıÃû³Æ¼´¿É£¬º¯ÊıÃû³Æ¾Í±íÊ¾µØÖ·)
-//µÚ4¸ö²ÎÊı£º´«µİ¸øÏß³ÌµÄ²ÎÊıµÄÖ¸Õë£¬¿ÉÒÔÍ¨¹ı´«Èë¶ÔÏóµÄÖ¸Õë£¬ÔÚÏß³Ìº¯ÊıÖĞÔÙ×ª»¯Îª¶ÔÓ¦ÀàµÄÖ¸Õë
-//µÚ5¸ö²ÎÊı£ºÏß³Ì³õÊ¼×´Ì¬£¬0:Á¢¼´ÔËĞĞ£»CREATE_SUSPEND£ºsuspended£¨Ğü¹Ò£©
-//µÚ6¸ö²ÎÊı£ºÓÃÓÚ¼ÇÂ¼Ïß³ÌIDµÄµØÖ·
-
-*/
-
 unsigned _stdcall  OJ_TaskEntry(void *pEntry)
 {
 	write_log(JUDGE_INFO,"Running Judge Core...");
 
-	(void)BDN_RegistBuildRun(MID_JUDGE, BDN_PRIORITY_NORMAL, Judge_BuildRun);
+	Judge_RegCmd();
+	
+	(void)BDN_RegistBuildRun(MID_JUDGE, VIEW_SYSTEM, BDN_PRIORITY_NORMAL, Judge_BuildRun);
+	(void)BDN_RegistBuildRun(MID_JUDGE, VIEW_JUDGE_MGR, BDN_PRIORITY_LOW, Judge_MGR_BuildRun);
+	(void)BDN_RegistBuildRun(MID_JUDGE, VIEW_VJUDGE_MGR, BDN_PRIORITY_LOW - 1, Judge_VJUDGE_BuildRun);
+	
 	
 	_beginthreadex(NULL, 0, Judge_DispatchThread, NULL, NULL, NULL);
 	
-    /* å¯åŠ¨å®šæ—¶å™¨çº¿ç¨‹ */
 	_beginthreadex(NULL, 0, Judge_TimerThread, NULL, NULL, NULL);
-
-	//WaitForSingleObject(handle, INFINITE);
-	//CloseHandle(handle);
 
 	write_log(JUDGE_INFO,"Judge Task init ok...");
 
@@ -1610,14 +1756,6 @@ void Judge_RegAppInfo()
 #endif
 
 }
-
-#if 0
-int main(int argc, char **argv)
-{
-	OJ_TaskEntry();
-	return 0;
-}
-#endif
 
 
 

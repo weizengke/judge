@@ -4,6 +4,25 @@
 #define DEBUG_DISABLE 0
 #define DEBUG_ENABLE  1
 
+#ifdef UCHAR
+#undef UCHAR
+#define UCHAR unsigned char
+#endif
+
+#ifndef ULONG
+#undef ULONG
+#define ULONG unsigned long
+#endif
+
+#ifndef CHAR
+#undef CHAR
+#define CHAR char
+#endif
+
+#ifndef VOID
+#undef VOID
+#define VOID void
+#endif
 enum DEBUG_TYPE_EM
 {
 	DEBUG_TYPE_NONE,
@@ -39,6 +58,12 @@ extern char *szModuleName[];
 extern char *szDebugName[];
 extern unsigned long g_aulDebugMask[][DEBUG_TYPE_MAX/32 + 1];
 extern int g_debug_switch;
+
+#define JUDGE_INFO 0
+#define JUDGE_WARNING 1
+#define JUDGE_ERROR 2
+#define JUDGE_FATAL 3
+#define JUDGE_SYSTEM_ERROR 4
 
 extern void RunDelay(int t);
 extern void MSGQueueMain();

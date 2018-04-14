@@ -1,8 +1,13 @@
 set CUR_DIR=%cd%
 
 rem 添加g++编译环境路径
-set Path=%CUR_DIR%\3part\mingw32\bin
+set Path=%Path%;%CUR_DIR%\3part\mingw32\bin;%CUR_DIR%\3part\7-Zip
 
+rem 解压工具链
+cd %CUR_DIR%\3part
+if not exist mingw32 7z x mingw32.rar -aoa
+
+cd %CUR_DIR%
 rem -j32并行编译，加快编译速度
 mingw32-make -j32 -f makefile32
 
@@ -22,6 +27,7 @@ SET ROOT_DIR=%~dp0
 
 SET OBJ_LIST=
 SET LIB_LIST=
+
 
 echo 进入目录%ROOT_DIR%%OBJ_DIR%
 cd %ROOT_DIR%%OBJ_DIR%

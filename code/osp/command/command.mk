@@ -1,9 +1,7 @@
-CMD_OBJ=$(OBJ_DIR)/command_var.o \
-		$(OBJ_DIR)/command_core.o \
-		$(OBJ_DIR)/command_func.o \
-		$(OBJ_DIR)/command_adp.o \
-		$(OBJ_DIR)/command_io.o\
-		$(OBJ_DIR)/command_bdn.o
+CMD_OBJ=$(OBJ_DIR)/command_main.o \
+        $(OBJ_DIR)/command_bdn.o \
+        $(OBJ_DIR)/command_core.o \
+        
 
 all:$(CMD_OBJ)
 

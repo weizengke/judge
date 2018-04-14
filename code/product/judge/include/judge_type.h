@@ -75,6 +75,7 @@ typedef struct tag_Judge_Submission_ST
 	char exePath[MAX_PATH];
     char inFileName[MAX_PATH];
     char outFileName[MAX_PATH];
+	char stdOutFileName[MAX_PATH];
     char DebugFile[MAX_PATH];
     char ErrorFile[MAX_PATH];
     char judge_log_filename[MAX_PATH];

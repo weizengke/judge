@@ -12,45 +12,11 @@
 
 extern char g_sysname[];
 
-void write_log(int level, const char *fmt, ...) {
-	va_list ap;
-	char buffer[BUFSIZE];
-	time_t  timep = time(NULL);
-	int l;
-	struct tm *p;
-    p = localtime(&timep);
-    p->tm_year = p->tm_year + 1900;
-    p->tm_mon = p->tm_mon + 1;
-	sprintf(buffer,"log/%04d-%02d-%02d.log", p->tm_year, p->tm_mon, p->tm_mday);
-
-	FILE *fp = fopen(buffer, "a+");
-	if (fp == NULL) {
-		fprintf(stderr, "open logfile error!\n");
-		return;
-	}
-
-	fprintf(fp, "%s:%04d-%02d-%02d %02d:%02d:%02d ",LEVEL_NAME[level],p->tm_year, p->tm_mon, p->tm_mday,p->tm_hour,p->tm_min,p->tm_sec);
-
-	va_start(ap, fmt);
-	l = vsnprintf(buffer, BUFSIZE, fmt, ap);
-	fprintf(fp, "%s\r\n", buffer);
-	if (g_oj_debug_switch == JUDGE_DEBUG_ON)
-	{
-		/* BEGIN: Added by weizengke, 2013/11/15 for vrp */
-		//pdt_debug_print("%s", buffer);
-		Judge_Debug(DEBUG_TYPE_INFO, "%s", buffer);
-		/* END:   Added by weizengke, 2013/11/15 */
-	}
-	va_end(ap);
-	fclose(fp);
-}
-
-
 void judge_outstring(const char *format, ...)
 {
-	extern int g_pdt_recovering;
+	extern ULONG PDT_IsCfgRecoverOver();
 
-	if (OS_YES == g_pdt_recovering)
+	if (OS_NO == PDT_IsCfgRecoverOver())
 	{
 		return ;
 	}

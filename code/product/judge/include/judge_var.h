@@ -12,5 +12,6 @@ extern char g_Vjudgetfilename[MAX_PATH];
 
 extern SOCKET g_sListen;
 
+extern int g_judge_mode ;
 
 #endif
