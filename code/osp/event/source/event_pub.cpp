@@ -16,21 +16,49 @@
 #include "osp\event\include\event_pub.h"
 #include "osp\debug\include\debug_center_inc.h"
 
-struct EVENT_Ntf_Node *g_pstEventNtfList[EVENT_NTF_MAX];
-
 #define EVENT_Debug(x, args...) debugcenter_print(MID_EVENT, x, args)
+/*****************************************************************************
+ Prototype    : EVENT_InitTbl
+ Description  : 初始化事件table
+ Input        : EVENT_NTF_NODE **ppstEvtTbl  
+                ULONG ulSize                 
+ Output       : None
+ Return Value : 
+ Calls        : 
+ Called By    : 
+ 
+  History        :
+  1.Date         : 2018/7/8
+    Author       : Jungle
+    Modification : Created function
+
+*****************************************************************************/
+ULONG EVENT_InitTbl(EVENT_NTF_NODE **ppstEvtTbl, ULONG ulSize)
+{
+	ULONG ulRet = OS_OK;
+	EVENT_NTF_NODE *pstEvtTbl = NULL;
+
+	if (NULL == ppstEvtTbl)
+	{
+		return OS_ERR;
+	}
+	
+	pstEvtTbl = (EVENT_NTF_NODE *)malloc(ulSize * sizeof(EVENT_NTF_NODE));
+	if (NULL == pstEvtTbl)
+	{
+		return OS_ERR;
+	}
+	memset(pstEvtTbl, 0, ulSize * sizeof(EVENT_NTF_NODE));
+
+	*ppstEvtTbl = pstEvtTbl;
+		
+	return ulRet;
+}
 
 /*****************************************************************************
 *   Prototype    : EVENT_RegistFunc
 *   Description  : 提供事件回调注册函数
-*   Input        : char *pModuleName
-*                  int  eventId
-				   int  cmdId
-*                  int  priority
-*                  int  (*pfCallBackFunc)(int evtId
-*                  int cmdId
-*                  void *pData
-*                  void **ppInfo)
+*   Input        : 
 *   Output       : None
 *   Return Value : int
 *   Calls        :
@@ -43,14 +71,25 @@ struct EVENT_Ntf_Node *g_pstEventNtfList[EVENT_NTF_MAX];
 *           Modification : Created function
 *
 *****************************************************************************/
-int EVENT_RegistFunc(char *pModuleName, int  eventId, int cmdId, int  priority,
-								int  (*pfCallBackFunc)(int evtId, int cmdId, void *pData, void **ppInfo))
+ULONG EVENT_RegistFunc(EVENT_NTF_NODE *pstEventTbl,
+						CHAR *pModuleName, 
+						ULONG eventId,
+						ULONG priority,
+						EVENT_CB_FUNC pfCallBackFunc)
 {
-	struct EVENT_Ntf_Node * pstNow = NULL;
-	struct EVENT_Ntf_Node * pstPre = NULL;
-	struct EVENT_Ntf_Node * pstEvtNtfNodeNew = NULL;
+	EVENT_NTF_NODE * pstTblHead = NULL;
+	EVENT_NTF_NODE * pstNow = NULL;
+	EVENT_NTF_NODE * pstPre = NULL;
+	EVENT_NTF_NODE * pstEvtNtfNodeNew = NULL;
 
-	pstEvtNtfNodeNew = (struct EVENT_Ntf_Node *)malloc(sizeof(struct EVENT_Ntf_Node));
+	if (NULL == pstEventTbl)
+	{
+		return OS_ERR;
+	}
+
+	pstTblHead = pstEventTbl + eventId;
+		
+	pstEvtNtfNodeNew = (EVENT_NTF_NODE *)malloc(sizeof(EVENT_NTF_NODE));
 	if (NULL == pstEvtNtfNodeNew)
 	{
 		return OS_ERR;
@@ -58,19 +97,18 @@ int EVENT_RegistFunc(char *pModuleName, int  eventId, int cmdId, int  priority,
 
 	pstEvtNtfNodeNew->pfCallBackFunc = pfCallBackFunc;
 	pstEvtNtfNodeNew->priority = priority;
-	pstEvtNtfNodeNew->cmdId    = cmdId;
 	pstEvtNtfNodeNew->eventId = eventId;
 	strcpy(pstEvtNtfNodeNew->moduleName, pModuleName);
 
-	if (NULL == g_pstEventNtfList[eventId])
+	pstNow = pstTblHead->pNext;
+	pstPre = pstTblHead;
+
+	if (NULL == pstNow)
 	{
-		g_pstEventNtfList[eventId] = pstEvtNtfNodeNew;
+		pstPre->pNext = pstEvtNtfNodeNew;
 		pstEvtNtfNodeNew->pNext = NULL;
 		return OS_OK;
 	}
-
-	pstNow = g_pstEventNtfList[eventId];
-	pstPre = pstNow;
 
 	while (NULL != pstNow)
 	{
@@ -83,9 +121,9 @@ int EVENT_RegistFunc(char *pModuleName, int  eventId, int cmdId, int  priority,
 		pstNow = pstNow->pNext;
 	}
 
+	/* INSERT TAIL*/
 	if (NULL == pstNow)
 	{
-		/* INSERT TAIL*/
 		pstPre->pNext = pstEvtNtfNodeNew;
 		pstEvtNtfNodeNew->pNext = NULL;
 	}
@@ -93,56 +131,23 @@ int EVENT_RegistFunc(char *pModuleName, int  eventId, int cmdId, int  priority,
 	{
 		/* INSERT HEAD */
 		pstEvtNtfNodeNew->pNext = pstNow;
-
-		if (pstNow == pstPre)
-		{
-			g_pstEventNtfList[eventId] = pstEvtNtfNodeNew;
-		}
-		else
-		{
-			pstPre->pNext = pstEvtNtfNodeNew;
-		}
-
+		pstNow->pNext = pstEvtNtfNodeNew;
 	}
 
+#if 0
+	pstTblHead = pstEventTbl + eventId;
+	while (NULL != pstTblHead)
+	{
+		printf("\r\n Module:%s eventId=%u, priority=%u", pstTblHead->moduleName, pstTblHead->eventId, pstTblHead->priority);
+		pstTblHead = pstTblHead->pNext;
+	}
+#endif
 
 	return OS_OK;
 }
 
 /*****************************************************************************
-*   Prototype    : EVENT_Ntf_Show
-*   Description  : Show All CallBack active
-*   Input        : None
-*   Output       : None
-*   Return Value : void
-*   Calls        :
-*   Called By    :
-*
-*   History:
-*
-*       1.  Date         : 2014/7/27
-*           Author       : weizengke
-*           Modification : Created function
-*
-*****************************************************************************/
-void EVENT_Ntf_Show()
-{
-	int index  = 0;
-	for (index = 0; index < EVENT_NTF_MAX; index++)
-	{
-		struct EVENT_Ntf_Node * pstHead =  g_pstEventNtfList[index];
-		while (NULL != pstHead)
-		{
-			EVENT_Debug(DEBUG_TYPE_INFO, "Mod:%s, Evt:%d, Cmd:%d, fpCBFunc:0x%x, pri:%d",
-					pstHead->moduleName, pstHead->eventId, pstHead->cmdId, pstHead->pfCallBackFunc, pstHead->priority);
-
-			pstHead = pstHead->pNext;
-		}
-	}
-}
-
-/*****************************************************************************
-*   Prototype    : EVENT_Ntf_Notify
+*   Prototype    : EVENT_Notify
 *   Description  : 事件通知函数
 *   Input        : int evtId
 *                  int cmdId
@@ -160,39 +165,38 @@ void EVENT_Ntf_Show()
 *           Modification : Created function
 *
 *****************************************************************************/
-int EVENT_Ntf_Notify(int evtId, int cmdId, void *pData, void **ppInfo)
+ULONG EVENT_Notify(EVENT_NTF_NODE *pstEventTbl, ULONG evtId, ULONG keyId, ULONG cmdId, VOID *pData, VOID **ppInfo)
 {
-	int index  = 0;
-	int ret = OS_OK;
+	ULONG index  = 0;
+	ULONG ret = OS_OK;
+	EVENT_NTF_NODE * pstHead =  NULL;
 
-	if (evtId >= EVENT_NTF_MAX)
+	if (NULL == pstEventTbl)
 	{
 		return OS_ERR;
 	}
 
-	struct EVENT_Ntf_Node * pstHead =  g_pstEventNtfList[evtId];
+	pstHead =  pstEventTbl + evtId;
+	pstHead = pstHead->pNext;
 
+	EVENT_Debug(DEBUG_TYPE_INFO, "EVENT_Notify [%s]...", pstHead->moduleName);
+	
 	while (NULL != pstHead)
 	{
-		if (EVENT_NTF_CMD_NONE != pstHead->cmdId)
-		{
-			if (cmdId != pstHead->cmdId)
-			{
-				pstHead = pstHead->pNext;
-				continue;
-			}
-		}
+		EVENT_Debug(DEBUG_TYPE_INFO, "EVENT_Notify [%s]...", pstHead->moduleName);
 
-		EVENT_Debug(DEBUG_TYPE_INFO, "EVENT_Ntf_Notify [%s]...", pstHead->moduleName);
-
-		ret = pstHead->pfCallBackFunc(evtId, cmdId, pData, ppInfo);
+		ret = pstHead->pfCallBackFunc(keyId, cmdId, pData, ppInfo);
 		if (OS_OK != ret)
 		{
-			EVENT_Debug(DEBUG_TYPE_ERROR, "EVENT_Ntf_Notify [%s] failed. (ret=%d)", pstHead->moduleName, ret);
+			EVENT_Debug(DEBUG_TYPE_ERROR, "EVENT_Notify [%s] failed. (ret=%d)", pstHead->moduleName, ret);
+
+			/* 遇错即返回 */
+			return ret;
 		}
 
 		pstHead = pstHead->pNext;
 	}
 
+	return ret;
 }
 

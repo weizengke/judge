@@ -1,41 +1,24 @@
 #ifndef _EVENT_PUB_H_
 #define _EVENT_PUB_H_
 
-typedef struct EVENT_Ntf_Node
+typedef ULONG (*EVENT_CB_FUNC)(ULONG keyId, ULONG cmdId, VOID *pData, VOID **ppInfo);
+
+typedef struct tagEVENT_Ntf_Node
 {
-	char moduleName[256];
-	int  eventId;
-	int  cmdId;
-	int  priority;
-	int  (*pfCallBackFunc)(int evtId, int cmdId, void *pData, void **ppInfo);
+	CHAR moduleName[256];
+	ULONG  eventId;
+	ULONG  priority;
+	EVENT_CB_FUNC pfCallBackFunc;
 
-	struct EVENT_Ntf_Node *pNext;
-};
+	struct tagEVENT_Ntf_Node *pNext;
+}EVENT_NTF_NODE;
 
-
-enum EVENT_NTF_E
-{
-	EVENT_NTF_NONE,
-	EVENT_NTF_JUDGE,
-	EVENT_NTF_SQL,
-	EVENT_NTF_CMD,
-
-	EVENT_NTF_MAX
-};
-
-enum EVENT_NTF_CMD_E
-{
-	EVENT_NTF_CMD_NONE,
-
-	EVENT_NTF_CMD_MAX
-};
-
-
-extern int EVENT_RegistFunc(char *pModuleName, int  eventId, int cmdId, int  priority,
-								int  (*pfCallBackFunc)(int evtId, int cmdId, void *pData, void **ppInfo));
-extern int EVENT_Ntf_Notify(int evtId, int cmdId, void *pData, void **ppInfo);
-
-extern void EVENT_Ntf_Show();
-
+extern ULONG EVENT_InitTbl(EVENT_NTF_NODE **ppstEvtTbl, ULONG ulSize);
+extern ULONG EVENT_RegistFunc(EVENT_NTF_NODE *pstEventTbl,
+						CHAR *pModuleName, 
+						ULONG eventId,
+						ULONG priority,
+						EVENT_CB_FUNC pfCallBackFunc);
+extern ULONG EVENT_Notify(EVENT_NTF_NODE *pstEventTbl, ULONG keyId, ULONG evtId, ULONG cmdId, VOID *pData, VOID **ppInfo);
 
 #endif

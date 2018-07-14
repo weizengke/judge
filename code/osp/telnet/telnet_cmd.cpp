@@ -25,14 +25,10 @@ enum TELNET_CMO_SHOW_ID_EM {
 enum TELNET_CMO_CFG_ID_EM {
 	TELNET_CMO_CFG_TELNET_UNDO = CMD_ELEMID_DEF(MID_TELNET, TELNET_CMO_TBL_CFG, 0),
 	TELNET_CMO_CFG_TELNET_ENABLE ,
-	TELNET_CMO_CFG_AAA ,
 	TELNET_CMO_CFG_AUTH_MODE,
 	TELNET_CMO_CFG_AUTH_MODE_NONE,
 	TELNET_CMO_CFG_AUTH_MODE_AAA,
 	TELNET_CMO_CFG_AUTH_MODE_PASSWORD,
-	TELNET_CMO_CFG_LOCAL_USER,
-	TELNET_CMO_CFG_LOCAL_USER_NAME,
-	TELNET_CMO_CFG_LOCAL_USER_PSW,
 	TELNET_CMO_CFG_TELNET_USER_NAME,
 	TELNET_CMO_CFG_TELNET_USER_PSW,	
 	
@@ -75,10 +71,10 @@ VOID TELNET_SHOW_Users(ULONG vtyId)
 	long sec = 0;
 	long min = 0;
 	long hour = 0;
-	char time_delay[10] = {0};
+	char time_delay[128] = {0};
 	char acbuff[65556] = {0};
 	char *buff = NULL;
-	struct cmd_vty * vty = NULL;
+	CMD_VTY_S * vty = NULL;
 	extern long getdiftime(time_t maxt,time_t mint);
 	
 	vty = cmd_vty_getById(vtyId);
@@ -109,8 +105,8 @@ VOID TELNET_SHOW_Users(ULONG vtyId)
 		    int addrlen = sizeof(addr);  
 		    if(getpeername(g_vty[i].user.socket, (struct sockaddr*)&addr, &addrlen) == -1){          
 		        continue;  
-		    }  
-
+		    }
+			
 			if (0 == g_vty[i].user.state)
 			{
 				sprintf(time_delay, "Unauthorized");
@@ -123,13 +119,14 @@ VOID TELNET_SHOW_Users(ULONG vtyId)
 				min=diff%60; 
 				hour=diff=diff/60;
 				sprintf(time_delay, "%02d:%02d:%02d", hour, min, sec);
+				
 			}
 
 			buff += sprintf(buff, " %s %-3u %-7s  %-12s %-16s  %-7u %s\r\n",
 				(vty->user.socket == g_vty[i].user.socket)?"+":" ", i , "Telnet", time_delay, inet_ntoa(addr.sin_addr), g_vty[i].user.socket, g_vty[i].user.state?g_vty[i].user.user_name:"-");
 		}
 	}
-
+	
 	vty_printf(vtyId, acbuff);
 
 }
@@ -184,11 +181,11 @@ ULONG TELNET_CFG_Callback(VOID *pRcvMsg)
 	ULONG isUndo = 0;
 	ULONG isTelnetEnable = 0;
 	ULONG isAuthMode = 0;
-	ULONG isLocaluser = 0;
 	ULONG isTelnetuser = 0;
 	CHAR Username[32] = {0};
 	CHAR Password[32] = {0};
-
+	extern void TELNET_KillAllVty();
+	
 	vtyId = cmd_get_vty_id(pRcvMsg);
 	iElemNum = cmd_get_elem_num(pRcvMsg);
 
@@ -206,22 +203,30 @@ ULONG TELNET_CFG_Callback(VOID *pRcvMsg)
 			case TELNET_CMO_CFG_TELNET_ENABLE:		
 				isTelnetEnable = OS_YES;
 				break;
-
-			case TELNET_CMO_CFG_AAA:
-				vty_view_set(vtyId, VIEW_AAA);
-				break;
-
+				
 			case TELNET_CMO_CFG_AUTH_MODE_NONE:		
 				extern ULONG g_TelnetAuthMode ;
 				extern char g_szTelnetUsername[32];
-				extern char g_szTelnetPassword[32];				
+				extern char g_szTelnetPassword[32];
+				
+				if (g_TelnetAuthMode != 0)
+				{
+					TELNET_KillAllVty();
+				}
+				
 				g_TelnetAuthMode = 0;
 				memset(g_szTelnetUsername, 0, sizeof(g_szTelnetUsername));
 				memset(g_szTelnetPassword, 0, sizeof(g_szTelnetPassword));
 				break;
 				
 			case TELNET_CMO_CFG_AUTH_MODE_PASSWORD:	
-				extern ULONG g_TelnetAuthMode ;				
+				extern ULONG g_TelnetAuthMode ;	
+
+				if (g_TelnetAuthMode != 1)
+				{
+					TELNET_KillAllVty();
+				}
+								
 				g_TelnetAuthMode = 1;				
 				vty_printf(vtyId, "Info: Please create telnet username and password.\r\n");				
 				break;
@@ -229,21 +234,19 @@ ULONG TELNET_CFG_Callback(VOID *pRcvMsg)
 			case TELNET_CMO_CFG_AUTH_MODE_AAA:		
 				extern ULONG g_TelnetAuthMode ;
 				extern char g_szTelnetUsername[32];
-				extern char g_szTelnetPassword[32];				
+				extern char g_szTelnetPassword[32];	
+
+				if (g_TelnetAuthMode != 2)
+				{
+					TELNET_KillAllVty();
+				}
+								
 				g_TelnetAuthMode = 2;
 				memset(g_szTelnetUsername, 0, sizeof(g_szTelnetUsername));
 				memset(g_szTelnetPassword, 0, sizeof(g_szTelnetPassword));				
 				vty_printf(vtyId, "Info: Please create AAA username and password.\r\n");
 				break;
-			case TELNET_CMO_CFG_LOCAL_USER_NAME:
-				isLocaluser = OS_YES;
-				cmd_copy_string_param(pElem, Username);				
-				break;
-
-			case TELNET_CMO_CFG_LOCAL_USER_PSW:
-				cmd_copy_string_param(pElem, Password);
-				break;
-
+			
 			case TELNET_CMO_CFG_TELNET_USER_NAME:
 				isTelnetuser = OS_YES;
 				cmd_copy_string_param(pElem, Username);					
@@ -272,28 +275,6 @@ ULONG TELNET_CFG_Callback(VOID *pRcvMsg)
 		return 0;
 	}
 
-	if (OS_YES == isLocaluser)
-	{
-		if (0 == isUndo)
-		{
-			extern ULONG AAA_AddUser(ULONG vtyId, char *uname, char *psw);
-			if (OS_OK != AAA_AddUser(vtyId, Username, Password))
-			{
-				return OS_ERR;
-			}
-		}
-		else
-		{
-			extern ULONG AAA_DelUser(ULONG vtyId, char *uname);
-			if (OS_OK != AAA_DelUser(vtyId, Username))
-			{
-				return OS_ERR;
-			}
-		}
-		
-		return 0;
-	}
-
 	if (OS_YES == isTelnetuser)
 	{
 		extern ULONG g_TelnetAuthMode ;
@@ -304,6 +285,12 @@ ULONG TELNET_CFG_Callback(VOID *pRcvMsg)
 		{
 			vty_printf(vtyId, "Error: The telnet authentication-mode is not password, please change to mode password.\r\n");
 			return OS_ERR;
+		}
+
+		if (strcmp(g_szTelnetUsername, Username)
+			|| strcmp(g_szTelnetPassword, Password))
+		{
+			TELNET_KillAllVty();
 		}
 		
 		strcpy(g_szTelnetUsername, Username);
@@ -349,7 +336,7 @@ ULONG TELNET_RegCmdShow()
 
 	/* 命令行注册四部曲2: 定义命令字 */
 	// 1
-	cmd_regelement_new(CMD_ELEMID_NULL,					CMD_ELEM_TYPE_KEY,	  "display",	   "Display", vec);
+	cmd_regelement_new(CMD_ELEMID_NULL,				CMD_ELEM_TYPE_KEY,	  "display",	   "Display", vec);
 	// 2
 	cmd_regelement_new(TELNET_CMO_SHOW_USERS,			CMD_ELEM_TYPE_KEY,	  "users",		   "Users", vec);
 
@@ -378,42 +365,29 @@ ULONG TELNET_RegCmdEnable()
 	// 4
 	cmd_regelement_new(TELNET_CMO_CFG_TELNET_ENABLE,	CMD_ELEM_TYPE_KEY,	  "enable",		   "Enable Telnet protocol", vec);
 	// 5
-	cmd_regelement_new(TELNET_CMO_CFG_AAA,				CMD_ELEM_TYPE_KEY,	  "aaa",		   "Authentication Authorization Accounting", vec);
-	// 6
 	cmd_regelement_new(TELNET_CMO_CFG_AUTH_MODE,		CMD_ELEM_TYPE_KEY,	  "authentication-mode","Telnet authentication mode", vec);
-	// 7
+	// 6
 	cmd_regelement_new(TELNET_CMO_CFG_AUTH_MODE_NONE,	CMD_ELEM_TYPE_KEY,	  "none",			"Authentication mode none", vec);
-	// 8
+	// 7
 	cmd_regelement_new(TELNET_CMO_CFG_AUTH_MODE_AAA,	CMD_ELEM_TYPE_KEY,	  "aaa",			"Authentication mode aaa", vec);
-	// 9
+	// 8
 	cmd_regelement_new(TELNET_CMO_CFG_AUTH_MODE_PASSWORD,CMD_ELEM_TYPE_KEY,	  "password",		"Authentication mode password", vec);
-	// 10
-	cmd_regelement_new(CMD_ELEMID_NULL,					CMD_ELEM_TYPE_KEY,	  "local-user",		"AAA Local User", vec);
-	// 11
-	cmd_regelement_new(TELNET_CMO_CFG_LOCAL_USER_NAME,	CMD_ELEM_TYPE_STRING, "STRING<1-32>",	"AAA Local User name", vec);
-	// 12
-	cmd_regelement_new(CMD_ELEMID_NULL,					CMD_ELEM_TYPE_KEY,	  "password",		"AAA Local User password", vec);
-	// 13
-	cmd_regelement_new(TELNET_CMO_CFG_LOCAL_USER_PSW,	CMD_ELEM_TYPE_STRING, "STRING<1-32>",	"AAA Local User password", vec);	
-	// 14
+	// 9
 	cmd_regelement_new(CMD_ELEMID_NULL,					CMD_ELEM_TYPE_KEY,	  "username",		"Telnet authentication username", vec);
-	// 15
+	// 10
 	cmd_regelement_new(TELNET_CMO_CFG_TELNET_USER_NAME,	CMD_ELEM_TYPE_STRING, "STRING<1-32>",	"Telnet authentication username", vec);
-	// 16
+	// 11
 	cmd_regelement_new(CMD_ELEMID_NULL,					CMD_ELEM_TYPE_KEY,	  "password",		"Telnet authentication password", vec);
-	// 17
+	// 12
 	cmd_regelement_new(TELNET_CMO_CFG_TELNET_USER_PSW,	CMD_ELEM_TYPE_STRING, "STRING<1-32>",	"Telnet authentication password", vec);
 	
 	/* 命令行注册四部曲3: 注册命令行 */
 	cmd_install_command(MID_TELNET, VIEW_SYSTEM,  " 1 2 3 4 ", vec);
 	cmd_install_command(MID_TELNET, VIEW_SYSTEM,  " 2 3 4 ", vec);
-	cmd_install_command(MID_TELNET, VIEW_SYSTEM,  " 5 ", vec);
-	cmd_install_command(MID_TELNET, VIEW_SYSTEM,  " 2 6 7 ", vec);
-	cmd_install_command(MID_TELNET, VIEW_SYSTEM,  " 2 6 8 ", vec);
-	cmd_install_command(MID_TELNET, VIEW_SYSTEM,  " 2 6 9 ", vec);
-	cmd_install_command(MID_TELNET, VIEW_AAA,  	  " 10 11 12 13 ", vec);
-	cmd_install_command(MID_TELNET, VIEW_AAA,     " 1 10 11 ", vec);
-	cmd_install_command(MID_TELNET, VIEW_SYSTEM,  " 2 14 15 16 17 ", vec);
+	cmd_install_command(MID_TELNET, VIEW_SYSTEM,  " 2 5 6 ", vec);
+	cmd_install_command(MID_TELNET, VIEW_SYSTEM,  " 2 5 7 ", vec);
+	cmd_install_command(MID_TELNET, VIEW_SYSTEM,  " 2 5 8 ", vec);
+	cmd_install_command(MID_TELNET, VIEW_SYSTEM,  " 2 9 10 11 12 ", vec);
 	
 	/* 命令行注册四部曲4: 释放命令行向量 */
 	CMD_VECTOR_FREE(vec);
@@ -422,8 +396,6 @@ ULONG TELNET_RegCmdEnable()
 
 ULONG TELNET_RegCmd()
 {
-	(VOID)cmd_view_regist("aaa-view", "aaa", VIEW_AAA, VIEW_SYSTEM);
-	
 	(VOID)cmd_regcallback(MID_TELNET, TELNET_CMD_Callback);	
 
 	(VOID)TELNET_RegCmdShow();

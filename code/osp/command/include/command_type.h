@@ -20,7 +20,6 @@ enum CMD_MATCH_STATUS {
 	CMD_PART_MATCH,
 	CMD_LIST_MATCH,
 	CMD_ERR_AMBIGOUS,
-	CMD_ERR_ARGU,
 };
 
 
@@ -133,7 +132,7 @@ enum CMD_ELEM_ID_EM {
 enum CMD_KEY_CODE_EM {
 	CMD_KEY_CODE_NONE = -1,
 		CMD_KEY_CODE_FILTER = 0,
-		CMD_KEY_CODE_TAB,  // CMD_KEY_CODE_TAB
+		CMD_KEY_CODE_TAB,
 		CMD_KEY_CODE_ENTER,
 		CMD_KEY_CODE_QUEST,
 		CMD_KEY_CODE_UP,
@@ -149,46 +148,46 @@ enum CMD_KEY_CODE_EM {
 		CMD_KEY_CODE_MAX
 };
 
-struct cmd_elem_st {
-	ULONG mid;
-	ULONG view_id;
-	ULONG para_num;
-	CMD_VECTOR_S *para_vec;
-};
+typedef struct cmd_line_st {
+	ULONG ulMid;			 	/* 模块id */
+	ULONG ulViewId;				/* 视图id */
+	ULONG ulElmtNum;			/* 命令行元素个数 */
+	CMD_VECTOR_S *pstElmtVec;	/* 命令行元素向量 */
+}CMD_LINE_S;
 
-typedef struct para_desc {
-	CMD_ELEM_TYPE_E  elem_tpye;
-	ULONG  elem_id;  /* 命令字元素id */
-	CHAR *para;    /* 命令字元素名 */
-	CHAR *desc;    /* 命令字帮助信息 */
-}CMD_ELEM_S;
+typedef struct cmd_elmt_st {
+	CMD_ELEM_TYPE_E  eElmtType;
+	ULONG ulElmtId;  /* 命令字元素id */
+	CHAR *pszElmtName;    /* 命令字元素名 */
+	CHAR *pszElmtHelp;    /* 命令字帮助信息 */
+}CMD_ELMT_S;
 
 #define CMD_VIEW_SONS_NUM 100
 
-typedef struct cmd_view_node {
-	ULONG  view_id;
-	CHAR view_name[CMD_MAX_VIEW_SIZE];
-    CHAR view_ais_name[CMD_MAX_VIEW_SIZE];
+typedef struct cmd_view_node_st {
+	ULONG ulViewId;
+	CHAR szViewName[CMD_MAX_VIEW_SIZE];
+    CHAR szViewAisName[CMD_MAX_VIEW_SIZE];
 
-	struct cmd_view_node *pParent;
-	struct cmd_view_node **ppSons;
-	ULONG view_son_num;
+	struct cmd_view_node_st *pParent;
+	struct cmd_view_node_st **ppSons;
+	ULONG ulViewSonNum;
 
-}view_node_st;
+}VIEW_NODE_S;
 
 
-typedef struct CMD_RUN_Ntf_Node
+typedef struct cmd_ntf_node_st
 {
-	ULONG  mId;
+	ULONG  ulMid;
 	ULONG  (*pfCallBackFunc)(VOID *pRcvMsg); /* 回调函数内申请内存，由调用者释放 */
 
-	struct CMD_RUN_Ntf_Node *pNext;
-};
+	struct cmd_ntf_node_st *pNext;
+}CMD_NTF_NODE_S;
 
 typedef struct tagCMD_RUNMSG_ELEM_S
 {
-	ULONG cmd_elemId;
-	CHAR cmd_param[128];
+	ULONG ulElmtId;
+	CHAR aszElmtArray[128];
 }CMD_RUNMSG_ELEM_S;
 
 typedef struct tagCMD_RUNMSG_S
@@ -199,10 +198,10 @@ typedef struct tagCMD_RUNMSG_S
 }CMD_RUNMSG_S;
 
 
-typedef struct key_handler {
-	ULONG key_value;
-	VOID (*key_func)(struct cmd_vty *);
-} key_handler_t;
+typedef struct key_handle_st {
+	ULONG ulKeyCode;
+	VOID (*pKeyCallbackfunc)(CMD_VTY_S *);
+} KEY_HANDLE_S;
 
 #endif
 

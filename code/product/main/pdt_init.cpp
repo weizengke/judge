@@ -134,7 +134,8 @@ void PDT_CfgRecover()
 	
 	while (fgets(line,1024,fp))
 	{
-		if ('#' != line[0])
+		if ('#' != line[0]
+			&& strlen(line) > 0)
 		{
 			line[strlen(line) - 1] = '\0';
 			ulRet = cmd_pub_run(line);
@@ -144,6 +145,8 @@ void PDT_CfgRecover()
 	}
 	
 	fclose(fp);
+
+	cmd_pub_run("return");
 	
 	printf("Eecover configuration end.\r\n");
 	write_log(JUDGE_INFO, "Eecover configuration end.");
@@ -185,8 +188,11 @@ long WINAPI PDT_ExceptionFilter(EXCEPTION_POINTERS * excp)
 {
 	extern SOCKET g_TelnetSSocket;
 
-	pdt_debug_print("Main Thread Exit...[code:%u]", GetLastError());
-	write_log(JUDGE_ERROR," Main Thread Exit after 5 second...(GetLastError=%u)",GetLastError());
+	pdt_debug_print("Exception in thread main...[ErrorCode=%u]",
+		GetLastError());
+	write_log(JUDGE_ERROR,
+		"!!! Exception in thread main, please mail to 269574524@qq for help. (ErrorCode:%u)",
+		GetLastError());
 	
 	closesocket(g_sListen);
 	closesocket(g_TelnetSSocket);
@@ -282,7 +288,7 @@ int PDT_InitSocket()
 
 	while(ret == SOCKET_ERROR && trybind > 0)
 	{
-		bind(g_sListen,(LPSOCKADDR)&sin,sizeof(sin));
+		ret = bind(g_sListen,(LPSOCKADDR)&sin,sizeof(sin));
 		//write_log(JUDGE_SYSTEM_ERROR,"bind failed:%d , it will try later...",WSAGetLastError());
 		trybind--;
 		Sleep(100);
@@ -395,8 +401,8 @@ void PDT_InitConfigData()
 
 	/* BEGIN: Added by weizengke,for hdu-vjudge*/
     GetPrivateProfileString("HDU","domain","http://acm.hdu.edu.cn",hdu_domain,sizeof(hdu_domain),INI_filename);
-	GetPrivateProfileString("HDU","username","NULL",hdu_username,sizeof(hdu_username),INI_filename);
-	GetPrivateProfileString("HDU","password","NULL",hdu_password,sizeof(hdu_password),INI_filename);
+	GetPrivateProfileString("HDU","username","",hdu_username,sizeof(hdu_username),INI_filename);
+	GetPrivateProfileString("HDU","password","",hdu_password,sizeof(hdu_password),INI_filename);
 	GetPrivateProfileString("HDU","judgerIP","127.0.0.1",hdu_judgerIP,sizeof(hdu_judgerIP),INI_filename);
 	hdu_sockport=GetPrivateProfileInt("HDU","sock_port",SOCKET_PORT,INI_filename);
 	hdu_remote_enable=GetPrivateProfileInt("HDU","remote_enable",OS_NO,INI_filename);
@@ -564,6 +570,9 @@ int main()
 	extern void Debug_RegAppInfo();
 	Debug_RegAppInfo();
 
+	extern void AAA_RegAppInfo();
+	AAA_RegAppInfo();
+	
 	extern void TELNET_RegAppInfo();
 	TELNET_RegAppInfo();
 
@@ -572,6 +581,9 @@ int main()
 
 	extern void NDP_RegAppInfo();
 	NDP_RegAppInfo();
+
+	extern void FTPS_RegAppInfo();
+	FTPS_RegAppInfo();
 	
 	for (vector<int>::size_type ix = 0; ix < g_vector_appInfo.size(); ++ix)
 	{
@@ -603,7 +615,7 @@ int main()
 	(VOID)cmd_regcallback(MID_OS, pdt_cmd_callback);	
 
 	Sleep(1000);
-	
+
 	/* ÅäÖÃ»Ö¸´´¦Àí */
 	PDT_CfgRecover();
 

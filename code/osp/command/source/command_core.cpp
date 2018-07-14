@@ -1,11 +1,9 @@
 /*
-	Code source reference from Zebra.
-
 	Author: Jungle Wei
 	Date  : 2013-10
 	Description: A common command line module
 
-	支持特性: TAB自动选择性补全, '?'联想 , CTRL+W 快速删除, 错误位置提示, 命令行带参数
+	支持特性: TAB自动选择性补全, '?'联想 , CTRL+W 快速删除, 错误位置提示, 命令行带参数, 命令行视图, telnet的vty技术
 
 
 				 如梦令·听
@@ -17,7 +15,16 @@
 				你听，
 				你听，
 				雨打风吹未停。
-
+					
+	存储结构: 命令行向量 - 命令行元素向量
+	
+	g_pstCmdVec - CMD_LINE_S 1 - CMD_ELMT_S 1
+	                           - CMD_ELMT_S 2
+	                           - CMD_ELMT_S <CR>
+	            - CMD_LINE_S 2 - CMD_ELMT_S 1
+	            			   - CMD_ELMT_S 2
+	            			   - CMD_ELMT_S 3
+	            			   - CMD_ELMT_S <CR>
 */
 #include <windows.h>
 #include <stdio.h>
@@ -49,27 +56,23 @@ CMD_VTY_S g_vty[CMD_VTY_MAXUSER_NUM]; /*telnet用户 */
 CMD_VTY_S *g_con_vty; /* 串口用户 */
 CMD_VTY_S *g_cfm_vty; /* 配置管理用户 */
 
-CMD_VECTOR_S *cmd_vec;     /* 存储全局命令行向量 */
-view_node_st *view_list;   /* 存储视图树 */
-struct CMD_RUN_Ntf_Node *g_pstCMDRunNtfList = NULL;  /* 存储命令行处理注册钩子 */
-CMD_VECTOR_S *elem_vector = NULL;  /* 定义命令字使用 */
-CMD_ELEM_S g_elem_cr = {CMD_ELEM_TYPE_END, CMD_ELEM_ID_CR, CMD_END, ""}; /* 命令行结束符 */
+CMD_VECTOR_S *g_pstCmdVec;    /* 存储全局命令行向量，每个命令行向量下挂一个命令行元素向量 */
+VIEW_NODE_S *g_pstViewList;   /* 存储视图树，维护视图之间的关系 */
+CMD_NTF_NODE_S *g_pstCMDRunNtfList = NULL;  /* 存储命令行处理注册钩子 */
+CMD_ELMT_S g_pstElmt_CR = {CMD_ELEM_TYPE_END, CMD_ELEM_ID_CR, CMD_END, ""}; /* 命令行结束符 */
 
-key_handler_t key_resolver[] = {
-	// resolve a whole line
+KEY_HANDLE_S key_resolver[] = {
 	{ CMD_KEY_CODE_FILTER, 	cmd_resolve_filter },
 	{ CMD_KEY_CODE_TAB, 	cmd_resolve_tab },
 	{ CMD_KEY_CODE_ENTER, 	cmd_resolve_enter },
 	{ CMD_KEY_CODE_QUEST, 	cmd_resolve_quest },
 	{ CMD_KEY_CODE_UP, 		cmd_resolve_up },
 	{ CMD_KEY_CODE_DOWN, 	cmd_resolve_down },
-	// resolve in read buffer
 	{ CMD_KEY_CODE_LEFT, 	cmd_resolve_left },
 	{ CMD_KEY_CODE_RIGHT, 	cmd_resolve_right },
 	{ CMD_KEY_CODE_DELETE,   cmd_resolve_delete },
 	{ CMD_KEY_CODE_BACKSPACE, 	cmd_resolve_backspace },
 	{ CMD_KEY_CODE_DEL_LASTWORD, cmd_resolve_del_lastword},
-
 	{ CMD_KEY_CODE_NOTCARE, cmd_resolve_insert },
 
 };
@@ -79,23 +82,23 @@ key_handler_t key_resolver[] = {
 CHAR *cmd_get_sysname()
 {
 	extern char *PDT_GetSysname();
-	
+
 	return PDT_GetSysname();
 }
 
-ULONG cmd_regcallback(ULONG mId, ULONG (*pfCallBackFunc)(VOID *pRcvMsg))
+ULONG cmd_regcallback(ULONG ulMid, ULONG (*pfCallBackFunc)(VOID *pRcvMsg))
 {
-	struct CMD_RUN_Ntf_Node * pstNow = NULL;
-	struct CMD_RUN_Ntf_Node * pstPre = NULL;
-	struct CMD_RUN_Ntf_Node * pstEvtNtfNodeNew = NULL;
+	CMD_NTF_NODE_S * pstNow = NULL;
+	CMD_NTF_NODE_S * pstPre = NULL;
+	CMD_NTF_NODE_S * pstEvtNtfNodeNew = NULL;
 
-	pstEvtNtfNodeNew = (struct CMD_RUN_Ntf_Node *)malloc(sizeof(struct CMD_RUN_Ntf_Node));
+	pstEvtNtfNodeNew = (CMD_NTF_NODE_S *)malloc(sizeof(CMD_NTF_NODE_S));
 	if (NULL == pstEvtNtfNodeNew)
 	{
 		return CMD_ERR;
 	}
 
-	pstEvtNtfNodeNew->mId = mId;
+	pstEvtNtfNodeNew->ulMid = ulMid;
 	pstEvtNtfNodeNew->pfCallBackFunc = pfCallBackFunc;
 
 	if (NULL == g_pstCMDRunNtfList)
@@ -104,7 +107,7 @@ ULONG cmd_regcallback(ULONG mId, ULONG (*pfCallBackFunc)(VOID *pRcvMsg))
 		pstEvtNtfNodeNew->pNext = NULL;
 		return CMD_OK;
 	}
-
+    
 	pstNow = g_pstCMDRunNtfList;
 	pstPre = pstNow;
 
@@ -151,7 +154,7 @@ ULONG cmd_get_vty_id(VOID *pRunMsg)
 
 	if (NULL == pstRunMsg)
 	{
-		NULL;
+		return CMD_VTY_INVALID_ID;
 	}
 
 	return pstRunMsg->vtyId;
@@ -163,7 +166,7 @@ VOID *cmd_get_elem_by_index(VOID *pRunMsg, ULONG index)
 
 	if (NULL == pstRunMsg)
 	{
-		NULL;
+		return NULL;
 	}
 
 	return (void*)(pstRunMsg->argv + index);
@@ -176,7 +179,7 @@ ULONG cmd_get_elem_num(VOID *pRunMsg)
 
 	if (NULL == pstRunMsg)
 	{
-		NULL;
+		return 0;
 	}
 
 	return pstRunMsg->argc;
@@ -194,7 +197,7 @@ ULONG cmd_get_first_elem_tblid(VOID *pRunMsg)
 
 	pElem = pstRunMsg->argv;
 
-	return ((0x00FF0000 & pElem->cmd_elemId) >> 16);
+	return ((0x00FF0000 & pElem->ulElmtId) >> 16);
 
 }
 
@@ -204,10 +207,10 @@ ULONG cmd_get_elemid(VOID *pElemMsg)
 
 	if (NULL == pElem)
 	{
-		0;
+		return CMD_ELEMID_NULL;
 	}
 
-	return pElem->cmd_elemId;
+	return pElem->ulElmtId;
 }
 
 CHAR* cmd_get_elem_param(VOID *pElemMsg)
@@ -216,10 +219,10 @@ CHAR* cmd_get_elem_param(VOID *pElemMsg)
 
 	if (NULL == pElem)
 	{
-		0;
+		return NULL;
 	}
 
-	return pElem->cmd_param;
+	return pElem->aszElmtArray;
 }
 
 ULONG cmd_get_ulong_param(VOID *pElemMsg)
@@ -228,10 +231,10 @@ ULONG cmd_get_ulong_param(VOID *pElemMsg)
 
 	if (NULL == pElem)
 	{
-		0;
+		return 0xFFFFFFFF;
 	}
 
-	return atol(pElem->cmd_param);
+	return atol(pElem->aszElmtArray);
 }
 
 VOID cmd_copy_string_param(VOID *pElemMsg, CHAR *param)
@@ -240,15 +243,33 @@ VOID cmd_copy_string_param(VOID *pElemMsg, CHAR *param)
 
 	if (NULL == pElem)
 	{
-		0;
+		return ;
 	}
 
-	strcpy(param, pElem->cmd_param);
+	strcpy(param, pElem->aszElmtArray);
 
 	return ;
 }
 
-ULONG cmd_run_notify(struct cmd_elem_st * cmd, struct cmd_vty *vty, CHAR **argv, ULONG argc)
+ULONG cmd_get_ip_ulong_param(VOID *pElemMsg)
+{
+	CMD_RUNMSG_ELEM_S *pElem = (CMD_RUNMSG_ELEM_S *)pElemMsg;
+
+	if (NULL == pElem)
+	{
+		return 0xFFFFFFFF;
+	}
+
+	if (0 == cmd_string_is_ip(pElem->aszElmtArray))
+	{
+		return 0xFFFFFFFF;
+	}
+			
+	return cmd_ip_string_to_ulong(pElem->aszElmtArray);
+}
+
+
+ULONG cmd_run_notify(CMD_LINE_S * pstCmdLine, CMD_VTY_S *vty, CHAR **argv, ULONG argc)
 {
 	ULONG index  = 0;
 	ULONG isize = 0;
@@ -256,7 +277,7 @@ ULONG cmd_run_notify(struct cmd_elem_st * cmd, struct cmd_vty *vty, CHAR **argv,
 	ULONG argcNum = 0;
 	CMD_RUNMSG_S *pstRunMsg = NULL;
 	CMD_RUNMSG_ELEM_S *pstRunMsgElem = NULL;
-	struct CMD_RUN_Ntf_Node * pstHead =  g_pstCMDRunNtfList;
+	CMD_NTF_NODE_S * pstHead =  g_pstCMDRunNtfList;
 
 	isize = sizeof(CMD_RUNMSG_S) + argc * sizeof(CMD_RUNMSG_ELEM_S);
 
@@ -274,25 +295,25 @@ ULONG cmd_run_notify(struct cmd_elem_st * cmd, struct cmd_vty *vty, CHAR **argv,
 
 	for (ULONG i = 0; i < argc; i++)
 	{
-		CMD_ELEM_S * cmd_elem = (CMD_ELEM_S *)cmd_vector_slot(cmd->para_vec, i);
+		CMD_ELMT_S * cmd_elem = (CMD_ELMT_S *)cmd_vector_get(pstCmdLine->pstElmtVec, i);
 
 		CMD_debug(DEBUG_TYPE_FUNC,
 			"cmd_run_notify: 0x%x, %d, %s, %s, %s, %d",
-			cmd_elem->elem_id, cmd_elem->elem_tpye, cmd_elem->para, cmd_elem->desc, argv[i], argc);
+			cmd_elem->ulElmtId, cmd_elem->eElmtType, cmd_elem->pszElmtName, cmd_elem->pszElmtHelp, argv[i], argc);
 
-		if (CMD_ELEMID_NULL == cmd_elem->elem_id)
+		if (CMD_ELEMID_NULL == cmd_elem->ulElmtId)
 		{
 			continue;
 		}
 
- 		pstRunMsgElem->cmd_elemId = cmd_elem->elem_id;
+ 		pstRunMsgElem->ulElmtId = cmd_elem->ulElmtId;
 		if (strlen(argv[i]) >= 128)
 		{
 			free(pstRunMsg);
 			return CMD_ERR;
 		}
 
-		strcpy(pstRunMsgElem->cmd_param, argv[i]);
+		strcpy(pstRunMsgElem->aszElmtArray, argv[i]);
 		pstRunMsgElem++;
 		argcNum++;
 
@@ -304,7 +325,7 @@ ULONG cmd_run_notify(struct cmd_elem_st * cmd, struct cmd_vty *vty, CHAR **argv,
 
 	while (NULL != pstHead)
 	{
-		if (cmd->mid != pstHead->mId)
+		if (pstCmdLine->ulMid != pstHead->ulMid)
 		{
 			pstHead = pstHead->pNext;
 			continue;
@@ -321,17 +342,17 @@ ULONG cmd_run_notify(struct cmd_elem_st * cmd, struct cmd_vty *vty, CHAR **argv,
 }
 
 VOID vty_printf(ULONG vtyId, CHAR *format, ...)
-{	
+{
 	ULONG ret = 0;
 	char buffer[BUFSIZE] = {0};
-	struct cmd_vty *vty = NULL;
+	CMD_VTY_S *vty = NULL;
 
 	vty = cmd_vty_getById(vtyId);
 	if (NULL == vty)
 	{
 		return;
 	}
-		
+
 	va_list args;
 	va_start(args, format);
 
@@ -340,18 +361,18 @@ VOID vty_printf(ULONG vtyId, CHAR *format, ...)
 		vprintf(format, args);
 	}
 	else
-	{
+	{		
 		vsnprintf(buffer, BUFSIZE, format, args);
-		send(vty->user.socket, buffer, strlen(buffer),0);	
+		send(vty->user.socket, buffer, strlen(buffer),0);
 	}
-	
+
 	va_end(args);
 
 	return;
 }
 
-VOID cmd_vty_printf(struct cmd_vty *vty, CHAR *format, ...)
-{	
+VOID cmd_vty_printf(CMD_VTY_S *vty, CHAR *format, ...)
+{
 	ULONG ret = 0;
 	char buffer[BUFSIZE] = {0};
 
@@ -365,9 +386,9 @@ VOID cmd_vty_printf(struct cmd_vty *vty, CHAR *format, ...)
 	else
 	{
 		vsnprintf(buffer, BUFSIZE, format, args);
-		send(vty->user.socket, buffer, strlen(buffer),0);		
+		send(vty->user.socket, buffer, strlen(buffer),0);
 	}
-	
+
 	va_end(args);
 
 	return;
@@ -377,7 +398,7 @@ VOID vty_print2all(CHAR *format, ...)
 {
 	ULONG ret = 0;
 	char buffer[BUFSIZE] = {0};
-	
+
 	va_list args;
 	va_start(args, format);
 
@@ -395,12 +416,11 @@ VOID vty_print2all(CHAR *format, ...)
 			send(g_vty[i].user.socket, buffer, strlen(buffer),0);
 		}
 	}
-	
+
 	va_end(args);
 }
 
-
-VOID cmd_delete_one(struct cmd_vty *vty)
+VOID cmd_delete_one(CMD_VTY_S *vty)
 {
 	if (CMD_VTY_CONSOLE_ID == vty->vtyId)
 	{
@@ -412,12 +432,12 @@ VOID cmd_delete_one(struct cmd_vty *vty)
 	}
 }
 
-VOID cmd_back_one(struct cmd_vty *vty)
+VOID cmd_back_one(CMD_VTY_S *vty)
 {
 	cmd_vty_printf(vty, "\b");
 }
 
-VOID cmd_put_one(struct cmd_vty *vty, CHAR c)
+VOID cmd_put_one(CMD_VTY_S *vty, CHAR c)
 {
 	cmd_vty_printf(vty, "%c", c);
 }
@@ -446,7 +466,7 @@ ULONG cmd_getch()
 	return c;
 }
 
-int vty_getch(struct cmd_vty *vty)
+int vty_getch(CMD_VTY_S *vty)
 {
 	int ret = 0;
 	CHAR buff[1] = {0};
@@ -457,7 +477,7 @@ int vty_getch(struct cmd_vty *vty)
 		buff[0] = cmd_getch();
 	}
 	else
-	{	
+	{
 		/* telnet模式 */
 		ret = recv(vty->user.socket, (char*)buff, 1, 0);
 
@@ -468,43 +488,13 @@ int vty_getch(struct cmd_vty *vty)
 	}
 
 	//CMD_debug(CMD_DEBUG_INFO, "vty_getch. (c=0x%x)", buff[0]);
-	
+
 	return buff[0];
 }
 
-
-/*****************************************************************************
- Prototype    : cmd_elem_is_para_type
- Description  : 检查命令元素是否是一个参数
- Input        : CMD_ELEM_TYPE_E type
- Output       : None
- Return Value :
- Calls        :
- Called By    :
-
-  History        :
-  1.Date         : 2013/10/5
-    Author       : weizengke
-    Modification : Created function
-
-*****************************************************************************/
-ULONG cmd_elem_is_para_type(CMD_ELEM_TYPE_E type)
-{
-	switch(type)
-	{
-		case CMD_ELEM_TYPE_INTEGER:
-		case CMD_ELEM_TYPE_STRING:
-			return CMD_YES;
-		default:
-			break;
-	}
-
-	return CMD_NO;
-}
-
 /* vty */
-struct cmd_vty *cmd_vty_getById(ULONG vtyId)
-{	
+CMD_VTY_S *cmd_vty_getById(ULONG vtyId)
+{
 	/* 串口 */
 	if (CMD_VTY_CONSOLE_ID == vtyId)
 	{
@@ -521,25 +511,24 @@ struct cmd_vty *cmd_vty_getById(ULONG vtyId)
 		{
 			return NULL;
 		}
-		
+
 		return &g_vty[vtyId];
-	}	
+	}
 }
 
-VOID cmd_vty_init(struct cmd_vty *vty)
+VOID cmd_vty_init(CMD_VTY_S *vty)
 {
 	vty->vtyId = vty->vtyId;
 	vty->used = 0;
 	vty->view_id = VIEW_USER;
-	vty->buf_len = CMD_BUFFER_SIZE;
-	vty->used_len = vty->cur_pos = 0;
-	vty->hpos = vty->hindex = 0;
+	vty->ulBufMaxLen = CMD_BUFFER_SIZE;
+	vty->ulUsedLen = vty->ulCurrentPos = 0;
+	vty->ulhpos = vty->ulhNum = 0;
 
-	vty->inputMachine_prev = CMD_KEY_CODE_NOTCARE;
-	vty->inputMachine_now = CMD_KEY_CODE_NOTCARE;
+	vty->ucKeyTypePre = CMD_KEY_CODE_NOTCARE;
+	vty->ucKeyTypeNow = CMD_KEY_CODE_NOTCARE;
 	memset(vty->tabbingString, 0, CMD_MAX_CMD_ELEM_SIZE);
 	memset(vty->tabString, 0, CMD_MAX_CMD_ELEM_SIZE);
-	vty->tabStringLenth = 0;
 
 	vty->user.socket = INVALID_SOCKET;
 	vty->user.state = 0;
@@ -550,107 +539,48 @@ VOID cmd_vty_init(struct cmd_vty *vty)
 	return ;
 }
 
-VOID cmd_vty_deinit(struct cmd_vty *vty)
+VOID cmd_vty_add_history(CMD_VTY_S *vty)
 {
-	ULONG i;
-
-	if (!vty)
-	{
-		return;
-	}
-
-	for (i = 0; i < HISTORY_MAX_SIZE; i++)
-	{
-		if (vty->history[i] != NULL)
-		{
-			free(vty->history[i]);
-			vty->history[i] = NULL;
-		}
-	}
-
-	free(vty);
-}
-
-VOID cmd_vty_add_history(struct cmd_vty *vty)
-{
-	ULONG idx =  vty->hindex ? vty->hindex - 1 : HISTORY_MAX_SIZE - 1;
+	ULONG idx =  vty->ulhNum ? vty->ulhNum - 1 : HISTORY_MAX_SIZE - 1;
 
 	/* if same as previous command, then ignore */
-	if (vty->history[idx] &&
-		!strcmp(vty->buffer, vty->history[idx]))
+	if (vty->pszHistory[idx] &&
+		!strcmp(vty->szBuffer, vty->pszHistory[idx]))
 	{
-		vty->hpos = vty->hindex;
+		vty->ulhpos = vty->ulhNum;
 		return;
 	}
 
 	/* insert into history tail */
-	if (vty->history[vty->hindex])
+	if (vty->pszHistory[vty->ulhNum])
 	{
-		free(vty->history[vty->hindex]);
+		free(vty->pszHistory[vty->ulhNum]);
 	}
 
-	vty->history[vty->hindex] = strdup(vty->buffer);
-	vty->hindex = (vty->hindex + 1) == HISTORY_MAX_SIZE ? 0 : vty->hindex + 1;
-	vty->hpos = vty->hindex;
+	vty->pszHistory[vty->ulhNum] = strdup(vty->szBuffer);
+	vty->ulhNum = (vty->ulhNum + 1) == HISTORY_MAX_SIZE ? 0 : vty->ulhNum + 1;
+	vty->ulhpos = vty->ulhNum;
 
 }
 
-/* vector */
-ULONG cmd_vector_fetch(CMD_VECTOR_S *v)
+CMD_VECTOR_S *cmd_vector_init()
 {
-	ULONG fetch_idx;
+	CMD_VECTOR_S *v = NULL;
 
-	for (fetch_idx = 0; fetch_idx < v->used_size; fetch_idx++)
-	{
-		if (v->data[fetch_idx] == NULL)
-		{
-			break;
-		}
-	}
-
-	while (v->size < fetch_idx + 1)
-	{
-		v->data = (void**)realloc(v->data, sizeof(void *) * v->size * 2);
-		if (!v->data)
-		{
-			CMD_debug(CMD_DEBUG_ERROR, "In cmd_vector_fetch, Not Enough Memory For data");
-			return -1;
-		}
-
-		memset(&v->data[v->size], 0, sizeof(void *) * v->size);
-		v->size *= 2;
-	}
-
-	return fetch_idx;
-}
-
-CMD_VECTOR_S *cmd_vector_init(ULONG size)
-{
-	CMD_VECTOR_S *v = (CMD_VECTOR_S *)calloc(1, sizeof(CMD_VECTOR_S));
+	v = (CMD_VECTOR_S *)malloc(sizeof(CMD_VECTOR_S));
 	if (v == NULL)
 	{
 		return NULL;
 	}
+	memset(v, 0, sizeof(CMD_VECTOR_S));
 
-	if (size == 0)
-	{
-		size = 1;
-	}
-
-	v->data = (void**)calloc(1, sizeof(void *) * size);
-	if (v->data == NULL)
-	{
-		CMD_debug(CMD_DEBUG_ERROR, "In cmd_vector_init, Not Enough Memory For data");
-		free(v);
-		return NULL;
-	}
-
-	v->used_size = 0;
-	v->size = size;
-
+	v->ulSize = 0;
+	v->ppData = NULL;
+	
 	return v;
 }
 
+/* freeall标识是否需要释放data数组内指针指向的内存 */
 VOID cmd_vector_deinit(CMD_VECTOR_S *v, ULONG freeall)
 {
 	if (v == NULL)
@@ -658,21 +588,21 @@ VOID cmd_vector_deinit(CMD_VECTOR_S *v, ULONG freeall)
 		return;
 	}
 
-	if (v->data)
+	if (v->ppData)
 	{
 		if (freeall)
 		{
 			ULONG i;
-			for (i = 0; i < cmd_vector_max(v); i++)
+			for (i = 0; i < cmd_vector_size(v); i++)
 			{
-				if (cmd_vector_slot(v, i))
+				if (cmd_vector_get(v, i))
 				{
-					free(cmd_vector_slot(v, i));
+					free(cmd_vector_get(v, i));
 				}
 			}
 		}
 
-		free(v->data);
+		free(v->ppData);
 	}
 
 	free(v);
@@ -680,34 +610,49 @@ VOID cmd_vector_deinit(CMD_VECTOR_S *v, ULONG freeall)
 
 CMD_VECTOR_S *cmd_vector_copy(CMD_VECTOR_S *v)
 {
-	ULONG size;
-	CMD_VECTOR_S *new_v = (CMD_VECTOR_S *)calloc(1, sizeof(CMD_VECTOR_S));
+	ULONG size = 0;
+	CMD_VECTOR_S *new_v = (CMD_VECTOR_S *)malloc(sizeof(CMD_VECTOR_S));
 	if (NULL == new_v)
 	{
 		CMD_DBGASSERT(0, "cmd_vector_copy");
 		return NULL;
 	}
+	memset(new_v, 0, sizeof(CMD_VECTOR_S));
 
-	new_v->used_size = v->used_size;
-	new_v->size = v->size;
+	new_v->ulSize = v->ulSize;
 
-	size = sizeof(void *) * (v->size);
-	new_v->data = (void**)calloc(1, sizeof(void *) * size);
-	memcpy(new_v->data, v->data, size);
+	size = sizeof(void *) * (v->ulSize);
+	new_v->ppData = (void**)malloc(size);
+	if (NULL == new_v->ppData)
+	{
+		CMD_DBGASSERT(0, "cmd_vector_copy");
+		return NULL;
+	}
+	memset(new_v->ppData, 0, size);
+	
+	memcpy(new_v->ppData, v->ppData, size);
 
 	return new_v;
 }
 
 VOID cmd_vector_insert(CMD_VECTOR_S *v, VOID *val)
 {
-	ULONG idx;
-
-	idx = cmd_vector_fetch(v);
-	v->data[idx] = val;
-	if (v->used_size <= idx)
+	ULONG size = sizeof(void *) * (v->ulSize + 1);
+	
+	v->ppData = (void**)realloc(v->ppData, size);
+	if (!v->ppData)
 	{
-		v->used_size = idx + 1;
+		CMD_debug(CMD_DEBUG_ERROR, "cmd_vector_insert, no enough memory for data.");
+		CMD_DBGASSERT(0,"cmd_vector_insert, no enough memory for data.");
+		return ;
 	}
+	
+	memset(&v->ppData[v->ulSize], 0, sizeof(void *) * 1);
+	
+	v->ppData[v->ulSize] = val;
+	v->ulSize += 1;
+
+	return;
 }
 
 /*
@@ -724,12 +669,12 @@ VOID cmd_vector_insert_cr(CMD_VECTOR_S *v)
 	}
 
 	memcpy(string_cr, CMD_END, sizeof(CMD_END));
-	cmd_vector_insert(v, string_cr); /* cmd_vector_insert(v, CMD_END); // bug of memory free(<CR>), it's static memory*/
+	cmd_vector_insert(v, string_cr);
 }
 
 CMD_VECTOR_S *cmd_vector_new()
 {
-	return cmd_vector_init(1);
+	return cmd_vector_init();
 }
 
 VOID cmd_vector_free(CMD_VECTOR_S **pVec)
@@ -740,42 +685,47 @@ VOID cmd_vector_free(CMD_VECTOR_S **pVec)
 
 CMD_VECTOR_S *cmd_str2vec(CHAR *string)
 {
-	ULONG str_len;
-	CHAR *cur, *start, *token;
-	CMD_VECTOR_S *vec;
+	ULONG str_len = 0;
+	CHAR *cur = NULL;
+	CHAR *start = NULL;
+	CHAR *token = NULL;
+	CMD_VECTOR_S *vec = NULL;
 
-	// empty string
 	if (string == NULL)
 	{
 		return NULL;
 	}
 
 	cur = string;
-	// skip white spaces
-	while (isspace((int) *cur) && *cur != '\0')
+
+	/* 跳过前缀为空格的字符 */
+	while (*cur == ' ' && *cur != '\0')
 	{
 		cur++;
 	}
 
-	// only white spaces
 	if (*cur == '\0')
 	{
 		return NULL;
 	}
 
-	// copy each command pieces into vector
-	vec = cmd_vector_init(1);
+	vec = cmd_vector_init();
+	if(NULL == vec)
+	{
+		return NULL;
+	}
+
 	while (1)
 	{
 		start = cur;
-		while (!(isspace((int) *cur) || *cur == '\r' || *cur == '\n') &&
+		while (!(*cur == ' ' || *cur == '\r' || *cur == '\n') &&
 				*cur != '\0')
 		{
 			cur++;
 		}
 
 		str_len = cur - start;
-		token = (char *)malloc(sizeof(char) * (str_len + 1));
+		token = (CHAR *)malloc(sizeof(CHAR) * (str_len + 1));
 		if (NULL == token)
 		{
 			CMD_debug(CMD_DEBUG_ERROR, "In cmd_str2vec, There is no memory for param token.");
@@ -786,7 +736,7 @@ CMD_VECTOR_S *cmd_str2vec(CHAR *string)
 		*(token + str_len) = '\0';
 		cmd_vector_insert(vec, (void *)token);
 
-		while((isspace ((int) *cur) || *cur == '\n' || *cur == '\r') &&
+		while((*cur == ' ' || *cur == '\n' || *cur == '\r') &&
 			*cur != '\0')
 		{
 			cur++;
@@ -802,66 +752,72 @@ CMD_VECTOR_S *cmd_str2vec(CHAR *string)
 
 CMD_VECTOR_S *cmd_cmd2vec(CMD_VECTOR_S * pVec, ULONG *pCmdLine, ULONG n)
 {
-	CMD_VECTOR_S *vec=NULL;
-	struct para_desc *desc = NULL;
-	
+	CMD_VECTOR_S *vec = NULL;
+	CMD_ELMT_S *pstCmdElem = NULL;
+
 	if(NULL == pVec
 		|| NULL == pCmdLine)
 	{
 		return NULL;
 	}
 
-	vec = cmd_vector_init(1);
+	vec = cmd_vector_init();
+	if(NULL == vec)
+	{
+		return NULL;
+	}
 
 	for (ULONG i = 0; i < n; i++)
-	{	
+	{
 		if (0 == pCmdLine[i])
 		{
 			CMD_DBGASSERT(0, "cmd cmd2vec, cmdline index cannot be 0.");
 			return NULL;
 		}
 
-		if (pCmdLine[i] - 1 >= cmd_vector_max(pVec))
+		if (pCmdLine[i] - 1 >= cmd_vector_size(pVec))
 		{
-			CMD_DBGASSERT(0, "cmd cmd2vec, cmdline index(%u) cannot more than %u.", pCmdLine[i], cmd_vector_max(pVec));
-			return NULL;
-		}
-		
-		desc = (struct para_desc *)cmd_vector_slot(pVec, pCmdLine[i] - 1);
-
-		CMD_ELEM_S * cmd_elem = NULL;
-		cmd_elem = (CMD_ELEM_S *)malloc(sizeof(CMD_ELEM_S));
-		if (NULL == cmd_elem)
-		{
+			CMD_DBGASSERT(0, 
+				"cmd cmd2vec, cmdline index(%u) cannot more than %u.",
+				pCmdLine[i], cmd_vector_size(pVec));
 			return NULL;
 		}
 
-		cmd_elem->elem_id = desc->elem_id;
-		cmd_elem->elem_tpye = desc->elem_tpye;
+		pstCmdElem = (CMD_ELMT_S *)cmd_vector_get(pVec, pCmdLine[i] - 1);
 
-		cmd_elem->para = (char *)malloc(strlen(desc->para) + 1);
-		if (NULL == cmd_elem->para)
+		CMD_ELMT_S * pstCmdElmtTmp = NULL;
+		pstCmdElmtTmp = (CMD_ELMT_S *)malloc(sizeof(CMD_ELMT_S));
+		if (NULL == pstCmdElmtTmp)
 		{
-			free(cmd_elem);
 			return NULL;
 		}
-		memset(cmd_elem->para, 0, strlen(desc->para) + 1);
-		strcpy(cmd_elem->para, desc->para);
 
-		cmd_elem->desc = (char *)malloc(strlen(desc->desc) + 1);
-		if (NULL == cmd_elem->desc)
+		pstCmdElmtTmp->ulElmtId = pstCmdElem->ulElmtId;
+		pstCmdElmtTmp->eElmtType = pstCmdElem->eElmtType;
+
+		pstCmdElmtTmp->pszElmtName = (CHAR *)malloc(strlen(pstCmdElem->pszElmtName) + 1);
+		if (NULL == pstCmdElmtTmp->pszElmtName)
 		{
-			free(cmd_elem->para);
-			free(cmd_elem);
+			free(pstCmdElmtTmp);
 			return NULL;
 		}
-		memset(cmd_elem->desc, 0, strlen(desc->desc) + 1);
-		strcpy(cmd_elem->desc, desc->desc);
+		memset(pstCmdElmtTmp->pszElmtName, 0, strlen(pstCmdElem->pszElmtName) + 1);
+		strcpy(pstCmdElmtTmp->pszElmtName, pstCmdElem->pszElmtName);
 
-		cmd_vector_insert(vec, (void *)cmd_elem);
+		pstCmdElmtTmp->pszElmtHelp = (CHAR *)malloc(strlen(pstCmdElem->pszElmtHelp) + 1);
+		if (NULL == pstCmdElmtTmp->pszElmtHelp)
+		{
+			free(pstCmdElmtTmp->pszElmtName);
+			free(pstCmdElmtTmp);
+			return NULL;
+		}
+		memset(pstCmdElmtTmp->pszElmtHelp, 0, strlen(pstCmdElem->pszElmtHelp) + 1);
+		strcpy(pstCmdElmtTmp->pszElmtHelp, pstCmdElem->pszElmtHelp);
+
+		cmd_vector_insert(vec, (void *)pstCmdElmtTmp);
 	}
 
-	cmd_vector_insert(vec, (void *)&g_elem_cr);
+	cmd_vector_insert(vec, (void *)&g_pstElmt_CR);
 
 	return vec;
 }
@@ -870,13 +826,31 @@ CMD_VECTOR_S *cmd_cmd2vec(CMD_VECTOR_S * pVec, ULONG *pCmdLine, ULONG n)
 
 
 /* cmd */
-static ULONG match_unique_string(struct para_desc **match, CHAR *str, ULONG size)
+static ULONG cmd_match_unique_string(CMD_ELMT_S **pstCmdElem, CHAR *str, ULONG size)
 {
 	ULONG i;
 
 	for (i = 0; i < size; i++)
 	{
-		if (match[i]->para != NULL && strcmp(match[i]->para, str) == 0)
+		if (pstCmdElem[i]->pszElmtName != NULL && strcmp(pstCmdElem[i]->pszElmtName, str) == 0)
+		{
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
+static ULONG cmd_match_unique_elmtid(CMD_ELMT_S **pstCmdElem, ULONG ulElmtId, ULONG size)
+{
+	ULONG i;
+
+	for (i = 0; i < size; i++)
+	{
+		CMD_debug(CMD_DEBUG_FUNC, "cmd_match_unique_elmtid. (ulElmtId=%u, %u)",
+									pstCmdElem[i]->ulElmtId,
+									ulElmtId);
+		if (pstCmdElem[i]->ulElmtId == ulElmtId)
 		{
 			return 0;
 		}
@@ -903,7 +877,7 @@ ULONG cmd_get_nth_elem_pos(CHAR *string, ULONG n, ULONG *pos)
 	pre = NULL;
 
 	// skip white spaces
-	while (isspace((int) *cur) && *cur != '\0')
+	while (*cur == ' ' && *cur != '\0')
 	{
 		pre = cur;
 		cur++;
@@ -918,7 +892,7 @@ ULONG cmd_get_nth_elem_pos(CHAR *string, ULONG n, ULONG *pos)
 	while (1)
 	{
 		start = cur;
-		while (!(isspace((int) *cur) || *cur == '\r' || *cur == '\n') &&
+		while (!(*cur == ' ' || *cur == '\r' || *cur == '\n') &&
 			*cur != '\0')
 		{
 			pre = cur;
@@ -935,7 +909,7 @@ ULONG cmd_get_nth_elem_pos(CHAR *string, ULONG n, ULONG *pos)
 			m++;
 		}
 
-		while((isspace ((int) *cur) || *cur == '\n' || *cur == '\r') &&
+		while((*cur == ' ' || *cur == '\n' || *cur == '\r') &&
 			*cur != '\0')
 		{
 			pre = cur;
@@ -947,7 +921,7 @@ ULONG cmd_get_nth_elem_pos(CHAR *string, ULONG n, ULONG *pos)
 			/* BEGIN: Added by weizengke, 2014/3/9 修复命令行不完全时，错误位置提示不准确的问题 */
 			*pos = (int)(cur - string);
 
-			if (!isspace ((int) *pre))
+			if (*pre != ' ')
 			{
 				*pos += 1;
 			}
@@ -963,8 +937,8 @@ ULONG cmd_get_nth_elem_pos(CHAR *string, ULONG n, ULONG *pos)
 /*****************************************************************************
 *   Prototype    : cmd_output_missmatch
 *   Description  : Output miss match command position
-*   Input        : cmd_vty *vty
-*                  int nomath_pos
+*   Input        : CMD_VTY_S *vty
+*                  int ulNoMatchPos
 *   Output       : None
 *   Return Value : void
 *   Calls        :
@@ -977,7 +951,7 @@ ULONG cmd_get_nth_elem_pos(CHAR *string, ULONG n, ULONG *pos)
 *           Modification : Created function
 *
 *****************************************************************************/
-VOID cmd_output_missmatch(cmd_vty *vty, ULONG nomath_pos)
+VOID cmd_output_missmatch(CMD_VTY_S *vty, ULONG ulNoMatchPos)
 {
 	ULONG i = 0;
 	ULONG n = 0;
@@ -990,7 +964,7 @@ VOID cmd_output_missmatch(cmd_vty *vty, ULONG nomath_pos)
 		pos_arrow += 1;
 	}
 
-	(VOID)cmd_get_nth_elem_pos(vty->buffer, nomath_pos, &n);
+	(VOID)cmd_get_nth_elem_pos(vty->szBuffer, ulNoMatchPos, &n);
 	pos_arrow += n;
 
 	for (i=0;i<pos_arrow;i++)
@@ -999,55 +973,6 @@ VOID cmd_output_missmatch(cmd_vty *vty, ULONG nomath_pos)
 	}
 
 	cmd_vty_printf(vty, "^\r\nError: Unrecognized command at '^' position.\r\n");
-
-}
-
-/*  get range form INTEGER<a-b> STRING<a-b>
-	type for INTEGER or STRING
-*/
-ULONG cmd_get_range_symbol(CHAR *string, ULONG *type, ULONG *a, ULONG *b)
-{
-	CHAR *pleft = NULL;
-	CHAR *pright = NULL;
-	CHAR *pline = NULL;
-	CHAR type_string[256] = {0};
-	/*
-		请确保string有效性
-	*/
-
-	if (string == NULL || a == NULL || b == NULL)
-	{
-		return CMD_ERR;
-	}
-
-	pleft  = strchr(string, '<');
-	pline  = strchr(string, '-');
-	pright = strchr(string, '>');
-
-	if (pleft == NULL || pline == NULL || pright == NULL)
-	{
-		return CMD_ERR;
-	}
-
-	*a = 0;
-	*b = 0;
-	*type = CMD_ELEM_TYPE_VALID;
-
-	sscanf(string,"%[A-Z]<%u-%u>", type_string, a, b);
-
-	if (strcmp(type_string, CMD_STRING) == 0)
-	{
-		*type = CMD_ELEM_TYPE_STRING;
-	}
-
-	if (strcmp(type_string, CMD_INTEGER) == 0)
-	{
-		*type = CMD_ELEM_TYPE_INTEGER;
-	}
-
-	CMD_debug(CMD_DEBUG_INFO, "%s<%u-%u>",type_string, *a, *b);
-
-	return CMD_OK;
 
 }
 
@@ -1060,18 +985,11 @@ ULONG cmd_string_isdigit(CHAR *string)
 		return CMD_ERR;
 	}
 
-	/* ULONG最大是4294967295 */
-	if (strlen(string) > 10
-		|| (strlen(string) == 10 && strcmp(string,"4294967295") > 0))
-	{
-		return CMD_ERR;
-	}
-
 	for (i = 0; i < (int)strlen(string); i++)
 	{
 		if (!isdigit(*(string + i)))
 		{
-			CMD_debug(CMD_DEBUG_ERROR, "cmd_string_isdigit return error.");
+			CMD_debug(CMD_DEBUG_ERROR, "cmd_string_isdigit return error. (c=%c)", *(string + i));
 			return CMD_ERR;
 		}
 	}
@@ -1080,70 +998,320 @@ ULONG cmd_string_isdigit(CHAR *string)
 	return CMD_OK;
 }
 
-/* match INTEGER or STRING */
-ULONG cmd_match_special_string(CHAR *icmd, CHAR *dest)
+
+/*****************************************************************************
+ Prototype    : cmd_elem_is_para_type
+ Description  : 检查命令元素是否是一个参数
+ Input        : CMD_ELEM_TYPE_E type
+ Output       : None
+ Return Value :
+ Calls        :
+ Called By    :
+
+  History        :
+  1.Date         : 2013/10/5
+    Author       : weizengke
+    Modification : Created function
+
+*****************************************************************************/
+ULONG cmd_elem_is_para_type(CMD_ELEM_TYPE_E type)
 {
-	/*
-	num
-
-	string
-
-	ohter
-
-	*/
-	ULONG dest_type = CMD_ELEM_TYPE_VALID;
-	ULONG a = 0;
-	ULONG b = 0;
-
-	if (icmd == NULL || dest == NULL)
-	{
-		return CMD_ERR;
-	}
-
-	if (cmd_get_range_symbol(dest, &dest_type, &a, &b))
-	{
-		return CMD_ERR;
-	}
-
-	switch (dest_type)
+	switch(type)
 	{
 		case CMD_ELEM_TYPE_INTEGER:
-			if (CMD_OK == cmd_string_isdigit(icmd))
-			{
-				ULONG icmd_i = atol(icmd);
-				if (icmd_i >= a && icmd_i <=b)
-				{
-					return CMD_OK;
-				}
-			}
-			break;
 		case CMD_ELEM_TYPE_STRING:
-			{
-				ULONG icmd_len = (ULONG)strlen(icmd);
-				if (icmd_len >= a && icmd_len <= b)
-				{
-					return CMD_OK;
-				}
-			}
-			break;
+		case CMD_ELEM_TYPE_IP:
+		case CMD_ELEM_TYPE_MAC:
+			return CMD_YES;
 		default:
 			break;
 	}
 
+	return CMD_NO;
+}
+
+ULONG cmd_match_command_integer(CHAR *icmd, CMD_ELMT_S *pstElmt)
+{
+	ULONG a = 0;
+	ULONG b = 0;
+	CHAR *pleft = NULL;
+	CHAR *pright = NULL;
+	CHAR *pline = NULL;
+	CHAR type_string[256] = {0};
+	ULONG icmd_i = 0;
+	
+	if (icmd == NULL || pstElmt == NULL)
+	{
+		return CMD_ERR;
+	}
+
+	if (NULL == pstElmt->pszElmtName)
+	{
+		return CMD_ERR;
+	}
+
+	pleft  = strchr(pstElmt->pszElmtName, '<');
+	pline  = strchr(pstElmt->pszElmtName, '-');
+	pright = strchr(pstElmt->pszElmtName, '>');
+
+	if (pleft == NULL || pline == NULL || pright == NULL)
+	{
+		return CMD_ERR;
+	}
+
+	sscanf(pstElmt->pszElmtName,"%[A-Z]<%u-%u>", type_string, &a, &b);
+	if (0 != strcmp(type_string, CMD_INTEGER))
+	{
+		return CMD_ERR;
+	}
+
+	CMD_debug(CMD_DEBUG_INFO, "%s<%u-%u>",type_string, a, b);
+
+	/* icmd must only has digit */
+	if (CMD_OK == cmd_string_isdigit(icmd))
+	{
+		/* ULONG is not larger than 4294967295 */
+		if (strlen(icmd) > 10
+			|| (strlen(icmd) == 10 && strcmp(icmd,"4294967295") > 0))
+		{
+			return CMD_ERR;
+		}
+
+		/* check range is valid */
+		icmd_i = atol(icmd);
+		if (icmd_i >= a && icmd_i <=b)
+		{
+			return CMD_OK;
+		}
+	}
 
 	return CMD_ERR;
 }
 
-static ULONG cmd_filter_command(struct cmd_vty *vty, CHAR *cmd, CMD_VECTOR_S *v, ULONG index)
+ULONG cmd_match_command_string(CHAR *icmd, CMD_ELMT_S *pstElmt)
+{
+	ULONG a = 0;
+	ULONG b = 0;
+	CHAR *pleft = NULL;
+	CHAR *pright = NULL;
+	CHAR *pline = NULL;
+	CHAR type_string[256] = {0};
+	ULONG icmd_len = 0;
+	
+	if (icmd == NULL || pstElmt == NULL)
+	{
+		return CMD_ERR;
+	}
+	
+	if (NULL == pstElmt->pszElmtName)
+	{
+		return CMD_ERR;
+	}
+
+	pleft  = strchr(pstElmt->pszElmtName, '<');
+	pline  = strchr(pstElmt->pszElmtName, '-');
+	pright = strchr(pstElmt->pszElmtName, '>');
+
+	if (pleft == NULL || pline == NULL || pright == NULL)
+	{
+		return CMD_ERR;
+	}
+
+	sscanf(pstElmt->pszElmtName,"%[A-Z]<%u-%u>", type_string, &a, &b);
+	if (0 != strcmp(type_string, CMD_STRING))
+	{
+		return CMD_ERR;
+	}
+
+	CMD_debug(CMD_DEBUG_INFO, "%s<%u-%u>",type_string, a, b);
+
+	/* 检查整形参数是否在范围内 */
+    icmd_len = (ULONG)strlen(icmd);
+	if (icmd_len >= a && icmd_len <= b)
+	{
+		return CMD_OK;
+	}
+
+	return CMD_ERR;
+}
+
+ULONG cmd_ip_string_to_ulong(CHAR *ip)  
+{  
+	ULONG re = 0;
+	UCHAR tmp = 0;
+
+	while (1) 
+	{
+		if (*ip != '\0' && *ip != '.')
+		{
+			tmp = tmp * 10 + *ip - '0';
+		} 
+		else
+		{
+			re = (re << 8) + tmp;
+			if (*ip == '\0')
+			{
+				break;
+			}
+			
+			tmp = 0;
+		}
+		
+		ip++;
+	}
+      
+    return re; 
+}   
+  
+VOID cmd_ip_ulong_to_string(ULONG ip, CHAR *buf)  
+{  
+    sprintf(buf, "%u.%u.%u.%u",  
+        (UCHAR)*((CHAR *)&ip + 3),  
+        (UCHAR)*((CHAR *)&ip + 2),  
+        (UCHAR)*((CHAR *)&ip + 1),  
+        (UCHAR)*((CHAR *)&ip + 0));  
+
+	return;
+}  
+
+ULONG cmd_string_is_ip(CHAR *str)
+{
+	ULONG ulLen = 0;
+	ULONG aulArr[4] = {0};
+	ULONG ulLoop = 0;
+	ULONG ulIndex = 0;
+	ULONG ulValue = 0;
+	ULONG ulIsDotOrEnd = 0;
+	
+	if (NULL == str)
+	{
+		return 0;
+	}
+	
+	ulLen = strlen(str);
+	if(ulLen < 7 || ulLen > 15) return 0;   
+
+	for (ulLoop = 0; ulLoop < ulLen; ulLoop++)
+	{
+		if ('.' == str[ulLoop])
+		{
+			/* 连续的'.' */
+			if (1 == ulIsDotOrEnd)
+			{
+				return 0;
+			}
+			
+			ulIsDotOrEnd = 1;
+			aulArr[ulIndex++] = ulValue;
+			ulValue = 0;
+		}
+		else
+		{
+			ulIsDotOrEnd = 0;
+			
+			/* not digit */
+			if (!isdigit(str[ulLoop]))
+			{
+				return 0;
+			}
+			
+			ulValue = ulValue * 10 + (str[ulLoop] - '0');
+
+			if (ulValue > 255)
+			{
+				return 0;
+			}
+		}				
+	}
+
+	if (0 == ulIsDotOrEnd)
+	{
+		aulArr[ulIndex++] = ulValue;
+		ulValue = 0;
+	}
+	
+	if (4 != ulIndex)
+	{
+		return 0;
+	}
+
+	return 1;
+}
+
+ULONG cmd_match_command_ip(CHAR *icmd, CMD_ELMT_S *pstElmt)
+{
+
+	if (icmd == NULL || pstElmt == NULL)
+	{
+		return CMD_ERR;
+	}
+	
+	if (NULL == pstElmt->pszElmtName)
+	{
+		return CMD_ERR;
+	}
+
+	if (0 != strcmp(pstElmt->pszElmtName, CMD_IP))
+	{
+		return CMD_ERR;
+	}
+	
+	if (1 == cmd_string_is_ip(icmd))
+	{
+		return CMD_OK;
+	}
+	else
+	{
+		return CMD_ERR;
+	}
+	
+}
+
+ULONG cmd_match_command_param(CHAR *icmd, CMD_ELMT_S *pstElmt)
+{
+	ULONG ulRet = CMD_ERR;
+	
+	if (icmd == NULL || pstElmt == NULL)
+	{
+		return CMD_ERR;
+	}
+
+	CMD_debug(CMD_DEBUG_INFO, "cmd_match_command_param. icmd=%s, pszElmtName=%s",
+				icmd, pstElmt->pszElmtName);
+	
+	switch(pstElmt->eElmtType)
+	{
+		case CMD_ELEM_TYPE_INTEGER:
+			ulRet = cmd_match_command_integer(icmd, pstElmt);	
+			
+			break;
+			
+		case CMD_ELEM_TYPE_STRING:
+			ulRet = cmd_match_command_string(icmd, pstElmt);	
+			
+			break;
+			
+		case CMD_ELEM_TYPE_IP:			
+			ulRet = cmd_match_command_ip(icmd, pstElmt);
+			
+			break;
+
+		case CMD_ELEM_TYPE_MAC:
+			break;		
+			
+		default:
+			break;
+	}
+
+	return ulRet;
+}
+
+static ULONG cmd_filter_command(CMD_VTY_S *vty, CHAR *cmd, CMD_VECTOR_S *v, ULONG index)
 {
 	ULONG i;
 	ULONG match_cmd = CMD_ERR;
-	struct cmd_elem_st *elem;
-	struct para_desc *desc;
-
-	// For each command, check the 'index'th parameter if it matches the
-	// 'index' paramter in command, set command vector which does not
-	// match cmd NULL
+	CMD_LINE_S *pstCmdLine;
+	CMD_ELMT_S *pstCmdElem;
 
 	/* BEGIN: Added by weizengke, 2013/10/4   PN:check cmd valid*/
 	if (cmd == NULL || 0 == strlen(cmd))
@@ -1156,33 +1324,32 @@ static ULONG cmd_filter_command(struct cmd_vty *vty, CHAR *cmd, CMD_VECTOR_S *v,
 	{
 		return CMD_OK;
 	}
-
 	/* END:   Added by weizengke, 2013/10/4   PN:None */
 
-	for (i = 0; i < cmd_vector_max(v); i++)
+	for (i = 0; i < cmd_vector_size(v); i++)
 	{
-		if ((elem = (struct cmd_elem_st*)cmd_vector_slot(v, i)) != NULL)
+		if ((pstCmdLine = (CMD_LINE_S*)cmd_vector_get(v, i)) != NULL)
 		{
-			if (elem->view_id != VIEW_GLOBAL
-				&& elem->view_id != vty->view_id)
+			if (pstCmdLine->ulViewId != VIEW_GLOBAL
+				&& pstCmdLine->ulViewId != vty->view_id)
 			{
 				continue;
 			}
 
-			if (index >= cmd_vector_max(elem->para_vec))
+			if (index >= cmd_vector_size(pstCmdLine->pstElmtVec))
 			{
-				cmd_vector_slot(v, i) = NULL;
+				cmd_vector_get(v, i) = NULL;
 				continue;
 			}
 
-			desc = (struct para_desc *)cmd_vector_slot(elem->para_vec, index);
+			pstCmdElem = (CMD_ELMT_S *)cmd_vector_get(pstCmdLine->pstElmtVec, index);
 
 			/* match STRING , INTEGER */
-			if (CMD_OK != cmd_match_special_string(cmd, desc->para))
+			if (CMD_OK != cmd_match_command_param(cmd, pstCmdElem))
 			{
-				if(strnicmp(cmd, desc->para, strlen(cmd)) != 0)
+				if(strnicmp(cmd, pstCmdElem->pszElmtName, strlen(cmd)) != 0)
 				{
-					cmd_vector_slot(v, i) = NULL;
+					cmd_vector_get(v, i) = NULL;
 					continue;
 				}
 			}
@@ -1193,99 +1360,92 @@ static ULONG cmd_filter_command(struct cmd_vty *vty, CHAR *cmd, CMD_VECTOR_S *v,
 		}
 	}
 
-	CMD_debug(CMD_DEBUG_INFO, "cmd_filter_command. (cmd=%s, match_res=%u)", vty->buffer, match_cmd);
+	CMD_debug(CMD_DEBUG_INFO, "cmd_filter_command. (cmd=%s, match_res=%u)", vty->szBuffer, match_cmd);
 
 	return match_cmd;
 }
 
-
-ULONG cmd_match_command(CMD_VECTOR_S *icmd_vec, struct cmd_vty *vty,
-		struct para_desc **match, ULONG *match_size, CHAR *lcd_str)
+ULONG cmd_match_command(CMD_VECTOR_S *icmd_vec, CMD_VTY_S *vty,
+		CMD_ELMT_S **ppstMatchCmdElem, ULONG *pulMatchNum)
 {
-	ULONG i;
-	CMD_VECTOR_S *cmd_vec_copy = cmd_vector_copy(cmd_vec);
+	ULONG i = 0;	
 	ULONG isize = 0;
 	ULONG size = 0;
+	CMD_VECTOR_S *cmd_vec_copy = cmd_vector_copy(g_pstCmdVec);
 
-	CMD_NOUSED(vty);
-	CMD_NOUSED(lcd_str);
-
-	// Three steps to find matched commands in 'cmd_vec'
-	// 1. for input command vector 'icmd_vec', check if it is matching cmd_vec
-	// 2. store last matching command parameter in cmd_vec into match_vec
-	// 3. according to match_vec, do no match, one match, part match, list match
-
-	if (icmd_vec == NULL)
+	if (NULL == icmd_vec
+		|| NULL == cmd_vec_copy)
 	{
 		return CMD_NO_MATCH;
 	}
 
-	isize = cmd_vector_max(icmd_vec) - 1;
+	isize = cmd_vector_size(icmd_vec) - 1;
 
-	// Step 1
+	/* scan all command vectors, set null while not match. */
 	for (i = 0; i < isize; i++)
 	{
-		char *ipara = (char*)cmd_vector_slot(icmd_vec, i);
-		cmd_filter_command(vty, ipara, cmd_vec_copy, i);
-	}
-
-	// Step 2
-	// insert matched command word into match_vec, only insert the next word
-	for(i = 0; i < cmd_vector_max(cmd_vec_copy); i++)
-	{
-		struct cmd_elem_st *elem = NULL;
-		elem = (struct cmd_elem_st *)cmd_vector_slot(cmd_vec_copy, i);
-
-		if(elem != NULL)
+		if (CMD_OK != cmd_filter_command(vty, (CHAR*)cmd_vector_get(icmd_vec, i), cmd_vec_copy, i))
 		{
-			if (elem->para_vec == NULL)
+			*pulMatchNum = 0;
+			return CMD_NO_MATCH;
+		}
+	}
+	
+	for(i = 0; i < cmd_vector_size(cmd_vec_copy); i++)
+	{
+		CMD_LINE_S *pstCmdLine = NULL;
+		pstCmdLine = (CMD_LINE_S *)cmd_vector_get(cmd_vec_copy, i);
+
+		if(pstCmdLine != NULL)
+		{
+			if (pstCmdLine->pstElmtVec == NULL)
 			{
  				continue;
  			}
 
-			if (elem->view_id != VIEW_GLOBAL
-				&& elem->view_id != vty->view_id)
+			if (pstCmdLine->ulViewId != VIEW_GLOBAL
+				&& pstCmdLine->ulViewId != vty->view_id)
 			{
 				continue;
 			}
 
-			if (isize >= cmd_vector_max(elem->para_vec))
+			if (isize >= cmd_vector_size(pstCmdLine->pstElmtVec))
 			{
-				cmd_vector_slot(cmd_vec_copy, i) = NULL;
+				cmd_vector_get(cmd_vec_copy, i) = NULL;
 				continue;
 			}
 
-			struct para_desc *desc = (struct para_desc *)cmd_vector_slot(elem->para_vec, isize);
-			char *str = (char*)cmd_vector_slot(icmd_vec, isize);
+			CMD_ELMT_S *pstCmdElem = (CMD_ELMT_S *)cmd_vector_get(pstCmdLine->pstElmtVec, isize);
+			CHAR *str = (CHAR*)cmd_vector_get(icmd_vec, isize);
 
-			if (str == NULL || strnicmp(str, desc->para, strlen(str)) == 0)
+			if (str == NULL || strnicmp(str, pstCmdElem->pszElmtName, strlen(str)) == 0)
 			{
-				if (match_unique_string(match, desc->para, size))
-					match[size++] = desc;
+				if (cmd_match_unique_string(ppstMatchCmdElem, pstCmdElem->pszElmtName, size))
+					ppstMatchCmdElem[size++] = pstCmdElem;
 			}
 
 		}
 
 	}
 
-	cmd_vector_deinit(cmd_vec_copy, 0);	// free cmd_vec_copy, no longer use
+	cmd_vector_deinit(cmd_vec_copy, 0);
 
-	// Step 3
-	// No command matched
+	/* No command matched */
 	if (size == 0)
 	{
-		*match_size = size;
+		*pulMatchNum = size;
 		return CMD_NO_MATCH;
 	}
 
-	// Only one command matched
+	/* Only one command matched */
 	if (size == 1)
 	{
-		*match_size = size;
+		*pulMatchNum = size;
 		return CMD_FULL_MATCH;
 	}
 
-	*match_size = size;
+	/* List matched */
+	*pulMatchNum = size;
 	return CMD_LIST_MATCH;
 }
 
@@ -1293,7 +1453,7 @@ ULONG cmd_match_command(CMD_VECTOR_S *icmd_vec, struct cmd_vty *vty,
  Prototype    : cmd_complete_command
  Description  : complete command　for ? complete
  Input        : CMD_VECTOR_S *icmd_vec  input cmd vector
-                struct cmd_vty *vty     the input vty
+                CMD_VTY_S *vty     the input vty
 
  Output       : char **doc              the return doc
  Return Value :
@@ -1306,204 +1466,241 @@ ULONG cmd_match_command(CMD_VECTOR_S *icmd_vec, struct cmd_vty *vty,
     Modification : Created function
 
 *****************************************************************************/
-ULONG cmd_complete_command(CMD_VECTOR_S *icmd_vec, struct cmd_vty *vty,
-									 struct para_desc **match, ULONG *match_size, ULONG *nomath_pos)
+ULONG cmd_complete_command(CMD_VECTOR_S *icmd_vec, CMD_VTY_S *vty,
+									 CMD_ELMT_S **ppstCmdElem, ULONG *pulMatchNum, ULONG *pulNoMatchPos)
 {
 
 
-	ULONG i;
-	CMD_VECTOR_S *cmd_vec_copy = cmd_vector_copy(cmd_vec);
-	ULONG match_num = 0;
+	ULONG i = 0;
+	CMD_VECTOR_S *cmd_vec_copy = cmd_vector_copy(g_pstCmdVec);
+	ULONG ulMatchNum = 0;
+	CHAR *str = NULL;
+	CMD_ELMT_S *pstCmdElem = NULL;
+	CMD_LINE_S *pstCmdLine = NULL;
 
-	char *str;
-	struct para_desc *para_desc_;
-	struct cmd_elem_st *elem;
-
-	if (icmd_vec == NULL || vty == NULL || match == NULL || match_size == NULL)
+	if (icmd_vec == NULL || vty == NULL || ppstCmdElem == NULL || pulMatchNum == NULL)
 	{
 		return CMD_ERR;
 	}
 
-	// Two steps to find matched commands in 'cmd_vec'
-	// 1. for input command vector 'icmd_vec', check if it is matching cmd_vec
-	// 2. check last matching command parameter in cmd_vec match cmd_vec
+	*pulNoMatchPos = CMD_NULL_DWORD;
 
-	*nomath_pos = CMD_NULL_DWORD;
-
-	// Step 1
+	/* scan all command vectors, set null while not match. */
 	/* BEGIN: Modified by weizengke, 2013/10/4   PN:循环过滤每一个向量 */
-	for (i = 0; i < cmd_vector_max(icmd_vec); i++)
+	for (i = 0; i < cmd_vector_size(icmd_vec); i++)
 	{
-		if (CMD_OK != cmd_filter_command(vty, (char*)cmd_vector_slot(icmd_vec, i), cmd_vec_copy, i))
+		if (CMD_OK != cmd_filter_command(vty, (CHAR*)cmd_vector_get(icmd_vec, i), cmd_vec_copy, i))
 		{
 			/* BEGIN: Added by weizengke, 2013/11/19 这里可以优化，不命中可以不需要再匹配了 */
 			/* 保存在第几个命令字无法匹配 */
-			*nomath_pos = (*nomath_pos == CMD_NULL_DWORD)?(i):(*nomath_pos);
+			*pulNoMatchPos = (*pulNoMatchPos == CMD_NULL_DWORD)?(i):(*pulNoMatchPos);
 
-			CMD_debug(CMD_DEBUG_ERROR, "cmd_complete_command, cannot match at pos %u", *nomath_pos);
+			CMD_debug(CMD_DEBUG_ERROR, "cmd_complete_command, cannot match at pos %u", *pulNoMatchPos);
+
+			cmd_vector_deinit(cmd_vec_copy, 0);
 			
 			return CMD_OK;
 		}
 	}
 	/* END:   Modified by weizengke, 2013/10/4   PN:None */
 
-	// Step 2
-	// insert matched command word into match_vec, only insert the next word
-	/* BEGIN: Added by weizengke, 2013/10/4   PN:only the last vector we need */
-	for(i = 0; i < cmd_vector_max(cmd_vec_copy); i++)
+	for(i = 0; i < cmd_vector_size(cmd_vec_copy); i++)
 	{
-		elem = (struct cmd_elem_st *)cmd_vector_slot(cmd_vec_copy, i);
-	
-		if(elem  != NULL)
+		pstCmdLine = (CMD_LINE_S *)cmd_vector_get(cmd_vec_copy, i);
+
+		if(pstCmdLine  != NULL)
 		{
-			if (cmd_vector_max(icmd_vec) - 1 >= cmd_vector_max(elem->para_vec))
+			if (cmd_vector_size(icmd_vec) - 1 >= cmd_vector_size(pstCmdLine->pstElmtVec))
 			{
-				cmd_vector_slot(cmd_vec_copy, i) = NULL;
+				cmd_vector_get(cmd_vec_copy, i) = NULL;
 				continue;
 			}
 
-			CMD_debug(CMD_DEBUG_FUNC, "cmd_complete_command, view_id=%d.", elem->view_id);
+			//CMD_debug(CMD_DEBUG_FUNC, "cmd_complete_command, view_id=%d.", pstCmdLine->ulViewId);
 
-			if (elem->view_id != VIEW_GLOBAL
-				&& elem->view_id != vty->view_id)
-			{
-				continue;
-			}
-
-			str = (char*)cmd_vector_slot(icmd_vec, cmd_vector_max(icmd_vec) - 1);
-			para_desc_ = (struct para_desc*)cmd_vector_slot(elem->para_vec, cmd_vector_max(icmd_vec) - 1);
-			if (para_desc_ == NULL)
+			if (pstCmdLine->ulViewId != VIEW_GLOBAL
+				&& pstCmdLine->ulViewId != vty->view_id)
 			{
 				continue;
 			}
 
+			str = (CHAR*)cmd_vector_get(icmd_vec, cmd_vector_size(icmd_vec) - 1);
+			pstCmdElem = (CMD_ELMT_S *)cmd_vector_get(pstCmdLine->pstElmtVec, cmd_vector_size(icmd_vec) - 1);
+			if (pstCmdElem == NULL)
+			{
+				continue;
+			}
+
+			CMD_debug(CMD_DEBUG_FUNC, "cmd_complete_command, eElmtType=%u", pstCmdElem->eElmtType);
+			
 			/* BEGIN: Added by weizengke, 2013/11/19 */
-			/* match STRING , INTEGER */
-			if (CMD_OK == cmd_match_special_string(str, para_desc_->para))
+			/* match STRING , INTEGER 
+			   bug: ip complete
+			*/
+			/* match param */
+			if (CMD_YES == cmd_elem_is_para_type(pstCmdElem->eElmtType))
 			{
-				match[match_num++] = para_desc_;
-
-				continue;
-			}
-			/* END:   Added by weizengke, 2013/11/19 */
-
-			/* match key */
-			if (strnicmp(str, CMD_END, strlen(str)) == 0
-			    ||(strnicmp(str, para_desc_->para, strlen(str)) == 0))
-			{
-
-				if (match_unique_string(match, para_desc_->para, match_num))
+				/* 无条件补全 */
+				if (0 == strnicmp(str, CMD_END, strlen(str)))
 				{
-					match[match_num++] = para_desc_;
+					CMD_debug(CMD_DEBUG_FUNC, "cmd_complete_command, input cr, eElmtType=%u, pszElmtName=%s, str=%s",
+												pstCmdElem->eElmtType,
+												pstCmdElem->pszElmtName,
+												str);
+
+					ppstCmdElem[ulMatchNum] = pstCmdElem;	
+					ulMatchNum++;
+
+				}
+				/* 无条件补全 */
+				else if (0 == strnicmp(pstCmdElem->pszElmtName, CMD_END, strlen(pstCmdElem->pszElmtName)))
+				{
+					CMD_debug(CMD_DEBUG_FUNC, "cmd_complete_command, cr, eElmtType=%u, pszElmtName=%s, str=%s",
+												pstCmdElem->eElmtType,
+												pstCmdElem->pszElmtName,
+												str);
+
+					ppstCmdElem[ulMatchNum] = pstCmdElem;	
+					ulMatchNum++;
+				}
+				/* 有条件补全 */
+				else if (CMD_OK == cmd_match_command_param(str, pstCmdElem))
+				{					
+					CMD_debug(CMD_DEBUG_FUNC, "cmd_complete_command, param, eElmtType=%u, pszElmtName=%s",
+												pstCmdElem->eElmtType,
+												pstCmdElem->pszElmtName);
+					
+					if (cmd_match_unique_elmtid(ppstCmdElem, pstCmdElem->ulElmtId, ulMatchNum))
+					{
+						ppstCmdElem[ulMatchNum] = pstCmdElem;
+						ulMatchNum++;
+					}
+				}
+				else
+				{
+					CMD_debug(CMD_DEBUG_FUNC, "cmd_complete_command, other, eElmtType=%u, pszElmtName=%s",
+												pstCmdElem->eElmtType,
+												pstCmdElem->pszElmtName);
 				}
 			}
-
+			/* END:   Added by weizengke, 2013/11/19 */
+			else
+			{
+				CMD_debug(CMD_DEBUG_FUNC, "cmd_complete_command, key, eElmtType=%u, pszElmtName=%s",
+											pstCmdElem->eElmtType,
+											pstCmdElem->pszElmtName);
+					
+				/* match key */
+				if (0 == strnicmp(str, CMD_END, strlen(str)) /* 无任何输入时输入?*/
+					|| strnicmp(str, pstCmdElem->pszElmtName, strlen(str)) == 0)
+				{				
+					/* get only one if more than one  */
+					if (cmd_match_unique_string(ppstCmdElem, pstCmdElem->pszElmtName, ulMatchNum))
+					{
+						ppstCmdElem[ulMatchNum] = pstCmdElem;
+						ulMatchNum++;
+					}
+				}
+			}
 		}
 	}
 
-	cmd_vector_deinit(cmd_vec_copy, 0);	// free cmd_vec_copy, no longer use
+	cmd_vector_deinit(cmd_vec_copy, 0);
 
-	CMD_debug(CMD_DEBUG_FUNC, "cmd_complete_command, match_num=%u", match_num);
+	CMD_debug(CMD_DEBUG_FUNC, "cmd_complete_command, ulMatchNum=%u", ulMatchNum);
 
 	/* BEGIN: Added by weizengke, 2013/10/27 sort for ? complete */
-	if (match_num > 0)
+	if (ulMatchNum > 0)
 	{
 		int j;
-		for (i = 0; i < match_num - 1; i++)
+		for (i = 0; i < ulMatchNum - 1; i++)
 		{
-			for (j = i; j < match_num; j++)
+			for (j = i; j < ulMatchNum; j++)
 			{
-				struct para_desc *para_desc__ = NULL;
-				if (0 == strnicmp(match[i]->para, CMD_END, strlen(match[i]->para))
-					|| ( 1 == stricmp(match[i]->para, match[j]->para)
-					&& 0 != strnicmp(match[j]->para, CMD_END, strlen(match[j]->para)))
+				CMD_ELMT_S *pstCmdElem_ = NULL;
+				if (0 == strnicmp(ppstCmdElem[i]->pszElmtName, CMD_END, strlen(ppstCmdElem[i]->pszElmtName))
+					|| ( 1 == stricmp(ppstCmdElem[i]->pszElmtName, ppstCmdElem[j]->pszElmtName)
+					&& 0 != strnicmp(ppstCmdElem[j]->pszElmtName, CMD_END, strlen(ppstCmdElem[j]->pszElmtName)))
 					)
 				{
-					para_desc__ = match[i];
-					match[i] =  match[j];
-					match[j] = para_desc__;
+					pstCmdElem_ = ppstCmdElem[i];
+					ppstCmdElem[i] =  ppstCmdElem[j];
+					ppstCmdElem[j] = pstCmdElem_;
 				}
 			}
 		}
 	}
 	/* END: Added by weizengke, 2013/10/27 sort for ? complete */
 
-	*match_size = match_num;
+	*pulMatchNum = ulMatchNum;
 
 	return CMD_OK;
 }
 
-ULONG cmd_execute_command(CMD_VECTOR_S *icmd_vec, struct cmd_vty *vty, 
-									struct para_desc **match, ULONG *match_size, ULONG *nomatch_pos)
+ULONG cmd_execute_command(CMD_VECTOR_S *icmd_vec, CMD_VTY_S *vty,
+									CMD_ELMT_S **ppstCmdElem, ULONG *pulMatchNum, ULONG *pulNoMatchPos)
 {
 	ULONG i;
-	CMD_VECTOR_S *cmd_vec_copy = cmd_vector_copy(cmd_vec);
-	struct cmd_elem_st *match_elem = NULL;
-	ULONG match_num = 0;
+	CMD_VECTOR_S *cmd_vec_copy = cmd_vector_copy(g_pstCmdVec);
+	CMD_LINE_S *pstMatchCmdLine = NULL;
+	ULONG ulMatchNum = 0;
 
-	/*
-	Two steps to find matched commands in 'cmd_vec'
-	 1. for input command vector 'icmd_vec', check if it is matching cmd_vec
-	 2. check last matching command parameter in cmd_vec match cmd_vec
-	*/
+	*pulNoMatchPos = CMD_NULL_DWORD;
 
-	*nomatch_pos = CMD_NULL_DWORD;
+	CMD_debug(CMD_DEBUG_INFO, "cmd_execute_command. (cmd=%s, view_id=%u)", vty->szBuffer, vty->view_id);
 
-	CMD_debug(CMD_DEBUG_INFO, "cmd_execute_command. (cmd=%s, view_id=%u)", vty->buffer, vty->view_id);
-
-	/* Step 1 */
-	for (i = 0; i < cmd_vector_max(icmd_vec); i++)
+	for (i = 0; i < cmd_vector_size(icmd_vec); i++)
 	{
-		if (CMD_OK != cmd_filter_command(vty, (char*)cmd_vector_slot(icmd_vec, i), cmd_vec_copy, i))
+		if (CMD_OK != cmd_filter_command(vty, (CHAR*)cmd_vector_get(icmd_vec, i), cmd_vec_copy, i))
 		{
 			/* BEGIN: Added by weizengke, 2013/11/19 不命中可以不需要再匹配了 */
 			/* 保存在第几个命令字无法匹配 */
-			*nomatch_pos = (*nomatch_pos == CMD_NULL_DWORD)?(i):(*nomatch_pos);
+			*pulNoMatchPos = (*pulNoMatchPos == CMD_NULL_DWORD)?(i):(*pulNoMatchPos);
 
-			CMD_debug(CMD_DEBUG_ERROR, "cmd_execute_command. not match at pos %u.", *nomatch_pos);
+			CMD_debug(CMD_DEBUG_ERROR, "cmd_execute_command. not match at pos %u.", *pulNoMatchPos);
+
+			cmd_vector_deinit(cmd_vec_copy, 0);
 			
 			return CMD_NO_MATCH;
 		}
 	}
 
-	/* Step 2 */
-	/*  insert matched command word into match_vec, only insert the next word */
-	if (*nomatch_pos == CMD_NULL_DWORD)
+	if (*pulNoMatchPos == CMD_NULL_DWORD)
 	{
 		/* BEGIN: Added by weizengke, 2014/3/9 修复命令行不完全时，错误位置提示不准确的问题 */
-		*nomatch_pos = cmd_vector_max(icmd_vec) - 1;
+		*pulNoMatchPos = cmd_vector_size(icmd_vec) - 1;
 
-		for(i = 0; i < cmd_vector_max(cmd_vec_copy); i++)
+		for(i = 0; i < cmd_vector_size(cmd_vec_copy); i++)
 		{
 			char *str;
-			struct para_desc *desc;
-			struct cmd_elem_st *elem = NULL;
+			CMD_ELMT_S *pstCmdElem;
+			CMD_LINE_S *pstCmdLine = NULL;
 
-			elem = (struct cmd_elem_st *)cmd_vector_slot(cmd_vec_copy, i);
-			if(elem != NULL)
+			pstCmdLine = (CMD_LINE_S *)cmd_vector_get(cmd_vec_copy, i);
+			if(pstCmdLine != NULL)
 			{
-				if (elem->view_id != VIEW_GLOBAL
-				&& elem->view_id != vty->view_id)
+				if (pstCmdLine->ulViewId != VIEW_GLOBAL
+				&& pstCmdLine->ulViewId != vty->view_id)
 				{
 					continue;
 				}
 
-				str = (char*)cmd_vector_slot(icmd_vec, cmd_vector_max(icmd_vec) - 1);
-				desc = (struct para_desc *)cmd_vector_slot(elem->para_vec, cmd_vector_max(icmd_vec) - 1);
+				str = (CHAR*)cmd_vector_get(icmd_vec, cmd_vector_size(icmd_vec) - 1);
+				pstCmdElem = (CMD_ELMT_S *)cmd_vector_get(pstCmdLine->pstElmtVec, cmd_vector_size(icmd_vec) - 1);
 
 				/* modified for command without argv */
-				if (cmd_vector_max(icmd_vec) == cmd_vector_max(elem->para_vec))
+				if (cmd_vector_size(icmd_vec) == cmd_vector_size(pstCmdLine->pstElmtVec))
 				{
 					/* BEGIN: Added by weizengke, 2013/10/5   PN:for support STRING<a-b> & INTEGER<a-b> */
-					if (CMD_OK == cmd_match_special_string(str, desc->para) ||
-						str != NULL && strnicmp(str, desc->para, strlen(str)) == 0)
+					if (CMD_OK == cmd_match_command_param(str, pstCmdElem) ||
+						str != NULL && strnicmp(str, pstCmdElem->pszElmtName, strlen(str)) == 0)
 					{
 						/* BEGIN: Added by weizengke, 2013/10/6   PN:command exec ambigous, return the last elem (not the <CR>) */
-						match[match_num] = (struct para_desc *)cmd_vector_slot(elem->para_vec, cmd_vector_max(icmd_vec) - 2);
+						ppstCmdElem[ulMatchNum] = (CMD_ELMT_S *)cmd_vector_get(pstCmdLine->pstElmtVec, cmd_vector_size(icmd_vec) - 2);
 						/* END:   Added by weizengke, 2013/10/6   PN:None */
 
-						match_num++;
-						match_elem = elem;
+						ulMatchNum++;
+						pstMatchCmdLine = pstCmdLine;
 
 					}
 				}
@@ -1512,63 +1709,61 @@ ULONG cmd_execute_command(CMD_VECTOR_S *icmd_vec, struct cmd_vty *vty,
 
 	}
 
-	*match_size = match_num;
+	*pulMatchNum = ulMatchNum;
 
 	cmd_vector_deinit(cmd_vec_copy, 0);
 
-	CMD_debug(CMD_DEBUG_INFO, "cmd_execute_command. (cmd=%s, match_num=%u)", vty->buffer, match_num);
+	CMD_debug(CMD_DEBUG_INFO, "cmd_execute_command. (cmd=%s, ulMatchNum=%u)", vty->szBuffer, ulMatchNum);
 
-	/* check if exactly match */
-	if (match_num == 0)
+	if (ulMatchNum == 0)
 	{
 		return CMD_NO_MATCH;
 	}
 
 	/* BEGIN: Added by weizengke, 2013/10/6   PN:command exec ambigous */
-	if (match_num > 1)
+	if (ulMatchNum > 1)
 	{
 		return CMD_ERR_AMBIGOUS;
 	}
 	/* END:   Added by weizengke, 2013/10/6   PN:None */
 
 	/* BEGIN: Added by weizengke, 2013/10/5  for support argv. PN:push param into function stack */
-	/* now icmd_vec and match_elem will be the same vector ,can push into function stack */
-	int argc = 0;
-	char *argv[CMD_MAX_CMD_NUM];
+	ULONG argc = 0;
+	CHAR *argv[CMD_MAX_CMD_NUM];
 
-	if (NULL == match_elem || match_elem->para_vec == NULL)
+	if (NULL == pstMatchCmdLine || pstMatchCmdLine->pstElmtVec == NULL)
 	{
 		return CMD_NO_MATCH;
 	}
 
-	for (i = 0, argc = 0; i < match_elem->para_num; i ++)
+	for (i = 0, argc = 0; i < pstMatchCmdLine->ulElmtNum; i ++)
 	{
-		struct para_desc  *desc = (struct para_desc *)cmd_vector_slot(match_elem->para_vec, i);
-		if (NULL == desc)
+		CMD_ELMT_S *pstCmdElem = (CMD_ELMT_S *)cmd_vector_get(pstMatchCmdLine->pstElmtVec, i);
+		if (NULL == pstCmdElem)
 		{
 			return CMD_NO_MATCH;
 		}
 
 		/* <CR> no need to push */
-		if (desc->elem_tpye == CMD_ELEM_TYPE_END)
+		if (pstCmdElem->eElmtType == CMD_ELEM_TYPE_END)
 		{
 			continue;
 		}
 
 		/* push param to argv and full command*/
-		if (CMD_YES == cmd_elem_is_para_type(desc->elem_tpye))
+		if (CMD_YES == cmd_elem_is_para_type(pstCmdElem->eElmtType))
 		{
-			argv[argc++] = (char*)cmd_vector_slot(icmd_vec, i);
+			argv[argc++] = (CHAR*)cmd_vector_get(icmd_vec, i);
 		}
 		else
 		{
-			argv[argc++] = desc->para;
+			argv[argc++] = pstCmdElem->pszElmtName;
 		}
 	}
 	/* END:   Added by weizengke, 2013/10/5   PN:None */
 
 	/* execute command */
-	(VOID)cmd_run_notify(match_elem, vty, argv, argc);
+	(VOID)cmd_run_notify(pstMatchCmdLine, vty, argv, argc);
 
 	return CMD_FULL_MATCH;
 }
@@ -1585,7 +1780,7 @@ VOID cmd_install_command(ULONG mid, ULONG cmd_view, CHAR *cmd_string, CMD_VECTOR
 	{
 		return;
 	}
-	
+
 	/* 计算线索表达式数组 */
 	for (;*cur != '\0';){
 		if (*cur >= '0' && *cur <= '9'){
@@ -1596,32 +1791,32 @@ VOID cmd_install_command(ULONG mid, ULONG cmd_view, CHAR *cmd_string, CMD_VECTOR
 		cur++;
 	}
 
-	if (cmd_vec == NULL)
+	if (g_pstCmdVec == NULL)
 	{
 		CMD_debug(CMD_DEBUG_ERROR, "Command Vector Not Exist");
 		return;
 	}
 
-	struct cmd_elem_st *elem = NULL;
+	CMD_LINE_S *pstCmdLine = NULL;
 
-	elem = (struct cmd_elem_st *)malloc(sizeof(struct cmd_elem_st));
-	if (NULL == elem)
+	pstCmdLine = (CMD_LINE_S *)malloc(sizeof(CMD_LINE_S));
+	if (NULL == pstCmdLine)
 	{
 		return;
 	}
-	memset(elem, 0, sizeof(struct cmd_elem_st));
+	memset(pstCmdLine, 0, sizeof(CMD_LINE_S));
 
-	elem->mid = mid;
-	elem->view_id = cmd_view;
-	elem->para_vec = cmd_cmd2vec(pVec, iIndex, iLoop);
-    if (NULL == elem->para_vec)
+	pstCmdLine->ulMid = mid;
+	pstCmdLine->ulViewId = cmd_view;
+	pstCmdLine->pstElmtVec = cmd_cmd2vec(pVec, iIndex, iLoop);
+    if (NULL == pstCmdLine->pstElmtVec)
     {
-		free(elem);
+		free(pstCmdLine);
         return;
     }
-	elem->para_num = cmd_vector_max(elem->para_vec);
+	pstCmdLine->ulElmtNum = cmd_vector_size(pstCmdLine->pstElmtVec);
 
-	cmd_vector_insert(cmd_vec, elem);
+	cmd_vector_insert(g_pstCmdVec, pstCmdLine);
 
 	return;
 }
@@ -1632,37 +1827,43 @@ ULONG cmd_regelement_new(ULONG cmd_elem_id,
 								CHAR *cmd_help,
 								CMD_VECTOR_S * pVec)
 {
-	CMD_ELEM_S * cmd_elem = NULL;
+	CMD_ELMT_S * pstCmdElem = NULL;
 
-	cmd_elem = (CMD_ELEM_S *)malloc(sizeof(CMD_ELEM_S));
-	if (NULL == cmd_elem)
+	if (CMD_MAX_CMD_ELEM_SIZE <= strlen(cmd_name))
+	{
+		CMD_DBGASSERT(0,"cmd_regelement_new");
+		return CMD_ERR;
+	}
+
+	pstCmdElem = (CMD_ELMT_S *)malloc(sizeof(CMD_ELMT_S));
+	if (NULL == pstCmdElem)
 	{
 		return CMD_ERR;
 	}
 
-	cmd_elem->elem_id = cmd_elem_id;
-	cmd_elem->elem_tpye = cmd_elem_type;
+	pstCmdElem->ulElmtId = cmd_elem_id;
+	pstCmdElem->eElmtType = cmd_elem_type;
 
-	cmd_elem->para = (char *)malloc(strlen(cmd_name) + 1);
-	if (NULL == cmd_elem->para)
+	pstCmdElem->pszElmtName = (char *)malloc(strlen(cmd_name) + 1);
+	if (NULL == pstCmdElem->pszElmtName)
 	{
-		free(cmd_elem);
+		free(pstCmdElem);
 		return CMD_ERR;
 	}
-	memset(cmd_elem->para, 0, strlen(cmd_name) + 1);
-	strcpy(cmd_elem->para, cmd_name);
+	memset(pstCmdElem->pszElmtName, 0, strlen(cmd_name) + 1);
+	strcpy(pstCmdElem->pszElmtName, cmd_name);
 
-	cmd_elem->desc = (char *)malloc(strlen(cmd_help) + 1);
-	if (NULL == cmd_elem->desc)
+	pstCmdElem->pszElmtHelp = (char *)malloc(strlen(cmd_help) + 1);
+	if (NULL == pstCmdElem->pszElmtHelp)
 	{
-		free(cmd_elem->para);
-		free(cmd_elem);
+		free(pstCmdElem->pszElmtName);
+		free(pstCmdElem);
 		return CMD_ERR;
 	}
-	memset(cmd_elem->desc, 0, strlen(cmd_help) + 1);
-	strcpy(cmd_elem->desc, cmd_help);
+	memset(pstCmdElem->pszElmtHelp, 0, strlen(cmd_help) + 1);
+	strcpy(pstCmdElem->pszElmtHelp, cmd_help);
 
-	cmd_vector_insert(pVec, cmd_elem);
+	cmd_vector_insert(pVec, pstCmdElem);
 
 	return CMD_OK;
 }
@@ -1671,38 +1872,38 @@ ULONG cmd_regelement_new(ULONG cmd_elem_id,
 /* resolve */
 
 /* Note: Added by weizengke, 2013/10/04 insert a word into the tail of input buffer */
-VOID cmd_insert_word(struct cmd_vty *vty, CHAR *str)
+VOID cmd_insert_word(CMD_VTY_S *vty, CHAR *str)
 {
-	strcat(vty->buffer, str);
-	vty->cur_pos += (int)strlen(str);
-	vty->used_len += (int)strlen(str);
+	strcat(vty->szBuffer, str);
+	vty->ulCurrentPos += (int)strlen(str);
+	vty->ulUsedLen += (int)strlen(str);
 }
 
 /* Note: Added by weizengke, 2013/10/04 delete the last word from input buffer */
-VOID cmd_delete_word(struct cmd_vty *vty)
+VOID cmd_delete_word(CMD_VTY_S *vty)
 {
-	int pos = strlen(vty->buffer);
+	int pos = strlen(vty->szBuffer);
 
-	while (pos > 0 && vty->buffer[pos - 1] != ' ')
+	while (pos > 0 && vty->szBuffer[pos - 1] != ' ')
 	{
 		pos--;
 	}
 
 	/* BEGIN: Added by weizengke, 2014/8/3 */
 	//vty->buffer[pos] = '\0';
-	memset(&vty->buffer[pos], 0, sizeof(vty->buffer) - pos);
+	memset(&vty->szBuffer[pos], 0, sizeof(vty->szBuffer) - pos);
 	/* END:   Added by weizengke, 2014/8/3 */
 
-	vty->cur_pos = strlen(vty->buffer);
-	vty->used_len = strlen(vty->buffer);
+	vty->ulCurrentPos = strlen(vty->szBuffer);
+	vty->ulUsedLen = strlen(vty->szBuffer);
 }
 
 /* Note: Added by weizengke, 2013/10/04 delete the last word from input buffer*/
-VOID cmd_delete_word_ctrl_W(struct cmd_vty *vty)
+VOID cmd_delete_word_ctrl_W(CMD_VTY_S *vty)
 {
 	/* 删除最后一个elem */
 
-	int pos = strlen(vty->buffer);
+	int pos = strlen(vty->szBuffer);
 
 	if (pos == 0)
 	{
@@ -1710,34 +1911,34 @@ VOID cmd_delete_word_ctrl_W(struct cmd_vty *vty)
 	}
 
 	/* ignore suffix-space */
-	while (vty->buffer[pos - 1] == ' ')
+	while (vty->szBuffer[pos - 1] == ' ')
 	{
 		pos--;
 	}
 
 	/* del the last word */
-	while (pos > 0 && vty->buffer[pos - 1] != ' ')
+	while (pos > 0 && vty->szBuffer[pos - 1] != ' ')
 	{
 		pos--;
 	}
 
 	/* BEGIN: Modified by weizengke, 2014/3/23, for https://github.com/weizengke/jungle/issues/1 */
 	//vty->buffer[pos] = '\0';
-	memset(&vty->buffer[pos], 0, sizeof(vty->buffer) - pos);
+	memset(&vty->szBuffer[pos], 0, sizeof(vty->szBuffer) - pos);
 	/* END:   Modified by weizengke, 2014/3/23 */
 
-	vty->cur_pos = strlen(vty->buffer);
-	vty->used_len = strlen(vty->buffer);
+	vty->ulCurrentPos = strlen(vty->szBuffer);
+	vty->ulUsedLen = strlen(vty->szBuffer);
 }
 
 /* Note: Added by weizengke, 2014/3/23 delete the last word at current pos from input buffer*/
-VOID cmd_delete_word_ctrl_W_ex(struct cmd_vty *vty)
+VOID cmd_delete_word_ctrl_W_ex(CMD_VTY_S *vty)
 {
 	/* 删除光标所在当前或之前elem */
 	int start_pos = 0;
 	int end_pos  = 0;
-	int len = strlen(vty->buffer);
-	int pos = vty->cur_pos;
+	int len = strlen(vty->szBuffer);
+	int pos = vty->ulCurrentPos;
 
 
 	CMD_debug(CMD_DEBUG_INFO, "ctrl_W:cur_poscur_pos = %d buffer_len = %d", pos, len);
@@ -1748,13 +1949,13 @@ VOID cmd_delete_word_ctrl_W_ex(struct cmd_vty *vty)
 	}
 
 	/* ignore suffix-space */
-	if (vty->buffer[pos] == ' ' || vty->buffer[pos] == '\0')
+	if (vty->szBuffer[pos] == ' ' || vty->szBuffer[pos] == '\0')
 	{
 		end_pos = pos;
 
 		pos--;
 		/* 往回找第一个非空字符 */
-		while (pos  >= 0 && vty->buffer[pos] == ' ')
+		while (pos  >= 0 && vty->szBuffer[pos] == ' ')
 		{
 			pos--;
 		}
@@ -1766,7 +1967,7 @@ VOID cmd_delete_word_ctrl_W_ex(struct cmd_vty *vty)
 		else
 		{
 			/* 继续往回找第一个空格或命令头 */
-			while (pos	>= 0 && vty->buffer[pos] != ' ')
+			while (pos	>= 0 && vty->szBuffer[pos] != ' ')
 			{
 				pos--;
 			}
@@ -1779,10 +1980,10 @@ VOID cmd_delete_word_ctrl_W_ex(struct cmd_vty *vty)
 	else
 	{
 		/* 分别往左右找空格 */
-		while (vty->buffer[pos + 1] != ' ')
+		while (vty->szBuffer[pos + 1] != ' ')
 		{
 			/* BEGIN: Added by weizengke, 2014/4/5 当光标位于命令行最后一个元素中间，再执行CTRL+W，出现异常显示 https://github.com/weizengke/jungle/issues/2 */
-			if (vty->buffer[pos + 1] == '\0') break;
+			if (vty->szBuffer[pos + 1] == '\0') break;
 			/* END:   Added by weizengke, 2014/4/5 */
 
 			pos++;
@@ -1792,8 +1993,8 @@ VOID cmd_delete_word_ctrl_W_ex(struct cmd_vty *vty)
 		end_pos = pos;
 		/* END:   Modified by weizengke, 2014/4/5 */
 
-		pos = vty->cur_pos;
-		while (vty->buffer[pos] != ' ')
+		pos = vty->ulCurrentPos;
+		while (vty->szBuffer[pos] != ' ')
 		{
 			pos--;
 		}
@@ -1801,17 +2002,17 @@ VOID cmd_delete_word_ctrl_W_ex(struct cmd_vty *vty)
 		start_pos = pos + 1;
 	}
 
-	int len_last = strlen(&vty->buffer[end_pos]);
+	int len_last = strlen(&vty->szBuffer[end_pos]);
 
-	memcpy(&vty->buffer[start_pos], &vty->buffer[end_pos], strlen(&vty->buffer[end_pos]));
-	memset(&vty->buffer[start_pos + len_last], 0, sizeof(vty->buffer)-(start_pos + len_last));
+	memcpy(&vty->szBuffer[start_pos], &vty->szBuffer[end_pos], strlen(&vty->szBuffer[end_pos]));
+	memset(&vty->szBuffer[start_pos + len_last], 0, sizeof(vty->szBuffer)-(start_pos + len_last));
 
 
-	vty->cur_pos -= (vty->cur_pos - start_pos);
-	vty->used_len -= (end_pos - start_pos);
+	vty->ulCurrentPos -= (vty->ulCurrentPos - start_pos);
+	vty->ulUsedLen -= (end_pos - start_pos);
 
 	CMD_debug(CMD_DEBUG_INFO, "ctrl+w end: buffer=%s, start_pos=%d end_pos=%d len_last=%d cur_pos=%d used_len=%d",
-		vty->buffer,start_pos,end_pos,len_last,vty->cur_pos, vty->used_len);
+		vty->szBuffer,start_pos,end_pos,len_last,vty->ulCurrentPos, vty->ulUsedLen);
 
 }
 
@@ -1819,7 +2020,7 @@ ULONG cmd_pub_run(CHAR *szCmdBuf)
 {
 	ULONG iRet = 0;
 	CMD_VTY_S *vty = g_cfm_vty;
-	
+
 	if (NULL == szCmdBuf)
 	{
 		return 1;
@@ -1827,31 +2028,34 @@ ULONG cmd_pub_run(CHAR *szCmdBuf)
 
 	if (strlen(szCmdBuf) > CMD_BUFFER_SIZE)
 	{
-		CMD_debug(CMD_DEBUG_ERROR, "cmd_pub_run. input(%u) command length larger then %u", strlen(szCmdBuf), CMD_BUFFER_SIZE);
+		CMD_debug(CMD_DEBUG_ERROR, 
+			"cmd_pub_run. input(%u) command length larger then %u",
+			strlen(szCmdBuf), CMD_BUFFER_SIZE);
 		return 1;
 	}
-	
-	memcpy(vty->buffer, szCmdBuf, CMD_BUFFER_SIZE);
-	vty->buf_len = CMD_BUFFER_SIZE;
-	
+
+	memcpy(vty->szBuffer, szCmdBuf, CMD_BUFFER_SIZE);
+	vty->ulBufMaxLen = CMD_BUFFER_SIZE;
+
 	iRet = cmd_run(vty);
-	
-	vty->cur_pos = vty->used_len = 0;
-	memset(vty->buffer, 0, vty->buf_len);
+
+	vty->ulCurrentPos = vty->ulUsedLen = 0;
+	memset(vty->szBuffer, 0, vty->ulBufMaxLen);
 
 	return iRet;
 }
 
-ULONG cmd_run(struct cmd_vty *vty)
+ULONG cmd_run(CMD_VTY_S *vty)
 {
 	CMD_VECTOR_S *v = NULL;
-	struct para_desc *match[CMD_MAX_MATCH_SIZE] = {0};	// matched string
-	ULONG match_size = 0;
-	ULONG match_type = CMD_NO_MATCH;
-	ULONG nomath_pos = CMD_NULL_DWORD;
+	CMD_ELMT_S *pstCmdElem[CMD_MAX_MATCH_SIZE] = {0};
+	ULONG ulMatchNum = 0;
+	ULONG ulMatchType = CMD_NO_MATCH;
+	ULONG ulNoMatchPos = CMD_NULL_DWORD;
 	ULONG view_id_ = VIEW_NULL;
-
-	v = cmd_str2vec(vty->buffer);
+	ULONG view_id_pre = VIEW_NULL;
+	
+	v = cmd_str2vec(vty->szBuffer);
 	if (v == NULL) {
 		return 1;
 	}
@@ -1860,23 +2064,25 @@ ULONG cmd_run(struct cmd_vty *vty)
 	cmd_vector_insert_cr(v);
 	/* END:   Added by weizengke, 2013/10/5   PN:None */
 
+	view_id_pre = vty->view_id;
+	
 	// do command
-	match_type = cmd_execute_command(v, vty, match, &match_size, &nomath_pos);
+	ulMatchType = cmd_execute_command(v, vty, pstCmdElem, &ulMatchNum, &ulNoMatchPos);
 	// add executed command into history
 
-	CMD_debug(CMD_DEBUG_INFO, "cmd_run. (cmd=%s, match_type=%u)", vty->buffer, match_type);
+	CMD_debug(CMD_DEBUG_INFO, "cmd_run. (cmd=%s, match_type=%u)", vty->szBuffer, ulMatchType);
 
 	view_id_ = vty->view_id;
 
 	/* 回退上一级视图执行 */
-	while (match_type != CMD_FULL_MATCH)
+	while (ulMatchType != CMD_FULL_MATCH)
 	{
-		ULONG match_size_ = 0;
-		ULONG nomath_pos_ = CMD_NULL_DWORD;
+		ULONG ulMatchNum_ = 0;
+		ULONG ulNoMatchPos_ = CMD_NULL_DWORD;
 		ULONG view_id__ = VIEW_NULL;
-		
+
 		view_id__ = vty_view_getParentViewId(vty->view_id);
-		
+
 		if (VIEW_NULL == view_id__
 			|| VIEW_USER == view_id__
 			|| VIEW_GLOBAL == view_id__)
@@ -1886,19 +2092,19 @@ ULONG cmd_run(struct cmd_vty *vty)
 		}
 
 		vty->view_id = view_id__;
-
+		view_id_pre = vty->view_id;
 		CMD_debug(CMD_DEBUG_FUNC, "Return back to view '%s'.", cmd_view_getViewName(vty->view_id));
-		
-		match_type = cmd_execute_command(v, vty, match, &match_size_, &nomath_pos_);
+
+		ulMatchType = cmd_execute_command(v, vty, pstCmdElem, &ulMatchNum_, &ulNoMatchPos_);
 	}
 
-	CMD_debug(CMD_DEBUG_FUNC, "* Execute command '%s' on view '%s'. (result:%u, username=%s, vtyId=%u)",
-		vty->buffer, cmd_view_getViewName(vty->view_id), match_type, vty->user.user_name, vty->vtyId);
-	
-	write_log(0, "* Execute command '%s' on view '%s'. (result:%u, username=%s, vtyId=%u)",
-		vty->buffer, cmd_view_getViewName(vty->view_id), match_type, vty->user.user_name, vty->vtyId);
-	
-	if (CMD_FULL_MATCH != match_type)
+	CMD_debug(CMD_DEBUG_FUNC, "Execute command '%s' on view '%s'. (result:%u, username=%s, vtyId=%u)",
+		vty->szBuffer, cmd_view_getViewName(view_id_pre), ulMatchType, vty->user.user_name, vty->vtyId);
+
+	write_log(0, "Execute command '%s' on view '%s'. (result:%u, username=%s, vtyId=%u)",
+		vty->szBuffer, cmd_view_getViewName(view_id_pre), ulMatchType, vty->user.user_name, vty->vtyId);
+
+	if (CMD_FULL_MATCH != ulMatchType)
 	{
 		return 1;
 	}
@@ -1906,111 +2112,30 @@ ULONG cmd_run(struct cmd_vty *vty)
 	return 0;
 }
 
-
-VOID cmd_read(struct cmd_vty *vty)
-{
-	int key_type;
-
-	if (NULL == vty)
-	{
-		return ;
-	}
-
-	while((vty->c = vty_getch(vty)) != EOF)
-	{			
-		/* 用户检查是否断链 */
-		if (0 == vty->used)
-		{
-			break;
-		}
-
-		/* 更新最后活动时间 */
-		vty->user.lastAccessTime = time(NULL);
-
-		/* step 1: get input key type */
-		if (CMD_VTY_CONSOLE_ID == vty->vtyId)
-		{
-			key_type = cmd_resolve(vty);
-		}
-		else
-		{
-			key_type = cmd_resolve_vty(vty);
-		}
-
-		//CMD_debug(CMD_DEBUG_INFO, "cmd_read. (key_type=%d)", key_type);
-
-		vty->inputMachine_now = key_type;
-
-		if (key_type <= CMD_KEY_CODE_NONE || key_type > CMD_KEY_CODE_NOTCARE)
-		{
-			CMD_debug(CMD_DEBUG_ERROR, "Unidentify Key Type, c = %c, key_type = %d\n", vty->c, key_type);
-			continue;
-		}
-
-		/* step 2: take actions according to input key */
-		key_resolver[key_type].key_func(vty);
-		vty->inputMachine_prev = vty->inputMachine_now;
-
-		if (vty->inputMachine_now != CMD_KEY_CODE_TAB)
-		{
-			memset(vty->tabString,0,sizeof(vty->tabString));
-			memset(vty->tabbingString,0,sizeof(vty->tabbingString));
-			vty->tabStringLenth = 0;
-		}
-
-		if (vty->buf_len != CMD_BUFFER_SIZE
-			|| vty->used_len > CMD_BUFFER_SIZE
-			|| vty->cur_pos > CMD_BUFFER_SIZE)
-		{
-			CMD_DBGASSERT(0, "cmd_read, buffer=%s, used_len=%u, cur_pos=%u, buf_len=%u",
-				vty->buffer, vty->used_len, vty->cur_pos,  vty->buf_len);
-		}		
-
-	}
-
-	return ;
-
-}
-
-VOID vty_go(ULONG vtyId)
-{
-	struct cmd_vty *vty = NULL;
-
-	vty = cmd_vty_getById(vtyId);
-	if (NULL == vty)
-	{
-		return;
-	}
-
-	cmd_read(vty);
-
-	return ;
-}
-
 /* Note: Added by weizengke, 2013/10 clear current line by cur-pos */
-VOID cmd_clear_line(struct cmd_vty *vty)
+VOID cmd_clear_line(CMD_VTY_S *vty)
 {
-	ULONG size = vty->used_len - vty->cur_pos;
+	ULONG size = vty->ulUsedLen - vty->ulCurrentPos;
 
-	CMD_DBGASSERT((vty->used_len - vty->cur_pos >= 0), "cmd_clear_line");
-	
+	CMD_DBGASSERT((vty->ulUsedLen - vty->ulCurrentPos >= 0), "cmd_clear_line");
+
 	while (size--)
 	{
 		cmd_put_one(vty, ' ');
 	}
 
-	while (vty->used_len)
+	while (vty->ulUsedLen)
 	{
-		vty->used_len--;
+		vty->ulUsedLen--;
 		cmd_back_one(vty);
 		cmd_put_one(vty, ' ');
 		cmd_back_one(vty);
 	}
 
-	memset(vty->buffer, 0, HISTORY_MAX_SIZE);
+	memset(vty->szBuffer, 0, HISTORY_MAX_SIZE);
 }
 
-struct cmd_vty * cmd_get_idlevty()
+CMD_VTY_S * cmd_get_idlevty()
 {
 	ULONG i = 0;
 
@@ -2046,8 +2171,8 @@ ULONG cmd_get_idle_vty()
 VOID vty_offline(ULONG vtyId)
 {
 	ULONG i = 0;
-	struct cmd_vty *vty = NULL;
-	
+	CMD_VTY_S *vty = NULL;
+
 	CMD_debug(CMD_DEBUG_FUNC, "vty_offline. (vtyId=%u)", vtyId);
 
 	vty = cmd_vty_getById(vtyId);
@@ -2056,25 +2181,50 @@ VOID vty_offline(ULONG vtyId)
 		return;
 	}
 
-	closesocket(vty->user.socket);
-	
+	if (INVALID_SOCKET != vty->user.socket)
+	{
+		closesocket(vty->user.socket);
+		vty->user.socket = INVALID_SOCKET;
+	}	
+
 	for (i = 0; i < HISTORY_MAX_SIZE; i++)
 	{
-		if (vty->history[i] != NULL)
+		if (vty->pszHistory[i] != NULL)
 		{
-			free(vty->history[i]);
-			vty->history[i] = NULL;
+			free(vty->pszHistory[i]);
+			vty->pszHistory[i] = NULL;
 		}
 	}
-	
-	cmd_vty_init(vty);
 
+	cmd_vty_init(vty);
+}
+
+VOID vty_offline_by_username(CHAR *pszName)
+{
+	ULONG i = 0;
+
+	if (NULL == pszName)
+	{
+		return;
+	}
+	
+	for (int i = 0; i < CMD_VTY_MAXUSER_NUM; i++)
+	{
+		if (g_vty[i].used
+			&& g_vty[i].user.state)
+		{
+			if (0 == strcmp(pszName, g_vty[i].user.user_name))
+			{
+				vty_offline(g_vty[i].vtyId);
+			}
+		}
+	}
 }
 
 ULONG vty_set_socket(ULONG vtyId, ULONG socket)
 {
-	struct cmd_vty *vty = NULL;
-	
+	CMD_VTY_S *vty = NULL;
+
 	vty = cmd_vty_getById(vtyId);
 	if (NULL == vty)
 	{
@@ -2086,7 +2236,7 @@ ULONG vty_set_socket(ULONG vtyId, ULONG socket)
 	return CMD_OK;
 }
 
-VOID cmd_outprompt(struct cmd_vty *vty)
+VOID cmd_outprompt(CMD_VTY_S *vty)
 {
 	//CMD_debug(CMD_DEBUG_INFO, "cmd_outprompt. (view_id=%d, sysname=%s)", vty->view_id, cmd_get_sysname());
 
@@ -2102,63 +2252,63 @@ VOID cmd_outprompt(struct cmd_vty *vty)
 		return;
 	}
 
-	view_node_st * view = NULL;
-	view = cmd_view_lookup(view_list, vty->view_id);
+	VIEW_NODE_S * view = NULL;
+	view = cmd_view_lookup(g_pstViewList, vty->view_id);
 	if (view == NULL)
 	{
 		cmd_vty_printf(vty, "%s>", cmd_get_sysname());
 		return ;
 	}
 
-	cmd_vty_printf(vty, "%s-%s]", cmd_get_sysname(), view->view_ais_name);
+	cmd_vty_printf(vty, "%s-%s]", cmd_get_sysname(), view->szViewAisName);
 
 }
 
-ULONG cmd_view_getaislenth(struct cmd_vty *vty)
+ULONG cmd_view_getaislenth(CMD_VTY_S *vty)
 {
-	view_node_st * view = NULL;
+	VIEW_NODE_S * view = NULL;
 
-	view = cmd_view_lookup(view_list, vty->view_id);
+	view = cmd_view_lookup(g_pstViewList, vty->view_id);
 	if (view == NULL)
 	{
 		return 0;
 	}
 
-	return strlen(view->view_ais_name);
+	return strlen(view->szViewAisName);
 }
 
 CHAR* cmd_view_getAis(ULONG view_id)
 {
-	view_node_st * view = NULL;
+	VIEW_NODE_S * view = NULL;
 
-	view = cmd_view_lookup(view_list, view_id);
+	view = cmd_view_lookup(g_pstViewList, view_id);
 	if (view == NULL)
 	{
 		return NULL;
 	}
 
-	return view->view_ais_name;
+	return view->szViewAisName;
 }
 
 CHAR* cmd_view_getViewName(ULONG view_id)
 {
-	view_node_st * view = NULL;
+	VIEW_NODE_S * view = NULL;
 
-	view = cmd_view_lookup(view_list, view_id);
+	view = cmd_view_lookup(g_pstViewList, view_id);
 	if (view == NULL)
 	{
 		return NULL;
 	}
 
-	return view->view_name;
+	return view->szViewName;
 }
 
 ULONG vty_view_getParentViewId(ULONG view_id)
 {
-	view_node_st * view = NULL;
-	view_node_st * prev_view = NULL;
+	VIEW_NODE_S * view = NULL;
+	VIEW_NODE_S * prev_view = NULL;
 
-	view = cmd_view_lookup(view_list, view_id);
+	view = cmd_view_lookup(g_pstViewList, view_id);
 	if (view == NULL)
 	{
 		return VIEW_NULL;
@@ -2170,15 +2320,15 @@ ULONG vty_view_getParentViewId(ULONG view_id)
 		return VIEW_NULL;
 	}
 
-	CMD_debug(CMD_DEBUG_FUNC, "vty_view_getParentViewId. (prev_view=%s, view_id=%u)", prev_view->view_name, prev_view->view_id);
+	CMD_debug(CMD_DEBUG_FUNC, "vty_view_getParentViewId. (prev_view=%s, view_id=%u)", prev_view->szViewName, prev_view->ulViewId);
 
-	return prev_view->view_id;
+	return prev_view->ulViewId;
 }
 
-view_node_st * cmd_view_lookup(view_node_st *view, ULONG view_id)
+VIEW_NODE_S * cmd_view_lookup(VIEW_NODE_S *view, ULONG view_id)
 {
-	view_node_st * view_son = NULL;
-	view_node_st * view_ = NULL;
+	VIEW_NODE_S * view_son = NULL;
+	VIEW_NODE_S * view_ = NULL;
 
 	if (NULL == view)
 	{
@@ -2188,13 +2338,13 @@ view_node_st * cmd_view_lookup(view_node_st *view, ULONG view_id)
 
 	//CMD_debug(CMD_DEBUG_FUNC, "cmd_view_lookup. (view(%d, view_name=%s, sons=%d), view_id=%d)", view->view_id, view->view_name, view->view_son_num, view_id);
 
-	if (view->view_id == view_id)
+	if (view->ulViewId == view_id)
 	{
 		//CMD_debug(CMD_DEBUG_ERROR, "cmd_view_lookup found. (view_id=%d, view_name=%s, sons=%d)", view->view_id, view->view_name, view->view_son_num);
 		return view;
 	}
 
-	for(int i = 0; i < view->view_son_num; i++)
+	for(int i = 0; i < view->ulViewSonNum; i++)
 	{
 		view_son  = view->ppSons[i];
 
@@ -2212,17 +2362,17 @@ view_node_st * cmd_view_lookup(view_node_st *view, ULONG view_id)
 }
 
 VOID vty_view_set(ULONG vtyId, ULONG view_id)
-{	
-	view_node_st * view = NULL;
-	struct cmd_vty *vty = NULL;
+{
+	VIEW_NODE_S * view = NULL;
+	CMD_VTY_S *vty = NULL;
 
 	vty = cmd_vty_getById(vtyId);
 	if (NULL == vty)
 	{
 		return;
 	}
-	
-	view = cmd_view_lookup(view_list, view_id);
+
+	view = cmd_view_lookup(g_pstViewList, view_id);
 	if (view == NULL)
 	{
 		return;
@@ -2247,9 +2397,9 @@ VOID vty_view_set(ULONG vtyId, ULONG view_id)
 
 VOID vty_view_quit(ULONG vtyId)
 {
-	view_node_st * view = NULL;
-	view_node_st * prev_view = NULL;
-	struct cmd_vty *vty = NULL;
+	VIEW_NODE_S * view = NULL;
+	VIEW_NODE_S * prev_view = NULL;
+	CMD_VTY_S *vty = NULL;
 
 	vty = cmd_vty_getById(vtyId);
 	if (NULL == vty)
@@ -2257,7 +2407,7 @@ VOID vty_view_quit(ULONG vtyId)
 		return;
 	}
 
-	view = cmd_view_lookup(view_list, vty->view_id);
+	view = cmd_view_lookup(g_pstViewList, vty->view_id);
 	if (view == NULL)
 	{
 		/* 用户离线 */
@@ -2272,13 +2422,13 @@ VOID vty_view_quit(ULONG vtyId)
 		return;
 	}
 
-	vty_view_set(vtyId, prev_view->view_id);
+	vty_view_set(vtyId, prev_view->ulViewId);
 
 }
 
 ULONG vty_get_current_viewid(ULONG vtyId)
 {
-	struct cmd_vty *vty = NULL;
+	CMD_VTY_S *vty = NULL;
 
 	vty = cmd_vty_getById(vtyId);
 	if (NULL == vty)
@@ -2292,13 +2442,13 @@ ULONG vty_get_current_viewid(ULONG vtyId)
 
 ULONG cmd_view_regist(CHAR *view_name, CHAR *view_ais, ULONG view_id, ULONG parent_view_id)
 {
-	view_node_st * view = NULL;
-	view_node_st * pSons = NULL;
-	view_node_st * pParent = NULL;
+	VIEW_NODE_S * view = NULL;
+	VIEW_NODE_S * pSons = NULL;
+	VIEW_NODE_S * pParent = NULL;
 
 	if (VIEW_NULL != parent_view_id)
 	{
-		pParent = cmd_view_lookup(view_list, parent_view_id);
+		pParent = cmd_view_lookup(g_pstViewList, parent_view_id);
 		if (NULL == pParent)
 		{
 			CMD_DBGASSERT(0, "cmd_view_regist, no parent view %u.", parent_view_id);
@@ -2306,32 +2456,32 @@ ULONG cmd_view_regist(CHAR *view_name, CHAR *view_ais, ULONG view_id, ULONG pare
 		}
 	}
 
-	view = (view_node_st *)malloc(sizeof(view_node_st));
+	view = (VIEW_NODE_S *)malloc(sizeof(VIEW_NODE_S));
 	if (NULL == view)
 	{
 		CMD_DBGASSERT(0, "cmd_view_regist, malloc failed.");
 		return CMD_ERR;
 	}
-	memset(view, 0, sizeof(view_node_st));
-	view->view_id = view_id;
-	strcpy(view->view_name, view_name);
-	strcpy(view->view_ais_name, view_ais);
+	memset(view, 0, sizeof(VIEW_NODE_S));
+	view->ulViewId = view_id;
+	strcpy(view->szViewName, view_name);
+	strcpy(view->szViewAisName, view_ais);
 
-	view->ppSons = (view_node_st **)malloc(CMD_VIEW_SONS_NUM * sizeof(view_node_st));
+	view->ppSons = (VIEW_NODE_S **)malloc(CMD_VIEW_SONS_NUM * sizeof(VIEW_NODE_S));
 	if (NULL == view->ppSons)
 	{
 		CMD_DBGASSERT(0, "cmd_view_regist sons malloc failed");
 		free(view);
 		return CMD_ERR;
 	}
-	memset(view->ppSons, 0, CMD_VIEW_SONS_NUM * sizeof(view_node_st));
+	memset(view->ppSons, 0, CMD_VIEW_SONS_NUM * sizeof(VIEW_NODE_S));
 
-	view->view_son_num = 0;
+	view->ulViewSonNum = 0;
 	view->pParent = pParent;
 
 	if (NULL != pParent)
 	{
-		if (pParent->view_son_num >= CMD_VIEW_SONS_NUM)
+		if (pParent->ulViewSonNum >= CMD_VIEW_SONS_NUM)
 		{
 			CMD_DBGASSERT(0, "cmd_view_regist sons num more than 100");
 			free(view);
@@ -2339,11 +2489,11 @@ ULONG cmd_view_regist(CHAR *view_name, CHAR *view_ais, ULONG view_id, ULONG pare
 			return CMD_ERR;
 		}
 
-		pParent->ppSons[pParent->view_son_num++] = view;
+		pParent->ppSons[pParent->ulViewSonNum++] = view;
 	}
 	else
 	{
-		view_list = view;
+		g_pstViewList = view;
 	}
 
 
@@ -2368,13 +2518,12 @@ VOID cmd_view_init()
 	return;
 }
 
-/* ------------------ Interface Function ----------------- */
-ULONG cmd_resolve_vty(struct cmd_vty *vty)
+ULONG cmd_resolve_vty(CMD_VTY_S *vty)
 {
 	CHAR c = vty->c;
-	ULONG key_type = CMD_KEY_CODE_NOTCARE;	// default is not special key
-	
-	switch (c) 
+	ULONG key_type = CMD_KEY_CODE_NOTCARE;
+
+	switch (c)
 	{
 		case 0x1b:
 			c = vty_getch(vty);
@@ -2383,7 +2532,7 @@ ULONG cmd_resolve_vty(struct cmd_vty *vty)
 				c = vty_getch(vty);
 				vty->c = c;
 			}
-			
+
 			switch (c)
 			{
 				case 0x41:
@@ -2421,8 +2570,8 @@ ULONG cmd_resolve_vty(struct cmd_vty *vty)
 		case CMD_KEY_TAB:
 			key_type = CMD_KEY_CODE_TAB;
 			break;
-		//case CMD_KEY_LF: 
-		case CMD_KEY_CR: 
+		//case CMD_KEY_LF:
+		case CMD_KEY_CR:
 			key_type = CMD_KEY_CODE_ENTER;
 			break;
 		case CMD_KEY_QUEST:
@@ -2443,13 +2592,11 @@ ULONG cmd_resolve_vty(struct cmd_vty *vty)
 
 	return key_type;
 }
-/* end key*/
 
-/* ------------------ Interface Function ----------------- */
-ULONG cmd_resolve(struct cmd_vty *vty)
+ULONG cmd_resolve(CMD_VTY_S *vty)
 {
 	CHAR c = vty->c;
-	ULONG key_type = CMD_KEY_CODE_NOTCARE;	// default is not special key
+	ULONG key_type = CMD_KEY_CODE_NOTCARE;
 
 	switch (c) {
 	case CMD_KEY_ARROW1:
@@ -2481,7 +2628,7 @@ ULONG cmd_resolve(struct cmd_vty *vty)
 					{
 						extern HWND g_hWnd;
 						::SendMessage(g_hWnd,WM_VSCROLL,MAKEWPARAM(SB_PAGEUP, 0),NULL);
-						
+
 						key_type = CMD_KEY_CODE_FILTER;
 					}
 					break;
@@ -2540,7 +2687,7 @@ ULONG cmd_resolve(struct cmd_vty *vty)
 		key_type = CMD_KEY_CODE_TAB;
 		break;
 	case CMD_KEY_LF:
-	case CMD_KEY_CR: 
+	case CMD_KEY_CR:
 		key_type = CMD_KEY_CODE_ENTER;
 		break;
 	case CMD_KEY_QUEST:
@@ -2558,9 +2705,8 @@ ULONG cmd_resolve(struct cmd_vty *vty)
 
 	return key_type;
 }
-/* end key*/
 
-VOID cmd_resolve_filter(struct cmd_vty *vty)
+VOID cmd_resolve_filter(CMD_VTY_S *vty)
 {
 	return;
 }
@@ -2568,7 +2714,7 @@ VOID cmd_resolve_filter(struct cmd_vty *vty)
 /*****************************************************************************
  函 数 名  : cmd_resolve_tab
  功能描述  : 适配TAB键，命令补全
- 输入参数  : struct cmd_vty *vty
+ 输入参数  : CMD_VTY_S *vty
  输出参数  : 无
  返 回 值  : void
  调用函数  :
@@ -2580,21 +2726,20 @@ VOID cmd_resolve_filter(struct cmd_vty *vty)
     修改内容   : 新生成函数
 
 *****************************************************************************/
-VOID cmd_resolve_tab(struct cmd_vty *vty)
+VOID cmd_resolve_tab(CMD_VTY_S *vty)
 {
-	ULONG i;
-	CMD_VECTOR_S *v;
-	struct para_desc *match[CMD_MAX_MATCH_SIZE] = {0};	// matched string
-	ULONG match_size = 0;
-	ULONG match_type = CMD_NO_MATCH;
+	ULONG i = 0;
+	CMD_VECTOR_S *v = NULL;
+	CMD_ELMT_S *pstCmdElem[CMD_MAX_MATCH_SIZE] = {0};
+	ULONG ulMatchNum = 0;
+	ULONG ulMatchType = CMD_NO_MATCH;
 	ULONG isNeedMatch = 1;   /* 非TAB场景(无空格)，不需要匹配 */
-	CHAR lcd_str[1024] = {0};	// if part match, then use this
 	CHAR *last_word = NULL;
 
-	if (strlen(vty->buffer) < vty->cur_pos)
+	if (strlen(vty->szBuffer) < vty->ulCurrentPos)
 	{
-		CMD_DBGASSERT(0, "cmd_resolve_tab. (buffer=%s[%u], cur_pos=%u, used_len=%u, buf_len=%u)",
-			vty->buffer, strlen(vty->buffer), vty->cur_pos, vty->used_len, vty->buf_len);
+		CMD_DBGASSERT(0, "cmd_resolve_tab. (buffer=%s[%u], ulCurrentPos=%u, ulUsedLen=%u, ulBufMaxLen=%u)",
+			vty->szBuffer, strlen(vty->szBuffer), vty->ulCurrentPos, vty->ulUsedLen, vty->ulBufMaxLen);
 		return;
 	}
 
@@ -2603,13 +2748,13 @@ VOID cmd_resolve_tab(struct cmd_vty *vty)
 	2: 需要覆盖当前光标后的buf
 	*/
 	/* BEGIN: Added by weizengke, 2013/11/17 bug for left and tab*/
-	memset(&(vty->buffer[vty->cur_pos]), 0 ,strlen(vty->buffer) - vty->cur_pos);
-	vty->used_len = strlen(vty->buffer);
+	memset(&(vty->szBuffer[vty->ulCurrentPos]), 0 ,strlen(vty->szBuffer) - vty->ulCurrentPos);
+	vty->ulUsedLen = strlen(vty->szBuffer);
 	/* END:   Added by weizengke, 2013/11/17 */
 
-	CMD_debug(CMD_DEBUG_FUNC,"tab in:used_len=%d, pos=%d\r\n",vty->used_len, vty->cur_pos);
+	CMD_debug(CMD_DEBUG_FUNC,"tab in:ulUsedLen=%d, ulCurrentPos=%d\r\n",vty->ulUsedLen, vty->ulCurrentPos);
 
-	if (vty->inputMachine_prev == CMD_KEY_CODE_TAB)
+	if (vty->ucKeyTypePre == CMD_KEY_CODE_TAB)
 	{
 		cmd_delete_word(vty);
 		cmd_insert_word(vty, vty->tabbingString);
@@ -2617,31 +2762,30 @@ VOID cmd_resolve_tab(struct cmd_vty *vty)
 	else
 	{
 		memset(vty->tabString,0,sizeof(vty->tabString));
-		vty->tabStringLenth = 0;
 	}
 
-	v = cmd_str2vec(vty->buffer);
+	v = cmd_str2vec(vty->szBuffer);
 	if (v == NULL)
 	{
 		/*
-		v = cmd_vector_init(1);
+		v = cmd_vector_init();
 		cmd_vector_insert(v, '\0');
 		*/
 		isNeedMatch = 0;
 	}
 
-	if (isspace((int)vty->buffer[vty->used_len - 1]))
+	if (' ' == vty->szBuffer[vty->ulUsedLen - 1])
 	{
 		isNeedMatch = 0;
 	}
 
 	if (1 == isNeedMatch && NULL != v)
 	{
-		match_type = cmd_match_command(v, vty, match, &match_size, lcd_str);
+		ulMatchType = cmd_match_command(v, vty, pstCmdElem, &ulMatchNum);
 
-		last_word = (char*)cmd_vector_slot(v, cmd_vector_max(v) - 1);
+		last_word = (CHAR*)cmd_vector_get(v, cmd_vector_size(v) - 1);
 
-		if (vty->inputMachine_prev != CMD_KEY_CODE_TAB)
+		if (vty->ucKeyTypePre != CMD_KEY_CODE_TAB)
 		{
 			strcpy(vty->tabbingString, last_word);
 		}
@@ -2650,106 +2794,77 @@ VOID cmd_resolve_tab(struct cmd_vty *vty)
 	}
 
 	cmd_vty_printf(vty, "%s", CMD_ENTER);
-	switch (match_type) {
+	switch (ulMatchType)
+	{
 		case CMD_NO_MATCH:
 			cmd_outprompt(vty);
-			cmd_vty_printf(vty, "%s", vty->buffer);
+			cmd_vty_printf(vty, "%s", vty->szBuffer);
 			break;
 		case CMD_FULL_MATCH:
 			cmd_delete_word(vty);
-			if (NULL != match[0])
+			if (NULL != pstCmdElem[0])
 			{
-				cmd_insert_word(vty, match[0]->para);
+				cmd_insert_word(vty, pstCmdElem[0]->pszElmtName);
 			}
 			/* BEGIN: Added by weizengke, 2013/10/14 for full match then next input*/
 			cmd_insert_word(vty, " ");
 			/* END:   Added by weizengke, 2013/10/14 */
 			cmd_outprompt(vty);
-			cmd_vty_printf(vty, "%s", vty->buffer);
+			cmd_vty_printf(vty, "%s", vty->szBuffer);
 
 			/* BEGIN: Added by weizengke, 2013/10/27 PN: fix the bug of CMD_FULL_MATCH and then continue TAB*/
 			memset(vty->tabString,0,sizeof(vty->tabString));
 			memset(vty->tabbingString,0,sizeof(vty->tabbingString));
-			vty->tabStringLenth = 0;
 			/* END:   Added by weizengke, 2013/10/27 */
 
 			break;
-		case CMD_PART_MATCH:
-			/*  delete at 2013-10-05, CMD_PART_MATCH will never reach, CMD_LIST_MATCH instead.
-
-				case like this:
-					disable , display
-					>di  TAB
-					>dis  ==> CMD_PART_MATCH
-			*/
-			cmd_delete_word(vty);
-			cmd_insert_word(vty, lcd_str);
-			cmd_outprompt(vty);
-			cmd_vty_printf(vty, "%s", vty->buffer);
-			break;
 		case CMD_LIST_MATCH:
-
-			if (vty->inputMachine_prev != CMD_KEY_CODE_TAB)
+			/* first TAB result */
+			if (vty->ucKeyTypePre != CMD_KEY_CODE_TAB)
 			{
 				memset(vty->tabString,0,sizeof(vty->tabString));
-				strcpy(vty->tabString, match[0]->para);
-				vty->tabStringLenth = strlen(vty->tabString);
-
-				/* cmd_vty_printf(vty, "%s", CMD_ENTER); */
+				strcpy(vty->tabString, pstCmdElem[0]->pszElmtName);
 			}
 			else
 			{
-				for (i = 0; i < match_size; i++)
+				for (i = 0; i < ulMatchNum; i++)
 				{
-					if (0 == strcmp(vty->tabString, match[i]->para))
+					if (0 == strcmp(vty->tabString, pstCmdElem[i]->pszElmtName))
 					{
 						break;
 					}
 				}
 
-				if (i == match_size)
-				{
-					CMD_debug(CMD_DEBUG_ERROR, "TAB for completing command. bug of tab continue. (tabString=%s)", vty->tabString);
-				}
-
 				i++;
 
-				if (i == match_size)
+				if (i == ulMatchNum)
 				{
 					i = 0;
 				}
 
 				memset(vty->tabString,0,sizeof(vty->tabString));
-				strcpy(vty->tabString, match[i]->para);
-				vty->tabStringLenth = strlen(vty->tabString);
-
+				strcpy(vty->tabString, pstCmdElem[i]->pszElmtName);
 			}
-
-			/*for (i = 0; i < match_size; i++) {
-				if (ANOTHER_LINE(i))
-					cmd_vty_printf(vty, "%s", CMD_ENTER);
-				cmd_vty_printf(vty, "%-25s", match[i]->para);
-			}
-			*/
 
 			cmd_delete_word(vty);
 			cmd_insert_word(vty, vty->tabString);
 
 			cmd_outprompt(vty);
-			cmd_vty_printf(vty, "%s", vty->buffer);
+			cmd_vty_printf(vty, "%s", vty->szBuffer);
 			break;
 		default:
 			break;
 	}
 
-	CMD_debug(CMD_DEBUG_FUNC,"tab out:used_len=%d, pos=%d",vty->used_len, vty->cur_pos);
-	
+	CMD_debug(CMD_DEBUG_FUNC,"tab out:ulUsedLen=%d, ulCurrentPos=%d",vty->ulUsedLen, vty->ulCurrentPos);
+
+	return;
 }
 
 /*****************************************************************************
  函 数 名  : cmd_resolve_enter
  功能描述  : 适配回车执行命令行
- 输入参数  : struct cmd_vty *vty
+ 输入参数  : CMD_VTY_S *vty
  输出参数  : 无
  返 回 值  : void
  调用函数  :
@@ -2780,19 +2895,21 @@ bugs:
 		<Jungle-config>
 
 *****************************************************************************/
-VOID cmd_resolve_enter(struct cmd_vty *vty)
+VOID cmd_resolve_enter(CMD_VTY_S *vty)
 {
-	struct para_desc *match[CMD_MAX_MATCH_SIZE];	// matched string
-	ULONG match_size = 0;
-	ULONG match_type = CMD_NO_MATCH;
-	CMD_VECTOR_S *v;
+	CMD_ELMT_S *pstCmdElem[CMD_MAX_MATCH_SIZE];
+	ULONG ulMatchNum = 0;
+	ULONG ulMatchType = CMD_NO_MATCH;
+	CMD_VECTOR_S *v = NULL;
 	ULONG i = 0;
-	ULONG nomath_pos = CMD_NULL_DWORD;
+	ULONG ulNoMatchPos = CMD_NULL_DWORD;
 	ULONG view_id_ = VIEW_NULL;
+	ULONG view_id_pre = VIEW_NULL;
 	
-	v = cmd_str2vec(vty->buffer);
-	if (v == NULL) {
-		cmd_vty_printf(vty, "%s", CMD_ENTER); /* 串口才需要回车 */
+	v = cmd_str2vec(vty->szBuffer);
+	if (v == NULL)
+	{
+		cmd_vty_printf(vty, "%s", CMD_ENTER);
 		cmd_outprompt(vty);
 		return;
 	}
@@ -2803,19 +2920,20 @@ VOID cmd_resolve_enter(struct cmd_vty *vty)
 
 	cmd_vty_printf(vty, "%s", CMD_ENTER);
 
-	// do command
-	match_type = cmd_execute_command(v, vty, match, &match_size, &nomath_pos);
+	view_id_pre = vty->view_id;
+		
+	ulMatchType = cmd_execute_command(v, vty, pstCmdElem, &ulMatchNum, &ulNoMatchPos);
 
 	view_id_ = vty->view_id;
-		
-	while (match_type == CMD_NO_MATCH)
+
+	while (ulMatchType == CMD_NO_MATCH)
 	{
-		ULONG match_size_ = 0;
-		ULONG nomath_pos_ = CMD_NULL_DWORD;
+		ULONG ulMatchNum_ = 0;
+		ULONG ulNoMatchPos_ = CMD_NULL_DWORD;
 		ULONG view_id__ = VIEW_NULL;
-		
+
 		view_id__ = vty_view_getParentViewId(vty->view_id);
-		
+
 		if (VIEW_NULL == view_id__
 			|| VIEW_USER == view_id__
 			|| VIEW_GLOBAL == view_id__)
@@ -2825,57 +2943,56 @@ VOID cmd_resolve_enter(struct cmd_vty *vty)
 		}
 
 		vty->view_id = view_id__;
-		
+		view_id_pre = vty->view_id;
 		CMD_debug(CMD_DEBUG_FUNC, "Return back to view '%s'.", cmd_view_getViewName(vty->view_id));
-		
-		match_type = cmd_execute_command(v, vty, match, &match_size_, &nomath_pos_);
+
+		ulMatchType = cmd_execute_command(v, vty, pstCmdElem, &ulMatchNum_, &ulNoMatchPos_);
 	}
 
 	CMD_debug(CMD_DEBUG_FUNC, "Execute command '%s' on view '%s'. (result:%u, username=%s, vtyId=%u)",
-		vty->buffer, cmd_view_getViewName(vty->view_id), match_type, vty->user.user_name, vty->vtyId);
-	
+		vty->szBuffer, cmd_view_getViewName(view_id_pre), ulMatchType, vty->user.user_name, vty->vtyId);
+
 	write_log(0, "Execute command '%s' on view '%s'. (result:%u, username=%s, vtyId=%u)",
-		vty->buffer, cmd_view_getViewName(vty->view_id), match_type, vty->user.user_name, vty->vtyId);
-	
-	// add executed command into history
+		vty->szBuffer, cmd_view_getViewName(view_id_pre), ulMatchType, vty->user.user_name, vty->vtyId);
+
+	/* add to history cmd */
 	cmd_vty_add_history(vty);
 
-	if (match_type == CMD_NO_MATCH)
+	if (ulMatchType == CMD_NO_MATCH)
 	{
-		cmd_output_missmatch(vty, nomath_pos);
-	}
-	else if (match_type == CMD_ERR_ARGU)
-	{
-		cmd_vty_printf(vty, "Too Many Arguments%s"CMD_ENTER);
+		cmd_output_missmatch(vty, ulNoMatchPos);
 	}
 
-	if (match_type == CMD_ERR_AMBIGOUS)
+	if (ulMatchType == CMD_ERR_AMBIGOUS)
 	{
-		if (match_size)
+		if (ulMatchNum)
 		{
-			cmd_vty_printf(vty, "Command '%s' anbigous follow:%s", vty->buffer, CMD_ENTER);
+			cmd_vty_printf(vty, "Command '%s' anbigous follow:%s", vty->szBuffer, CMD_ENTER);
 
-			for (i = 0; i < match_size; i++)
+			for (i = 0; i < ulMatchNum; i++)
 			{
 				if (ANOTHER_LINE(i))
+				{
 					cmd_vty_printf(vty, "%s", CMD_ENTER);
-				cmd_vty_printf(vty, " %-25s", match[i]->para);
+				}
+				
+				cmd_vty_printf(vty, " %-25s", pstCmdElem[i]->pszElmtName);
 			}
+			
 			cmd_vty_printf(vty, "%s", CMD_ENTER);
 			/* del 10-29
 			cmd_outprompt(vty);
 			cmd_vty_printf(vty, "%s", vty->buffer);
 			*/
-			vty->cur_pos = vty->used_len = 0;
-			memset(vty->buffer, 0, vty->buf_len);
+			vty->ulCurrentPos = vty->ulUsedLen = 0;
+			memset(vty->szBuffer, 0, vty->ulBufMaxLen);
 			cmd_outprompt(vty);
 		}
 	}
 	else
 	{
-		// ready for another command
-		vty->cur_pos = vty->used_len = 0;
-		memset(vty->buffer, 0, vty->buf_len);
+		vty->ulCurrentPos = vty->ulUsedLen = 0;
+		memset(vty->szBuffer, 0, vty->ulBufMaxLen);
 		cmd_outprompt(vty);
 	}
 }
@@ -2883,7 +3000,7 @@ VOID cmd_resolve_enter(struct cmd_vty *vty)
 /*****************************************************************************
  函 数 名  : cmd_resolve_quest
  功能描述  : 适配?字符，联想命令
- 输入参数  : struct cmd_vty *vty
+ 输入参数  : CMD_VTY_S *vty
  输出参数  : 无
  返 回 值  : void
  调用函数  :
@@ -2902,133 +3019,153 @@ VOID cmd_resolve_enter(struct cmd_vty *vty)
 	   >dis loop   =======> show what
 
 *****************************************************************************/
-VOID cmd_resolve_quest(struct cmd_vty *vty)
+VOID cmd_resolve_quest(CMD_VTY_S *vty)
 {
-	CMD_VECTOR_S *v;
-	struct para_desc *match[CMD_MAX_MATCH_SIZE];	// matched string
-	ULONG match_size = 0;
+	CMD_VECTOR_S *v = NULL;
+	CMD_ELMT_S *pstCmdElem[CMD_MAX_MATCH_SIZE] = {0};
+	ULONG ulMatchNum = 0;
 	ULONG i = 0;
-	ULONG nomath_pos = CMD_NULL_DWORD;
+	ULONG ulNoMatchPos = CMD_NULL_DWORD;
 
 	/* BEGIN: Added by weizengke, 2013/10/4   PN:need print '?' */
 	cmd_put_one(vty, '?');
 	/* END:   Added by weizengke, 2013/10/4   PN:need print '?' */
 
-	if (strlen(vty->buffer) < vty->cur_pos)
+	if (strlen(vty->szBuffer) < vty->ulCurrentPos)
 	{
-		CMD_DBGASSERT(0, "cmd_resolve_quest. (buffer=%s[%u], cur_pos=%u, used_len=%u, buf_len=%u)",
-			vty->buffer, strlen(vty->buffer), vty->cur_pos, vty->used_len, vty->buf_len);
+		CMD_DBGASSERT(0, "cmd_resolve_quest. (buffer=%s[%u], ulCurrentPos=%u, ulUsedLen=%u, ulBufMaxLen=%u)",
+			vty->szBuffer, strlen(vty->szBuffer), vty->ulCurrentPos, vty->ulUsedLen, vty->ulBufMaxLen);
 		return;
 	}
-	
+
 	/*
 	1: 取pos 之前的buf
 	2: 需要覆盖当前光标后的buf
 	*/
 	/* BEGIN: Added by weizengke, 2013/11/17 bug for left and tab*/
-	memset(&(vty->buffer[vty->cur_pos]), 0 ,strlen(vty->buffer) - vty->cur_pos);
-	vty->used_len = strlen(vty->buffer);
+	memset(&(vty->szBuffer[vty->ulCurrentPos]), 0 ,strlen(vty->szBuffer) - vty->ulCurrentPos);
+	vty->ulUsedLen = strlen(vty->szBuffer);
 	/* END:   Added by weizengke, 2013/11/17 */
 
-	v = cmd_str2vec(vty->buffer);
+	v = cmd_str2vec(vty->szBuffer);
 	if (v == NULL)
 	{
-		v = cmd_vector_init(1);
+		v = cmd_vector_init();
+		if(NULL == v)
+		{
+			return ;
+		}
+			
 		cmd_vector_insert_cr(v);
 	}
-	else if (isspace((int)vty->buffer[vty->used_len - 1]))
+	else if (' ' == vty->szBuffer[vty->ulUsedLen - 1])
 	{
 		cmd_vector_insert_cr(v);
 	}
 
-	cmd_complete_command(v, vty, match, &match_size, &nomath_pos);
+	cmd_complete_command(v, vty, pstCmdElem, &ulMatchNum, &ulNoMatchPos);
 
-	CMD_debug(CMD_DEBUG_FUNC, "cmd_resolve_quest. (match_size=%u, nomath_pos=%u)", match_size, nomath_pos);
-	
 	cmd_vty_printf(vty, "%s", CMD_ENTER);
-
-	if (match_size > 0) {
-		for (i = 0; i < match_size; i++) {
-			cmd_vty_printf(vty, " %-25s%s\r\n", match[i]->para,match[i]->desc);
+	if (ulMatchNum > 0) 
+	{
+	    cmd_vty_printf(vty,"%s commands:\r\n",cmd_view_getViewName(vty->view_id));
+		for (i = 0; i < ulMatchNum; i++)
+		{
+			cmd_vty_printf(vty, " %-25s%s\r\n", pstCmdElem[i]->pszElmtName,pstCmdElem[i]->pszElmtHelp);
 		}
+		
 		cmd_outprompt(vty);
-		cmd_vty_printf(vty, "%s", vty->buffer);
-	} else {
-
-		cmd_output_missmatch(vty, nomath_pos);
-
+		cmd_vty_printf(vty, "%s", vty->szBuffer);
+	} 
+	else 
+	{
+		cmd_output_missmatch(vty, ulNoMatchPos);
 		cmd_outprompt(vty);
-		cmd_vty_printf(vty, "%s", vty->buffer);
+		cmd_vty_printf(vty, "%s", vty->szBuffer);
 	}
 
 	cmd_vector_deinit(v, 0);
+
+	
+	CMD_debug(CMD_DEBUG_FUNC, "cmd_resolve_quest. (ulMatchNum=%u, ulNoMatchPos=%u)", ulMatchNum, ulNoMatchPos);
+
+	return;
 }
 
 
 /* bug of up twice with last key is not up, the hpos not restart */
-VOID cmd_resolve_up(struct cmd_vty *vty)
+VOID cmd_resolve_up(CMD_VTY_S *vty)
 {
-	ULONG try_idx = vty->hpos == 0 ? (HISTORY_MAX_SIZE - 1) : vty->hpos - 1;
+	ULONG idx = 0;
 
-	// if no history
-	if (vty->history[try_idx] == NULL)
+	idx = vty->ulhpos == 0 ? (HISTORY_MAX_SIZE - 1) : vty->ulhpos - 1;
+
+	if (vty->pszHistory[idx] == NULL)
+	{
 		return;
-	vty->hpos = try_idx;
+	}
+	
+	vty->ulhpos = idx;
 
-	// print history command
 	cmd_clear_line(vty);
-	strcpy(vty->buffer, vty->history[vty->hpos]);
-	vty->cur_pos = vty->used_len = strlen(vty->history[vty->hpos]);
-	cmd_vty_printf(vty, "%s", vty->buffer);
+	strcpy(vty->szBuffer, vty->pszHistory[vty->ulhpos]);
+	vty->ulCurrentPos = vty->ulUsedLen = strlen(vty->pszHistory[vty->ulhpos]);
+	cmd_vty_printf(vty, "%s", vty->szBuffer);
+
+	return;
 }
 
-VOID cmd_resolve_down(struct cmd_vty *vty)
+VOID cmd_resolve_down(CMD_VTY_S *vty)
 {
-	ULONG try_idx = vty->hpos ==( HISTORY_MAX_SIZE - 1) ? 0 : vty->hpos + 1;
+	ULONG idx = 0;
 
-	// if no history
-	if (vty->history[try_idx] == NULL)
+	idx = vty->ulhpos ==( HISTORY_MAX_SIZE - 1) ? 0 : vty->ulhpos + 1;
+
+	if (vty->pszHistory[idx] == NULL)
+	{
 		return;
-	vty->hpos = try_idx;
+	}
+	
+	vty->ulhpos = idx;
 
-	// print history command
 	cmd_clear_line(vty);
-	strcpy(vty->buffer, vty->history[vty->hpos]);
-	vty->cur_pos = vty->used_len = strlen(vty->history[vty->hpos]);
-	cmd_vty_printf(vty, "%s", vty->buffer);
+	strcpy(vty->szBuffer, vty->pszHistory[vty->ulhpos]);
+	vty->ulCurrentPos = vty->ulUsedLen = strlen(vty->pszHistory[vty->ulhpos]);
+	cmd_vty_printf(vty, "%s", vty->szBuffer);
+
+	return;
 }
 
-// handle in read buffer, including left, right, delete, insert
-VOID cmd_resolve_left(struct cmd_vty *vty)
+VOID cmd_resolve_left(CMD_VTY_S *vty)
 {
-	// already at leftmost, cannot move more
-	if (vty->cur_pos <= 0)
+	if (vty->ulCurrentPos <= 0)
 	{
 		return;
 	}
 
-	// move left one step
-	vty->cur_pos--;
+	vty->ulCurrentPos--;
 	cmd_back_one(vty);
+
+	return;
 }
 
-VOID cmd_resolve_right(struct cmd_vty *vty)
+VOID cmd_resolve_right(CMD_VTY_S *vty)
 {
-	// already at rightmost, cannot move more
-	if (vty->cur_pos >= vty->used_len)
+	if (vty->ulCurrentPos >= vty->ulUsedLen)
 	{
 		return;
 	}
 
-	// move right one step
-	cmd_put_one(vty, vty->buffer[vty->cur_pos]);
-	vty->cur_pos++;
+	cmd_put_one(vty, vty->szBuffer[vty->ulCurrentPos]);
+	vty->ulCurrentPos++;
+
+	return;
 }
 
 /*****************************************************************************
  函 数 名  : cmd_resolve_delete
  功能描述  : 适配Delete键，向前删除字符
- 输入参数  : struct cmd_vty *vty
+ 输入参数  : CMD_VTY_S *vty
  输出参数  : 无
  返 回 值  : void
  调用函数  :
@@ -3040,121 +3177,132 @@ VOID cmd_resolve_right(struct cmd_vty *vty)
     修改内容   : 新生成函数
 
 *****************************************************************************/
-VOID cmd_resolve_delete(struct cmd_vty *vty)
+VOID cmd_resolve_delete(CMD_VTY_S *vty)
 {
-	ULONG i, size;
+	ULONG i = 0;
+	ULONG size = 0;
 
-	// no more to delete
-	if (vty->cur_pos >= vty->used_len)
+	if (vty->ulCurrentPos >= vty->ulUsedLen)
 	{
 		return;
 	}
 
-	/* del the  current char*/
 	cmd_delete_one(vty);
 
-	size = vty->used_len - vty->cur_pos;
-	
-	CMD_DBGASSERT((vty->used_len >= vty->cur_pos), 
-		"cmd_resolve_delete. (used_len=%u, cur_pos=%u)",
-		vty->used_len, vty->cur_pos);
+	size = vty->ulUsedLen - vty->ulCurrentPos;
 
-	memcpy(&vty->buffer[vty->cur_pos], &vty->buffer[vty->cur_pos + 1], size);
+	CMD_DBGASSERT((vty->ulUsedLen >= vty->ulCurrentPos),
+		"cmd_resolve_delete. (ulUsedLen=%u, ulCurrentPos=%u)",
+		vty->ulUsedLen, vty->ulCurrentPos);
 
-	//vty->buffer[vty->used_len] = '\0';
-	vty->buffer[vty->used_len - 1] = '\0';
+	memcpy(&vty->szBuffer[vty->ulCurrentPos], &vty->szBuffer[vty->ulCurrentPos + 1], size);
 
-	/* output the right chars */
+	vty->szBuffer[vty->ulUsedLen - 1] = '\0';
+
 	for (i = 0; i < size; i ++)
-		cmd_put_one(vty, vty->buffer[vty->cur_pos + i]);
+	{
+		cmd_put_one(vty, vty->szBuffer[vty->ulCurrentPos + i]);
+	}
+	
+	vty->ulUsedLen--;
 
-	vty->used_len--;
-
-	/* back the cur_pos */
 	for (i = 0; i < size; i++)
+	{
 		cmd_back_one(vty);
+	}
 
-
+	return;
 }
 
-VOID cmd_resolve_backspace(struct cmd_vty *vty)
+VOID cmd_resolve_backspace(CMD_VTY_S *vty)
 {
-	ULONG i, size;
+	ULONG i = 0;
+	ULONG size = 0;
 
-	// no more to delete
-	if (vty->cur_pos <= 0)
+	if (vty->ulCurrentPos <= 0)
 	{
 		return;
 	}
 
-	size = vty->used_len - vty->cur_pos;
-	
-	CMD_DBGASSERT((vty->used_len >= vty->cur_pos), 
-		"cmd_resolve_backspace. (used_len=%u, cur_pos=%u)",
-		vty->used_len, vty->cur_pos);
+	size = vty->ulUsedLen - vty->ulCurrentPos;
 
-	// delete char
-	vty->cur_pos--;
-	vty->used_len--;
+	CMD_DBGASSERT((vty->ulUsedLen >= vty->ulCurrentPos),
+		"cmd_resolve_backspace. (ulUsedLen=%u, ulCurrentPos=%u)",
+		vty->ulUsedLen, vty->ulCurrentPos);
+
+	vty->ulCurrentPos--;
+	vty->ulUsedLen--;
 	cmd_back_one(vty);
 
-	// print left chars
-	memcpy(&vty->buffer[vty->cur_pos], &vty->buffer[vty->cur_pos + 1], size);
-	vty->buffer[vty->used_len] = '\0';
+	memcpy(&vty->szBuffer[vty->ulCurrentPos], &vty->szBuffer[vty->ulCurrentPos + 1], size);
+	vty->szBuffer[vty->ulUsedLen] = '\0';
+	
 	for (i = 0; i < size; i ++)
-		cmd_put_one(vty, vty->buffer[vty->cur_pos + i]);
+	{
+		cmd_put_one(vty, vty->szBuffer[vty->ulCurrentPos + i]);
+	}
+	
 	cmd_put_one(vty, ' ');
+	
 	for (i = 0; i < size + 1; i++)
+	{
 		cmd_back_one(vty);
+	}
 
+	return;
 }
 
-VOID cmd_resolve_insert(struct cmd_vty *vty)
+VOID cmd_resolve_insert(CMD_VTY_S *vty)
 {
-	ULONG i, size;
+	ULONG i = 0;
+	ULONG size = 0;
 
-	// no more to insert
-	if (vty->used_len >= vty->buf_len)
+	if (vty->ulUsedLen >= vty->ulBufMaxLen)
 	{
-		CMD_debug(CMD_DEBUG_FUNC, "cmd_resolve_insert, used_len(%u)>=buf_len(%u, cur_pos=%u)",
-			vty->used_len, vty->buf_len, vty->cur_pos);
-	
+		CMD_debug(CMD_DEBUG_FUNC, "cmd_resolve_insert, ulUsedLen(%u)>=ulBufMaxLen(%u, ulCurrentPos=%u)",
+			vty->ulUsedLen, vty->ulBufMaxLen, vty->ulCurrentPos);
+
 		return;
 	}
-		
-	if (vty->used_len < vty->cur_pos)
+
+	if (vty->ulUsedLen < vty->ulCurrentPos)
 	{
-		CMD_DBGASSERT(0, "cmd_resolve_insert. (used_len=%u, cur_pos=%u)", vty->used_len, vty->cur_pos);		
+		CMD_DBGASSERT(0, "cmd_resolve_insert. (ulUsedLen=%u, ulCurrentPos=%u)", vty->ulUsedLen, vty->ulCurrentPos);
 		return;
 	}
-	
-	size = vty->used_len - vty->cur_pos;
-	memcpy(&vty->buffer[vty->cur_pos + 1], &vty->buffer[vty->cur_pos], size);
-	vty->buffer[vty->cur_pos] = vty->c;
+
+	size = vty->ulUsedLen - vty->ulCurrentPos;
+	memcpy(&vty->szBuffer[vty->ulCurrentPos + 1], &vty->szBuffer[vty->ulCurrentPos], size);
+	vty->szBuffer[vty->ulCurrentPos] = vty->c;
 
 #if 0
 	/* BEGIN: del by weizengke, 2013/11/17 */
 	/* BEGIN: Added by weizengke, 2013/10/4   PN:bug for continue tab */
-	vty->buffer[vty->cur_pos + 1] = '\0';
+	vty->szBuffer[vty->ulCurrentPos + 1] = '\0';
 	/* END:   Added by weizengke, 2013/10/4   PN:None */
 	/* END: del by weizengke, 2013/11/17 */
 #endif
 
-	// print left chars, then back size
 	for (i = 0; i < size + 1; i++)
-		cmd_put_one(vty, vty->buffer[vty->cur_pos + i]);
+	{
+		cmd_put_one(vty, vty->szBuffer[vty->ulCurrentPos + i]);
+	}
+	
 	for (i = 0; i < size; i++)
+	{
 		cmd_back_one(vty);
+	}
+	
+	vty->ulCurrentPos++;
+	vty->ulUsedLen++;
 
-	vty->cur_pos++;
-	vty->used_len++;
-
+	return;
 }
 
 /*****************************************************************************
  函 数 名  : cmd_resolve_del_lastword
  功能描述  : 适配CTRL_W键，快速删除最后一个命令字
- 输入参数  : struct cmd_vty *vty
+ 输入参数  : CMD_VTY_S *vty
  输出参数  : 无
  返 回 值  : void
  调用函数  :
@@ -3166,60 +3314,148 @@ VOID cmd_resolve_insert(struct cmd_vty *vty)
     修改内容   : 新生成函数
 
 *****************************************************************************/
-VOID cmd_resolve_del_lastword(struct cmd_vty *vty)
+VOID cmd_resolve_del_lastword(CMD_VTY_S *vty)
 {
-	ULONG i, size;
+	ULONG i = 0;
+	ULONG size = 0;
 
-	// no more to delete
-	CMD_debug(CMD_DEBUG_FUNC, "\r\ncmd_resolve_del_lastword, cur_pos=%d",vty->cur_pos);
-	
-	if (vty->cur_pos <= 0)
+	CMD_debug(CMD_DEBUG_FUNC, "cmd_resolve_del_lastword, ulCurrentPos=%d",vty->ulCurrentPos);
+
+	if (vty->ulCurrentPos <= 0)
+	{
 		return;
-
+	}
+	
 	cmd_delete_word_ctrl_W_ex(vty);
 
 	cmd_vty_printf(vty, "%s", CMD_ENTER);
 	cmd_outprompt(vty);
-	cmd_vty_printf(vty, "%s", vty->buffer);
+	cmd_vty_printf(vty, "%s", vty->szBuffer);
 
 	/* BEGIN: Added by weizengke, 2014/3/23 support delete word form cur_pos*/
-	for (i = 0; i < strlen(vty->buffer) - vty->cur_pos; i++)
+	for (i = 0; i < strlen(vty->szBuffer) - vty->ulCurrentPos; i++)
 	{
 		cmd_back_one(vty);
 	}
 	/* END:   Added by weizengke, 2014/3/23 */
 
+	return;
+}
+
+VOID cmd_read(CMD_VTY_S *vty)
+{
+	UCHAR ucKeyType = 0;
+
+	if (NULL == vty)
+	{
+		return ;
+	}
+
+	while((vty->c = vty_getch(vty)) != EOF)
+	{
+		/* check vty is online */
+		if (0 == vty->used)
+		{
+			break;
+		}
+
+		/* 更新最后活动时间 */
+		vty->user.lastAccessTime = time(NULL);
+
+		if (CMD_VTY_CONSOLE_ID == vty->vtyId)
+		{
+			ucKeyType = cmd_resolve(vty);
+		}
+		else
+		{
+			ucKeyType = cmd_resolve_vty(vty);
+		}
+
+		//CMD_debug(CMD_DEBUG_INFO, "cmd_read. (key_type=%d)", key_type);
+
+		vty->ucKeyTypeNow = ucKeyType;
+
+		if (ucKeyType <= CMD_KEY_CODE_NONE 
+			|| ucKeyType > CMD_KEY_CODE_NOTCARE)
+		{
+			CMD_debug(CMD_DEBUG_ERROR, "Unknow key type, c=%c, ucKeyType=%u\n", vty->c, ucKeyType);
+			continue;
+		}
+
+		key_resolver[ucKeyType].pKeyCallbackfunc(vty);
+		
+		vty->ucKeyTypePre = vty->ucKeyTypeNow;
+		
+		/* not key type TAB, clear tabString */
+		if (vty->ucKeyTypeNow != CMD_KEY_CODE_TAB)
+		{
+			memset(vty->tabString,0,sizeof(vty->tabString));
+			memset(vty->tabbingString,0,sizeof(vty->tabbingString));
+		}
+
+		/* for debug */
+		if (vty->ulBufMaxLen != CMD_BUFFER_SIZE
+			|| vty->ulUsedLen > CMD_BUFFER_SIZE
+			|| vty->ulCurrentPos > CMD_BUFFER_SIZE)
+		{
+			CMD_DBGASSERT(0, "cmd_read, szBuffer=%s, ulUsedLen=%u, ulCurrentPos=%u, ulBufMaxLen=%u",
+				vty->szBuffer, vty->ulUsedLen, vty->ulCurrentPos,  vty->ulBufMaxLen);
+		}
+
+	}
+
+	return ;
+
+}
+
+VOID vty_go(ULONG vtyId)
+{
+	CMD_VTY_S *vty = NULL;
+
+	vty = cmd_vty_getById(vtyId);
+	if (NULL == vty)
+	{
+		return;
+	}
+
+	cmd_read(vty);
+
+	return ;
 }
 
 int cmd_init()
 {
-	/* initial cmd vector */
-	cmd_vec = cmd_vector_init(1);
+	g_pstCmdVec = cmd_vector_init();
+	if(NULL == g_pstCmdVec)
+	{
+		return CMD_ERR;
+	}
 
 	/* 视图初始化 */
 	cmd_view_init();
 
-	/* install cmd */
-	//cmd_install();
-
-	/* initial com_vty */
-	g_con_vty = (struct cmd_vty *)calloc(1, sizeof(struct cmd_vty));
+	g_con_vty = (CMD_VTY_S *)malloc(sizeof(CMD_VTY_S));
 	if(g_con_vty == NULL)
 	{
 		return CMD_ERR;
 	}
+	memset(g_con_vty, 0, sizeof(CMD_VTY_S));
+	
 	cmd_vty_init(g_con_vty);
 	g_con_vty->used = 1;
 	g_con_vty->vtyId = CMD_VTY_CONSOLE_ID;
 	g_con_vty->user.type = 0;
 	g_con_vty->user.state = 1;
 	g_con_vty->user.lastAccessTime = time(NULL);
+	strcpy(g_con_vty->user.user_name, "CON");
 	
-	g_cfm_vty = (struct cmd_vty *)calloc(1, sizeof(struct cmd_vty));
+	g_cfm_vty = (CMD_VTY_S *)malloc(sizeof(CMD_VTY_S));
 	if(g_cfm_vty == NULL)
 	{
 		return CMD_ERR;
 	}
+	memset(g_cfm_vty, 0, sizeof(CMD_VTY_S));
+	
 	cmd_vty_init(g_cfm_vty);
 	g_cfm_vty->used = 1;
 	g_cfm_vty->vtyId = CMD_VTY_CFM_ID;
@@ -3253,8 +3489,6 @@ int cmd_main_entry(void *pEntry)
 		
 		cmd_read(g_con_vty);
 	}
-
-	cmd_vty_deinit(g_con_vty);
 
 	return 0;
 }

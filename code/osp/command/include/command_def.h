@@ -36,9 +36,6 @@
 
 #define CMD_LOG_LEVEL	LOG_DEBUG
 
-
-#define CMD_ELEM_SPACE_SIZE  CMD_MAX_CMD_ELEM_SIZE + 1
-
 // enter may be '\n' or '\r\n'
 #define CMD_ENTER			"\r\n"
 
@@ -58,6 +55,8 @@
 #define CMD_END         "<cr>"
 #define CMD_INTEGER 	"INTEGER"
 #define CMD_STRING  	"STRING"
+#define CMD_IP  		"X.X.X.X"
+#define CMD_MAC  		"H-H-H"
 
 #define BUFSIZE 65535
 
@@ -69,13 +68,9 @@
 			write_log(0, args);\
 		}\
 
-#define cmd_vector_slot(v, i)	    ((v)->data[(i)])
-#define cmd_vector_max(v)		    ((v)->used_size)
+#define cmd_vector_get(v, i)	    ((v)->ppData[(i)])
+#define cmd_vector_size(v)		    ((v)->ulSize)
 
-/* key */
-// definition of ASCII value of keys
-// Arrow key is a sequenece started by 27, 91, XX
-// Backspace value is 8, Ctrl+H equals backspace, so another value is 127
 #ifdef _LINUX_
 #define CMD_KEY_ARROW1	0x1b  		 //0xffffffe0
 #define CMD_KEY_ARROW2	0x5b		 //0x0

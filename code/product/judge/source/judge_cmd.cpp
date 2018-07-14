@@ -27,6 +27,7 @@ VOID Judge_ShowBrief(ULONG vtyId)
 	extern int g_sock_port;
 	extern char dataPath[];
 	extern char g_sysname[];
+	extern queue <JUDGE_DATA_S> g_JudgeQueue;
 	
 	API_TimeToString(strDateStr, g_lastjudgetime);
 
@@ -38,6 +39,7 @@ VOID Judge_ShowBrief(ULONG vtyId)
 	buff += sprintf(buff, "  Judge Mode    : %s\r\n", (g_judge_mode==JUDGE_MODE_ACM)?"ACM":"OI");
 	buff += sprintf(buff, "  Testcase Path : %s\r\n", dataPath);
 	buff += sprintf(buff, "  Last Judge    : %s\r\n", strDateStr.c_str());
+	buff += sprintf(buff, "  Queue Length  : %u\r\n", g_JudgeQueue.size());
 	buff += sprintf(buff, " =================================================="
 		   "========================\r\n");
 
@@ -249,8 +251,15 @@ ULONG Judge_CFG_Config(VOID *pRcvMsg)
 				break;
 
 			case JUDGE_CMO_CFG_HDU_REMOTE_IP:
-				isHDUJudgeIp= OS_YES;
-				cmd_copy_string_param(pElem, ip);
+				{
+					ULONG ulIp = 0;
+					extern VOID cmd_ip_ulong_to_string(ULONG ip, CHAR *buf);
+
+					isHDUJudgeIp= OS_YES;
+					ulIp = cmd_get_ip_ulong_param(pElem);
+					cmd_ip_ulong_to_string(ulIp, ip);
+
+				}
 				break;
 
 			case JUDGE_CMO_CFG_HDU_REMOTE_PORT:	
@@ -422,7 +431,7 @@ ULONG Judge_RegCmdConfig()
 	// 12
 	cmd_regelement_new(CMD_ELEMID_NULL, CMD_ELEM_TYPE_KEY, "testcase-path", "Testcase path", vec);
 	// 13
-	cmd_regelement_new(JUDGE_CMO_CFG_TESTCASE_PATH, CMD_ELEM_TYPE_STRING, "STRING<1-255>", "Testcase path", vec);
+	cmd_regelement_new(JUDGE_CMO_CFG_TESTCASE_PATH, CMD_ELEM_TYPE_STRING, "STRING<1-255>", "Testcase path, default is 'data'", vec);
 	// 14
 	cmd_regelement_new(JUDGE_CMO_CFG_SECURITY, CMD_ELEM_TYPE_KEY, "security", "Security function, only support API-Hook", vec);
 	// 15
@@ -446,12 +455,12 @@ ULONG Judge_RegCmdConfig()
 	// 24
 	cmd_regelement_new(CMD_ELEMID_NULL,				CMD_ELEM_TYPE_KEY, 	  "ip",	"IP address", vec);
 	// 25
-	cmd_regelement_new(JUDGE_CMO_CFG_HDU_REMOTE_IP,	CMD_ELEM_TYPE_STRING, "STRING<1-24>",	"IP address", vec);
+	cmd_regelement_new(JUDGE_CMO_CFG_HDU_REMOTE_IP,	CMD_ELEM_TYPE_IP, 	 CMD_ELMT_IP,	"IP address", vec);
 	// 26
 	cmd_regelement_new(CMD_ELEMID_NULL, 			CMD_ELEM_TYPE_KEY,	  "port", "Socket port of HDU remote judger", vec);
 	// 27
 	cmd_regelement_new(JUDGE_CMO_CFG_HDU_REMOTE_PORT, CMD_ELEM_TYPE_INTEGER, "INTEGER<1-65535>", "Socket port of HDU remote judger",vec);
-		
+	
 	/* ÃüÁîÐÐ×¢²áËÄ²¿Çú3: ×¢²áÃüÁîÐÐ */
 	cmd_install_command(MID_JUDGE, VIEW_SYSTEM, " 2 3 4 ", vec);
 	cmd_install_command(MID_JUDGE, VIEW_SYSTEM, " 2 8 ", vec);

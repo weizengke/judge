@@ -1,52 +1,54 @@
 #ifndef _COMMAND_CORE_H_
 #define _COMMAND_CORE_H_
 
+extern ULONG cmd_ip_string_to_ulong(CHAR *ip);
+extern VOID cmd_ip_ulong_to_string(ULONG ip, CHAR *buf);
+extern ULONG cmd_string_is_ip(CHAR *str);
+
 extern VOID vty_offline(ULONG vtyId);	
-extern VOID cmd_clear_line(struct cmd_vty *vty);
-extern struct cmd_vty *cmd_vty_getById(ULONG vtyId);
-extern VOID cmd_vty_init(struct cmd_vty *vty);
-extern VOID cmd_vty_deinit(struct cmd_vty *vty);
-extern VOID cmd_vty_add_history(struct cmd_vty *vty);
+extern VOID cmd_clear_line(CMD_VTY_S *vty);
+extern CMD_VTY_S *cmd_vty_getById(ULONG vtyId);
+extern VOID cmd_vty_init(CMD_VTY_S *vty);
+extern VOID cmd_vty_add_history(CMD_VTY_S *vty);
 extern VOID cmd_vector_insert_cr(CMD_VECTOR_S *v);
 
 extern CMD_VECTOR_S *cmd_vector_copy(CMD_VECTOR_S *v);
 extern CMD_VECTOR_S *cmd_str2vec(CHAR *string);
-extern ULONG cmd_vector_fetch(CMD_VECTOR_S *v);
-extern CMD_VECTOR_S *cmd_vector_init(ULONG size);
+extern CMD_VECTOR_S *cmd_vector_init();
 extern VOID cmd_vector_deinit(CMD_VECTOR_S *v, ULONG freeall);
 
-extern ULONG cmd_match_command(CMD_VECTOR_S *icmd_vec, struct cmd_vty *vty,
-		struct para_desc **match, ULONG *match_size, CHAR *lcd_str);
+extern ULONG cmd_match_command(CMD_VECTOR_S *icmd_vec, CMD_VTY_S *vty,
+		CMD_ELMT_S **ppstMatchCmdElem, ULONG *pulMatchNum);
 
-extern ULONG cmd_complete_command(CMD_VECTOR_S *icmd_vec, struct cmd_vty *vty,
-											struct para_desc **match, ULONG *match_size, ULONG *nomatch_pos);
+extern ULONG cmd_complete_command(CMD_VECTOR_S *icmd_vec, CMD_VTY_S *vty,
+											CMD_ELMT_S **ppstCmdElem, ULONG *pulMatchNum, ULONG *pulNoMatchPos);
 
-extern ULONG cmd_execute_command(CMD_VECTOR_S *icmd_vec, struct cmd_vty *vty,
-											struct para_desc **match, ULONG *match_size, ULONG *nomatch_pos);
+extern ULONG cmd_execute_command(CMD_VECTOR_S *icmd_vec, CMD_VTY_S *vty,
+											CMD_ELMT_S **ppstCmdElem, ULONG *pulMatchNum, ULONG *pulNoMatchPos);
 
-extern VOID cmd_output_missmatch(cmd_vty *vty, ULONG nomath_pos);
+extern VOID cmd_output_missmatch(CMD_VTY_S *vty, ULONG ulNoMatchPos);
 
-extern VOID cmd_insert_word(struct cmd_vty *vty, CHAR *str);
-extern VOID cmd_delete_word(struct cmd_vty *vty);
-extern VOID cmd_delete_word_ctrl_W(struct cmd_vty *vty);
-extern VOID cmd_delete_word_ctrl_W_ex(struct cmd_vty *vty);
+extern VOID cmd_insert_word(CMD_VTY_S *vty, CHAR *str);
+extern VOID cmd_delete_word(CMD_VTY_S *vty);
+extern VOID cmd_delete_word_ctrl_W(CMD_VTY_S *vty);
+extern VOID cmd_delete_word_ctrl_W_ex(CMD_VTY_S *vty);
 
 extern ULONG cmd_get_idle_vty();
 extern VOID cmd_vty_set_terminaldebug(VOID *vty, CHAR isEnable);
 
-extern VOID cmd_read(struct cmd_vty *vty);
-extern ULONG cmd_run(struct cmd_vty *vty);
+extern VOID cmd_read(CMD_VTY_S *vty);
+extern ULONG cmd_run(CMD_VTY_S *vty);
 extern VOID vty_view_set(ULONG vtyId, ULONG view_id);
-extern view_node_st * cmd_view_lookup(view_node_st *view, ULONG view_id);
-extern VOID vty_view_quit(struct cmd_vty *vty);
-extern ULONG cmd_view_getaislenth(struct cmd_vty *vty);
-extern VOID cmd_outprompt(struct cmd_vty *vty);
+extern VIEW_NODE_S * cmd_view_lookup(VIEW_NODE_S *view, ULONG view_id);
+extern VOID vty_view_quit(CMD_VTY_S *vty);
+extern ULONG cmd_view_getaislenth(CMD_VTY_S *vty);
+extern VOID cmd_outprompt(CMD_VTY_S *vty);
 extern CHAR* cmd_view_getAis(ULONG view_id);
 extern CHAR* cmd_view_getViewName(ULONG view_id);
 extern ULONG vty_view_getParentViewId(ULONG view_id);
 
-extern ULONG cmd_resolve(struct cmd_vty *vty);
-extern ULONG cmd_resolve_vty(struct cmd_vty *vty);
+extern ULONG cmd_resolve(CMD_VTY_S *vty);
+extern ULONG cmd_resolve_vty(CMD_VTY_S *vty);
 extern CMD_VECTOR_S *cmd_vector_new();
 extern VOID cmd_vector_free(CMD_VECTOR_S **ppVec);
 extern ULONG cmd_regelement_new(ULONG cmd_elem_id, CMD_ELEM_TYPE_E cmd_elem_type, CHAR *cmd_name, CHAR *cmd_help, CMD_VECTOR_S *pVec);
@@ -61,21 +63,21 @@ extern CHAR* cmd_get_elem_param(VOID *pElemMsg);
 extern ULONG cmd_get_ulong_param(VOID *pElemMsg);
 extern VOID cmd_copy_string_param(VOID *pElemMsg, CHAR *param);	
 extern ULONG cmd_get_first_elem_tblid(VOID *pRunMsg);
-extern ULONG cmd_regcallback(ULONG mId, ULONG (*pfCallBackFunc)(VOID *pRcvMsg));
+extern ULONG cmd_regcallback(ULONG ulMid, ULONG (*pfCallBackFunc)(VOID *pRcvMsg));
 
 
-extern VOID cmd_resolve_filter(struct cmd_vty *vty);
-extern VOID cmd_resolve_tab(struct cmd_vty *vty);
-extern VOID cmd_resolve_enter(struct cmd_vty *vty);
-extern VOID cmd_resolve_quest(struct cmd_vty *vty);
-extern VOID cmd_resolve_up(struct cmd_vty *vty);
-extern VOID cmd_resolve_down(struct cmd_vty *vty);
-extern VOID cmd_resolve_left(struct cmd_vty *vty);
-extern VOID cmd_resolve_right(struct cmd_vty *vty);
-extern VOID cmd_resolve_delete(struct cmd_vty *vty);
-extern VOID cmd_resolve_backspace(struct cmd_vty *vty);
-extern VOID cmd_resolve_insert(struct cmd_vty *vty);
-extern VOID cmd_resolve_del_lastword(struct cmd_vty *vty);
+extern VOID cmd_resolve_filter(CMD_VTY_S *vty);
+extern VOID cmd_resolve_tab(CMD_VTY_S *vty);
+extern VOID cmd_resolve_enter(CMD_VTY_S *vty);
+extern VOID cmd_resolve_quest(CMD_VTY_S *vty);
+extern VOID cmd_resolve_up(CMD_VTY_S *vty);
+extern VOID cmd_resolve_down(CMD_VTY_S *vty);
+extern VOID cmd_resolve_left(CMD_VTY_S *vty);
+extern VOID cmd_resolve_right(CMD_VTY_S *vty);
+extern VOID cmd_resolve_delete(CMD_VTY_S *vty);
+extern VOID cmd_resolve_backspace(CMD_VTY_S *vty);
+extern VOID cmd_resolve_insert(CMD_VTY_S *vty);
+extern VOID cmd_resolve_del_lastword(CMD_VTY_S *vty);
 
 
 #endif _COMMAND_CORE_H_

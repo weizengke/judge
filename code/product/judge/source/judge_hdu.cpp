@@ -58,10 +58,10 @@ UCHAR gaucHDULanguageName[][VJUDGE_MAX_LANG_SIZE] = {
 
 /* HDU VJUDGE */
 char hdu_domain[256] = "http://acm.hdu.edu.cn";
-char hdu_username[1000]="weizengke";
-char hdu_password[1000]="********";
+char hdu_username[1000]={0};
+char hdu_password[1000]={0};
 char hdu_judgerIP[20]="127.0.0.1";
-int hdu_sockport = 6606;
+int hdu_sockport = 0;
 int hdu_remote_enable=OS_NO;
 int hdu_vjudge_enable=OS_NO;
 

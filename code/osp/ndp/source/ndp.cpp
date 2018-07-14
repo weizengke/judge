@@ -626,7 +626,7 @@ unsigned _stdcall  NDP_TaskEntry(void *pEntry)
 {
 	ULONG ulRet = OS_OK;
 
-	(void)BDN_RegistBuildRun(MID_NDP, VIEW_SYSTEM, BDN_PRIORITY_NORMAL, NDP_BuildRun);
+	//(void)BDN_RegistBuildRun(MID_NDP, VIEW_SYSTEM, BDN_PRIORITY_NORMAL, NDP_BuildRun);
 	
 	/* 启动定时器线程 */
 	_beginthreadex(NULL, 0, NDP_TimerThread, NULL, NULL, NULL);

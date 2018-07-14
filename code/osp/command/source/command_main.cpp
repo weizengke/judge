@@ -46,7 +46,7 @@ VOID CMD_ShowCliState(ULONG vtyId, ULONG vtyId2)
 {
 	char buffTmp[65535] = {0};
 	char *buff = buffTmp;
-	struct cmd_vty *vty = NULL;
+	CMD_VTY_S *vty = NULL;
 	string strDateStr;
 	extern int API_TimeToString(string &strDateStr,const time_t &timeData);
 	
@@ -61,16 +61,15 @@ VOID CMD_ShowCliState(ULONG vtyId, ULONG vtyId2)
 	buff += sprintf(buff, "Vty %u State:\r\n", vtyId2);
 	buff += sprintf(buff, "  used          : %u\r\n", vty->used);
 	buff += sprintf(buff, "  view_id       : %u\r\n", vty->view_id);
-	buff += sprintf(buff, "  used_len      : %u\r\n", vty->used_len);
-	buff += sprintf(buff, "  cur_pos       : %u\r\n", vty->cur_pos);
-	buff += sprintf(buff, "  buffer        : %s\r\n", vty->buffer);
-	buff += sprintf(buff, "  machine_prev  : %u\r\n", vty->inputMachine_prev);
-	buff += sprintf(buff, "  machine_now   : %u\r\n", vty->inputMachine_now);
+	buff += sprintf(buff, "  ulUsedLen     : %u\r\n", vty->ulUsedLen);
+	buff += sprintf(buff, "  ulCurrentPos  : %u\r\n", vty->ulCurrentPos);
+	buff += sprintf(buff, "  szBuffer      : %s\r\n", vty->szBuffer);
+	buff += sprintf(buff, "  ucKeyTypePre  : %u\r\n", vty->ucKeyTypePre);
+	buff += sprintf(buff, "  ucKeyTypeNow  : %u\r\n", vty->ucKeyTypeNow);
 	buff += sprintf(buff, "  tabbingString : %s\r\n", vty->tabbingString);
 	buff += sprintf(buff, "  tabString     : %s\r\n", vty->tabString);
-	buff += sprintf(buff, "  tabStringLenth: %u\r\n", vty->tabStringLenth);
-	buff += sprintf(buff, "  hpos          : %u\r\n", vty->hpos);
-	buff += sprintf(buff, "  hindex        : %u\r\n", vty->hindex);
+	buff += sprintf(buff, "  ulhpos        : %u\r\n", vty->ulhpos);
+	buff += sprintf(buff, "  ulhNum        : %u\r\n", vty->ulhNum);
 	buff += sprintf(buff, "  user.user_name: %s\r\n", vty->user.user_name);
 	buff += sprintf(buff, "  user.state    : %u\r\n", vty->user.state);
 	buff += sprintf(buff, "  user.type     : %u\r\n", vty->user.type);
@@ -140,23 +139,16 @@ ULONG CMD_SHOW_Callback(VOID *pRcvMsg)
 
 	if (OS_YES == isThis)
 	{
-		extern void BDN_ShowCurrentViewBuildRun(ULONG vtyId, ULONG ulIncludeDefault);
-		if (OS_YES == incDefault)
-		{						
-			BDN_ShowCurrentViewBuildRun(vtyId, OS_YES);
-		}
-		else
-		{
-			BDN_ShowCurrentViewBuildRun(vtyId, OS_NO);
-		}
-		
+		extern VOID BDN_ShowCurrentViewBuildRun(ULONG vtyId, ULONG ulIncludeDefault);					
+		BDN_ShowCurrentViewBuildRun(vtyId, incDefault);
+
 		return 0;
 	}
 
 	if (OS_YES == isCurCfg)
 	{
-		void BDN_ShowBuildRun(ULONG vtyId);
-		BDN_ShowBuildRun(vtyId);
+		extern VOID BDN_ShowBuildRun(ULONG vtyId, ULONG ulIncludeDefault);
+		BDN_ShowBuildRun(vtyId, incDefault);
 		return 0;
 	}
 
@@ -172,24 +164,24 @@ ULONG CMD_SHOW_Callback(VOID *pRcvMsg)
 	{
 		int try_idx = 0;
 		int i = 0;
-		struct cmd_vty * vty = NULL;
+		CMD_VTY_S * vty = NULL;
 		
-		extern struct cmd_vty *cmd_vty_getById(ULONG vtyId);
+		extern CMD_VTY_S *cmd_vty_getById(ULONG vtyId);
 		vty = cmd_vty_getById(vtyId);
 		if (NULL != vty)
 		{
 			for (i = 0;  i < HISTORY_MAX_SIZE; i++)
 			{
-				if (vty->history[i] == NULL)
+				if (vty->pszHistory[i] == NULL)
 					break;
 			}
 			
 			for (i = i-1; i >= 0 && ulNum > 0; i--,ulNum--)
 			{
-				if (vty->history[i] == NULL)
+				if (vty->pszHistory[i] == NULL)
 					break;
 			
-				vty_printf(vtyId, "%s \r\n", vty->history[i]);
+				vty_printf(vtyId, "%s \r\n", vty->pszHistory[i]);
 			}
 
 		}
@@ -212,7 +204,7 @@ ULONG CMD_Save_Config(ULONG vtyId)
 	ULONG ulRet = OS_OK;
 	CHAR *pBuildrun = NULL;
 	FILE * fp= NULL;
-	extern ULONG BDN_SystemBuildRun(CHAR **ppBuildrun);
+	extern ULONG BDN_SystemBuildRun(CHAR **ppBuildrun, ULONG ulIncludeDefault);
 	
 	sprintf(filename, "conf\\config.cfg");
 
@@ -223,7 +215,7 @@ ULONG CMD_Save_Config(ULONG vtyId)
 		return OS_ERR;
 	}
 	
-	ulRet = BDN_SystemBuildRun(&pBuildrun);
+	ulRet = BDN_SystemBuildRun(&pBuildrun, OS_NO);
 	if (OS_OK != ulRet)
 	{
 		vty_printf(vtyId, "Error: Save configuration failed.\r\n");
@@ -314,25 +306,31 @@ ULONG CMD_RUN_Callback(VOID *pRcvMsg)
 ULONG CMD_ADP_RegShowCmd()
 {
 	CMD_VECTOR_S * vec = NULL;
+	CHAR szHisCmd[32] = {0};
+	CHAR szVtyId[32] = {0};
+	
+	sprintf(szHisCmd, "INTEGER<1-%u>", HISTORY_MAX_SIZE);
+	sprintf(szVtyId, "INTEGER<0-%u>", CMD_VTY_MAXUSER_NUM);
 	
 	/* 命令行注册四部曲1: 申请命令行向量 */
 	CMD_VECTOR_NEW(vec);
 
 	/* 命令行注册四部曲2: 定义命令字 */
 	cmd_regelement_new(CMD_ELEMID_NULL, 			CMD_ELEM_TYPE_KEY,    "display",     	   		 "Display", vec);
-	cmd_regelement_new(CMD_CMO_SHOW_THIS, 			CMD_ELEM_TYPE_KEY,    "this",      	 			 "This", 	 vec);
+	cmd_regelement_new(CMD_CMO_SHOW_THIS, 		CMD_ELEM_TYPE_KEY,    "this",      	 			 "This", 	 vec);
 	cmd_regelement_new(CMD_CMO_SHOW_CUR_CONFIG, 	CMD_ELEM_TYPE_KEY,    "current-configuration",   "Current configuration", 	 vec);
 	cmd_regelement_new(CMD_CMO_SHOW_SAVE_CONFIG, 	CMD_ELEM_TYPE_KEY,    "save-configuration",      "Save configuration", 	 vec);
 	cmd_regelement_new(CMD_CMO_SHOW_INC_DEFAULT, 	CMD_ELEM_TYPE_KEY,    "include-default",      	 "include-default", 	 vec);
 	cmd_regelement_new(CMD_CMO_SHOW_HISTORY, 		CMD_ELEM_TYPE_KEY,    "history",      	 		 "Command excute in the history", 	 vec);
-	cmd_regelement_new(CMD_CMO_SHOW_HISTORY_NUM, 	CMD_ELEM_TYPE_INTEGER,"INTEGER<1-200>",      	 "Number of history command show",  vec);
-	cmd_regelement_new(CMD_ELEMID_NULL, 			CMD_ELEM_TYPE_KEY,    "vty",      	 		 	 "VTY", 	 vec);
-	cmd_regelement_new(CMD_CMO_SHOW_VTY_ID, 		CMD_ELEM_TYPE_INTEGER,"INTEGER<0-32>",      	 "VTY ID",  vec);
+	cmd_regelement_new(CMD_CMO_SHOW_HISTORY_NUM, 	CMD_ELEM_TYPE_INTEGER, szHisCmd,      	 		 "Number of history command show",  vec);
+	cmd_regelement_new(CMD_ELEMID_NULL, 			CMD_ELEM_TYPE_KEY,     "vty",      	 		 	 "VTY", 	 vec);
+	cmd_regelement_new(CMD_CMO_SHOW_VTY_ID, 		CMD_ELEM_TYPE_INTEGER, szVtyId,      	 		 "VTY ID",  vec);
 	
 	/* 命令行注册四部曲3: 注册命令行 */
 	cmd_install_command(MID_CMD, VIEW_GLOBAL,  " 1 2 ", vec);
 	cmd_install_command(MID_CMD, VIEW_GLOBAL,  " 1 2 5 ", vec);
 	cmd_install_command(MID_CMD, VIEW_GLOBAL,  " 1 3 ", vec);
+	cmd_install_command(MID_CMD, VIEW_GLOBAL,  " 1 3 5 ", vec);
 	cmd_install_command(MID_CMD, VIEW_GLOBAL,  " 1 4 ", vec);
 	cmd_install_command(MID_CMD, VIEW_GLOBAL,  " 1 6 ", vec);
 	cmd_install_command(MID_CMD, VIEW_GLOBAL,  " 1 6 7 ", vec);

@@ -289,7 +289,7 @@ void Test()
 #if M_DES("cmd_display_command_tree_st",1)
 CMD_DEFINE(cmd_display_command_tree_st, (char*)"display command-tree", (char*)"display command tree", display_command_tree)
 {
-	extern void cmd_show_command_tree(struct cmd_vty *vty);
+	extern void cmd_show_command_tree(struct cmd_vty_st *vty);
 	cmd_show_command_tree(vty);
 
 	return 0;
@@ -391,7 +391,7 @@ CMD_DEFINE(cmd_ndp_server_bind_port, (char*)"ndp server bind port INTEGER<1-6553
 CMD_DEFINE(cmd_display_ndp_neighbor, (char*)"display ndp neighbor",
 		(char*)"display ndp neighbor", display_ndp_neighbor)
 {
-	extern void NDP_ShowAllNeighbors(struct cmd_vty *vty);
+	extern void NDP_ShowAllNeighbors(struct cmd_vty_st *vty);
 	NDP_ShowAllNeighbors(vty);
 }
 #endif

@@ -26,9 +26,11 @@ enum CMD_ELEM_TYPE_E
 {
 	CMD_ELEM_TYPE_VALID,
 	CMD_ELEM_TYPE_KEY,     /* 关键字 */
-	CMD_ELEM_TYPE_INTEGER, /* 整形参数 */
-	CMD_ELEM_TYPE_STRING,  /* 字符型参数 */
-
+	CMD_ELEM_TYPE_INTEGER, /* 整形参数 INTEGER<A-B>*/
+	CMD_ELEM_TYPE_STRING,  /* 字符型参数 STRING<A-B>*/
+	CMD_ELEM_TYPE_IP,  	   /* ip地址类型参数 X.X.X.X*/
+	CMD_ELEM_TYPE_MAC,     /* MAC地址类型参数 H-H-H*/
+	
 	CMD_ELEM_TYPE_END,     /* 命令行结束符<CR> */
 	CMD_ELEM_TYPE_MAX,
 };
@@ -55,18 +57,24 @@ enum CMD_VIEW_ID_E {
 	VIEW_ID_MAX = 255,	
 };
 
+#define CMD_ELMT_IP  		"X.X.X.X"
+#define CMD_ELMT_MAC  		"H-H-H"
+
+
 // maximum number of command to remember
-#define HISTORY_MAX_SIZE	200
+#define HISTORY_MAX_SIZE	256
 
-// maximum number of commands that can matched
-#define CMD_MAX_MATCH_SIZE	100
+// maximum number of commands that can matched, 需要修改为动态分配
+#define CMD_MAX_MATCH_SIZE	1024  
 
-// maximum number of command arguments
+// maximum number of command element
 #define CMD_MAX_CMD_NUM		16
 
-#define CMD_MAX_CMD_ELEM_SIZE 24
+// maximum length of command element
+#define CMD_MAX_CMD_ELEM_SIZE 128
 
-#define CMD_MAX_VIEW_SIZE   24
+// maximum length of view name or ais-name
+#define CMD_MAX_VIEW_SIZE   CMD_MAX_CMD_ELEM_SIZE
 
 // size of input buffer size
 #define CMD_BUFFER_SIZE		(CMD_MAX_CMD_NUM * (CMD_MAX_CMD_ELEM_SIZE + 2))
@@ -87,52 +95,43 @@ enum CMD_VIEW_ID_E {
 #define CMD_VECTOR_FREE(vec) cmd_vector_free(&vec);
 
 
-struct vty_user_s {
+typedef struct vty_user_st {
 	int level;
-	int type;  /* 0:com, 1:telnet */
+	int type;  /* 0:console, 1:telnet */
 	int state;  /* 0:idle, 1:access */
 	int terminal_debugging;
 	SOCKET socket;
 	char user_name[32];
 	char user_psw[32];
-	time_t lastAccessTime;
-	
-};
+	time_t lastAccessTime;	
+}VTY_USER_S;
 
-/**
- * A virtual tty used by CMD
- * */
-typedef struct cmd_vty {
-	ULONG used;
-	ULONG vtyId;	
-	ULONG view_id; /* 当前所在视图 */	
-	vty_user_s user;
-	ULONG buf_len;
-	ULONG used_len;
-	ULONG cur_pos;
-	CHAR c;
-	CHAR res[3];
-	CHAR buffer[CMD_BUFFER_SIZE];
-
-	/* BEGIN: Added by weizengke, for support TAB agian and agian */
-	ULONG inputMachine_prev;
-	ULONG inputMachine_now;
+typedef struct cmd_vty_st {
+	ULONG used;      /* vty 是否被占用 */
+	ULONG vtyId;     /* vty id         */
+	ULONG view_id;   /* 当前所在视图   */	
+	VTY_USER_S user; /* 当前vty对应的用户信息   */	
+	ULONG ulBufMaxLen;   /* 命令行输入的最大长度    */
+	ULONG ulUsedLen;     /* 当前命令行输入的长度    */
+	ULONG ulCurrentPos;  /* 当前命令行光标所在位置  */
+	CHAR c;   			 /* 当前输入的字符		    */
+	/* BEGIN: for support TAB agian and agian */
+	UCHAR ucKeyTypePre;	    					/* 上次输入类型   */
+	UCHAR ucKeyTypeNow;							/* 本次输入类型   */
 	CHAR tabbingString[CMD_MAX_CMD_ELEM_SIZE];	/* 最初始用来补全查找的字串*/
 	CHAR tabString[CMD_MAX_CMD_ELEM_SIZE];		/* 最后一次补全的命令 */
-	ULONG tabStringLenth;
-	/* END: Added by weizengke, for support TAB agian and agian */
-
-	ULONG hpos;
-	ULONG hindex;
-	CHAR *history[HISTORY_MAX_SIZE];	
+	/* END: for support TAB agian and agian */
+	CHAR res;
+	CHAR szBuffer[CMD_BUFFER_SIZE];      /* 当前命令行缓冲区内容    */
+	ULONG ulhpos;					     /* 当前查询的历史命令行下标 */
+	ULONG ulhNum;	   					 /* 当前存在的历史命令计数   */
+	CHAR *pszHistory[HISTORY_MAX_SIZE];  /* 当前存在的历史命令数组   */	
 }CMD_VTY_S;
 
 typedef struct tagCMD_VECTOR_S {
-	ULONG size;
-	ULONG used_size;
-	VOID **data;
+	ULONG ulSize;
+	VOID **ppData;
 } CMD_VECTOR_S;
-
 
 /* 
 cmd_vector_new函数功能: 创建命令行向量
@@ -200,6 +199,9 @@ extern ULONG cmd_get_idle_vty();
 /* 用于用户下线 */
 extern VOID vty_offline(ULONG vtyId);	
 
+/* 用于指定用户名用户下线 */
+extern VOID vty_offline_by_username(CHAR *pszName);
+
 /* 设置vty的socket */
 extern ULONG vty_set_socket(ULONG vtyId, ULONG socket);
 
@@ -265,6 +267,15 @@ cmd_copy_string_param函数功能: 从命令元素中获取字符型参数的值
 extern VOID cmd_copy_string_param(VOID *pElemMsg, CHAR *param);
 
 /* 
+cmd_get_ulong_param函数功能: 从命令元素中获取整形参数的值
+入参: VOID *pElemMsg - 命令行元素指针
+返回值: ULONG - 整形参数的ip值
+注: 当该命令元素为整形参数ip时使用
+*/
+extern ULONG cmd_get_ip_ulong_param(VOID *pElemMsg);
+
+
+/* 
 cmd_get_first_elem_tblid函数功能: 获取命令行处理的tableid
 入参: VOID *pRunMsg - 命令行回调的消息指针
 返回值: ULONG - tableid
@@ -275,14 +286,14 @@ extern ULONG cmd_get_first_elem_tblid(VOID *pRunMsg);
 /*  */
 /* 
 cmd_regcallback函数功能: 命令行处理回调注册
-入参: ULONG mId - 处理该回调的模块id(与注册命令字的tblid需要一致)
+入参: ULONG ulMid - 处理该回调的模块id(与注册命令字的tblid需要一致)
 返回值: ULONG (*pfCallBackFunc)(VOID *pRcvMsg) - 需要注册的回调函数指针
 每一个模块都要注册一个回调，以便处理命令行执行过程
 */
-extern ULONG cmd_regcallback(ULONG mId, ULONG (*pfCallBackFunc)(VOID *pRcvMsg));
+extern ULONG cmd_regcallback(ULONG ulMid, ULONG (*pfCallBackFunc)(VOID *pRcvMsg));
 
 
-extern struct cmd_vty *cmd_vty_getById(ULONG vtyId);
+extern CMD_VTY_S *cmd_vty_getById(ULONG vtyId);
 extern CMD_VTY_S g_vty[CMD_VTY_MAXUSER_NUM];
 extern CMD_VTY_S *g_con_vty;
 

@@ -10,7 +10,9 @@
 #include <stdio.h>
 #include <queue>
 
+#include "osp\event\include\event_pub.h"
 #include "osp\command\include\icli.h"
+#include "osp\aaa\aaa.h"
 #include "osp\common\include\osp_common_def.h"
 #include "product\include\pdt_common_inc.h"
 #include "product\judge\include\judge_inc.h"
@@ -22,14 +24,6 @@ using namespace std;
 #define TELNET_AUTHMODE_PASSWORD 1
 #define TELNET_AUTHMODE_AAA      2
 
-typedef struct tagAAA_USER_S {
-	ULONG used;
-	ULONG level;
-	ULONG type;
-	char user_name[32];
-	char user_psw[32];
-}AAA_USER_S;
-
 SOCKET g_TelnetSSocket;
 ULONG g_TelnetServerEnable = OS_NO;
 ULONG g_TelnetAuthMode = 0;
@@ -38,9 +32,6 @@ char g_szTelnetPassword[32] = {0};
 
 int g_telnet_port = 23;
 HANDLE hTelnetLisent = NULL;
-
-#define AAA_USER_MAX_NUM 16 
-AAA_USER_S g_stAAAUser[AAA_USER_MAX_NUM] = {0};
 
 #define TELNET_Debug(x, args...) debugcenter_print(MID_TELNET, x, args)
 
@@ -73,119 +64,20 @@ DONT  254(FE)     接受方回应WONT
 */
 #define TEL_ECHO  0x01
 
-AAA_USER_S * AAA_LookupUser(char *uname)
+void TELNET_KillAllVty()
 {
-	for (int i = 0; i < AAA_USER_MAX_NUM; i++)
+	int i = 0;
+
+	for (i == 0; i < CMD_VTY_MAXUSER_NUM; i++)
 	{
-		if (1 == g_stAAAUser[i].used
-			&& 0 == strcmp(uname, g_stAAAUser[i].user_name))
+		if (g_vty[i].used == 1
+			&& g_vty[i].user.state == 1)
 		{
-			return &g_stAAAUser[i];
+			vty_offline(i);
 		}
 	}
 
-	return NULL;
-}
-
-AAA_USER_S * AAA_GetIdleUser(char *uname, char *psw)
-{
-	for (int i = 0; i < AAA_USER_MAX_NUM; i++)
-	{
-		if (0 == g_stAAAUser[i].used)
-		{
-			memset(&g_stAAAUser[i], 0, sizeof(AAA_USER_S));
-			return &g_stAAAUser[i];
-		}
-	}
-
-	return NULL;
-}
-
-
-ULONG AAA_AddUser(ULONG vtyId, char *uname, char *psw)
-{
-	AAA_USER_S * user = NULL;
-
-	user = AAA_LookupUser(uname);
-	if (NULL != user)
-	{	
-		vty_printf(vtyId, "Error: The user %s is already exist.\r\n", uname);
-		return OS_ERR;
-	}
-
-	user = AAA_GetIdleUser(uname, psw);
-	if (NULL == user)
-	{
-		vty_printf(vtyId, "Error: Create user failed, because exceed the max number(%d).\r\n", AAA_USER_MAX_NUM);
-		return OS_ERR;
-	}
-
-	user->used = OS_YES;
-	strcpy(user->user_name, uname);
-	strcpy(user->user_psw, psw);
-
-	return OS_OK;
-}
-
-ULONG AAA_DelUser(ULONG vtyId, char *uname)
-{
-	AAA_USER_S * user = NULL;
-
-	user = AAA_LookupUser(uname);
-	if (NULL == user)
-	{	
-		vty_printf(vtyId, "Error: The user %s is not exist.\r\n", uname);
-		return OS_ERR;
-	}
-
-	memset(user, 0, sizeof(AAA_USER_S));
-
-	return OS_OK;
-}
-
-ULONG AAA_UserAuth(char *uname, char *psw)
-{
-	AAA_USER_S * user = NULL;
-
-	user = AAA_LookupUser(uname);
-	if (NULL == user)
-	{	
-		return OS_ERR;
-	}
-
-	if (0 == strcmp(user->user_psw, psw))
-	{
-		return OS_OK;
-	}
-
-	return OS_ERR;
-}
-
-ULONG AAA_BuildRun(CHAR **ppBuildrun, ULONG ulIncludeDefault)
-{
-	CHAR *pBuildrun = NULL;
-
-	*ppBuildrun = (CHAR*)malloc(BDN_MAX_BUILDRUN_SIZE);
-	if (NULL == *ppBuildrun)
-	{
-		return OS_ERR;
-	}
-	memset(*ppBuildrun, 0, BDN_MAX_BUILDRUN_SIZE);
-	
-	pBuildrun = *ppBuildrun;
-
-	pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN"aaa");
-
-	for (int i = 0; i < AAA_USER_MAX_NUM; i++)
-	{
-		if (g_stAAAUser[i].used)
-		{
-			pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"local-user %s password %s",
-				g_stAAAUser[i].user_name, g_stAAAUser[i].user_psw);
-		}
-	}
-
-	return OS_OK;
+	return;
 }
 
 void TELNET_AgingIdleVty()
@@ -301,7 +193,7 @@ ULONG TELNET_InitSocket()
 	return OS_OK;
 }
 
-void TELNET_RecvBuff(struct cmd_vty *vty, char *pbuff, int isPsw)
+void TELNET_RecvBuff(CMD_VTY_S *vty, char *pbuff, int isPsw)
 {
 	int ret = 0;
 	SOCKET sClient = 0;
@@ -387,7 +279,7 @@ ULONG TELNET_UserAuth(char *uname, char *psw)
 	return OS_ERR;
 }
 
-ULONG TELNET_DoUserAccess(struct cmd_vty *vty)
+ULONG TELNET_DoUserAccess(CMD_VTY_S *vty)
 {
 	int ret = 0;
 	SOCKET sClient = 0;
@@ -407,7 +299,7 @@ ULONG TELNET_DoUserAccess(struct cmd_vty *vty)
 	send(sClient,(const char*)"\r\nPassword:", sizeof("\r\nPassword:"),0);
 	TELNET_RecvBuff(vty, buff_password, OS_YES);
 
-	write_log(JUDGE_INFO,"Telnet user access. (name=%s, psw=%s)", buff_username, buff_password);
+	//write_log(JUDGE_INFO,"Telnet user access. (name=%s, psw=%s)", buff_username, buff_password);
 	
 	//if (OS_OK == SQL_UserLogin(buff_username, buff_password))
 	if (TELNET_AUTHMODE_PASSWORD == g_TelnetAuthMode)
@@ -423,7 +315,7 @@ ULONG TELNET_DoUserAccess(struct cmd_vty *vty)
 
 	if (TELNET_AUTHMODE_AAA == g_TelnetAuthMode)
 	{
-		if (OS_OK == AAA_UserAuth(buff_username, buff_password))
+		if (OS_OK == AAA_UserAuth(buff_username, buff_password, AAA_SERVICE_TYPE_TELNET))
 		{
 			memcpy(vty->user.user_name, buff_username, sizeof(buff_username));
 			return OS_OK;
@@ -435,7 +327,7 @@ ULONG TELNET_DoUserAccess(struct cmd_vty *vty)
 	return OS_ERR;
 }
 
-void TELNET_Send_Will(struct cmd_vty *vty, char option)
+void TELNET_Send_Will(CMD_VTY_S *vty, char option)
 {
 	char buff[3] = {0};
 	char buf_option[3] = {0};
@@ -452,7 +344,7 @@ void TELNET_Send_Will(struct cmd_vty *vty, char option)
 	TELNET_Debug(DEBUG_TYPE_INFO, "TELNET_Send_Will. Ack(0x%x, 0x%x, 0x%x).", buff[0], buff[1], buff[2]);
 }
 
-void TELNET_Send_Do(struct cmd_vty *vty, char option)
+void TELNET_Send_Do(CMD_VTY_S *vty, char option)
 {
 	char buff[3] = {0};
 	char buf_option[3] = {0};
@@ -474,8 +366,8 @@ unsigned _stdcall TELNET_SessionThread(void *pEntry)
 	SOCKET sClient = 0;
 	char buf_option[4] = {0};
 	char buff_hello[1024] = "\r\n=========================>>\r\nWelcome to judger-kernel.\r\n=========================>>\r\n";
-	struct cmd_vty *vty = (struct cmd_vty*)pEntry;
-	extern VOID cmd_outprompt(struct cmd_vty *vty);
+	CMD_VTY_S *vty = (CMD_VTY_S *)pEntry;
+	extern VOID cmd_outprompt(CMD_VTY_S *vty);
 	
 	if (NULL == vty)
 	{
@@ -496,6 +388,8 @@ unsigned _stdcall TELNET_SessionThread(void *pEntry)
 		return 0;
 	}
 
+	write_log(JUDGE_INFO,"Telnet user '%s' access successfuly.", vty->user.user_name);
+	
 	/* 用户接入ok */
 	vty->user.state = 1;
 	vty->user.lastAccessTime = time(NULL);
@@ -519,8 +413,8 @@ unsigned _stdcall TELNET_ListenThread(void *pEntry)
 	sockaddr_in remoteAddr;
 	SOCKET sClient;
 	int nAddrLen = sizeof(remoteAddr);
-	struct cmd_vty *vty = NULL;
-	extern struct cmd_vty * cmd_get_idlevty();
+	CMD_VTY_S *vty = NULL;
+	extern CMD_VTY_S * cmd_get_idlevty();
 	
 	while(OS_YES == g_TelnetServerEnable)
 	{
@@ -657,9 +551,26 @@ ULONG TELNET_BuildRun(CHAR **ppBuildrun, ULONG ulIncludeDefault)
 	return OS_OK;
 }
 
+ULONG TELNET_EVT_UserKill(ULONG keyId, ULONG cmdId, VOID *pData, VOID **ppInfo)
+{
+	if (TELNET_AUTHMODE_AAA != g_TelnetAuthMode)
+	{
+		return OS_OK;
+	}
+
+	/* AAA用户删除，踢telnet用户下线 */
+	vty_offline_by_username((CHAR*)pData);
+	
+	return OS_OK;
+}
+
 int TELNET_Init()
 {
-
+	/* 注册AAA账号变化事件，踢用户下线 */
+	(VOID)AAA_EvtRegistFunc("TELNET", AAA_EVT_USER_DEL, 0, TELNET_EVT_UserKill);
+	(VOID)AAA_EvtRegistFunc("TELNET", AAA_EVT_USER_PSW_CHANGE, 0, TELNET_EVT_UserKill);
+	(VOID)AAA_EvtRegistFunc("TELNET", AAA_EVT_USER_SERVICE_TELNET_DEL, 0, TELNET_EVT_UserKill);
+	
 	return OS_OK;
 }
 
@@ -673,7 +584,6 @@ unsigned _stdcall  TELNET_TaskEntry(void *pEntry)
 	}
 
 	(void)BDN_RegistBuildRun(MID_TELNET, VIEW_SYSTEM, BDN_PRIORITY_HIGH + 100, TELNET_BuildRun);
-	(void)BDN_RegistBuildRun(MID_TELNET, VIEW_AAA, BDN_PRIORITY_HIGH + 99, AAA_BuildRun);
 	
 	/* 启动定时器线程 */
 	_beginthreadex(NULL, 0, TELNET_TimerThread, NULL, NULL, NULL);

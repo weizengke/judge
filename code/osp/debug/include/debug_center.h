@@ -39,9 +39,9 @@ enum DEBUG_TYPE_EM
 #define DEBUG_MID_ISVALID(x) (x>MID_NULL && x<MID_ID_END)
 #define DEBUG_TYPE_ISVALID(x) (x>DEBUG_TYPE_NONE && x<DEBUG_TYPE_MAX)
 #define DEBUG_MASKLENTG 32
-#define DEBUG_MASK_GET(mid, x) (( g_aulDebugMask[mid][(x)/DEBUG_MASKLENTG] >> ((x)%DEBUG_MASKLENTG)) & 1)
-#define DEBUG_MASK_SET(mid, x) ( g_aulDebugMask[mid][(x)/DEBUG_MASKLENTG] |= ( 1 << (x)%DEBUG_MASKLENTG ) )
-#define DEBUG_MASK_CLEAR(mid, x) if (DEBUG_MASK_GET(mid, x)) ( g_aulDebugMask[mid][(x)/DEBUG_MASKLENTG] ^= ( 1 << (x)%DEBUG_MASKLENTG) )
+#define DEBUG_MASK_GET(mid, x)   (( g_aulDebugMask[mid][(x)/DEBUG_MASKLENTG] >> ((x)%DEBUG_MASKLENTG)) & 1)
+#define DEBUG_MASK_SET(mid, x)   ( g_aulDebugMask[mid][(x)/DEBUG_MASKLENTG] |= ( 1 << (x)%DEBUG_MASKLENTG ) )
+#define DEBUG_MASK_CLEAR(mid, x) ( g_aulDebugMask[mid][(x)/DEBUG_MASKLENTG] &= ~( 1 << (x)%DEBUG_MASKLENTG) )
 	
 /* END:   Added by weizengke, 2013/10/27 */
 

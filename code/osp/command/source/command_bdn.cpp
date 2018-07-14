@@ -102,7 +102,7 @@ ULONG BDN_RegistBuildRun(ULONG moduleId, ULONG view_id, ULONG  priority,
 	return OS_OK;
 }
 
-ULONG BDN_SystemBuildRun(CHAR **ppBuildrun)
+ULONG BDN_SystemBuildRun(CHAR **ppBuildrun, ULONG ulIncludeDefault)
 {
 	int index  = 0;
 	int ret = OS_OK;
@@ -122,7 +122,7 @@ ULONG BDN_SystemBuildRun(CHAR **ppBuildrun)
 	{
 		
 		pBuildrun = NULL;
-		ret = pstHead->pfCallBackFunc(&pBuildrun, OS_NO);
+		ret = pstHead->pfCallBackFunc(&pBuildrun, ulIncludeDefault);
 		if (OS_OK != ret)
 		{
 		}
@@ -149,12 +149,12 @@ ULONG BDN_SystemBuildRun(CHAR **ppBuildrun)
 }
 
 
-void BDN_ShowBuildRun(ULONG vtyId)
+VOID BDN_ShowBuildRun(ULONG vtyId, ULONG ulIncludeDefault)
 {
 	ULONG ulRet = OS_OK;
 	CHAR *pBuildrun = NULL;
 
-	ulRet = BDN_SystemBuildRun(&pBuildrun);
+	ulRet = BDN_SystemBuildRun(&pBuildrun, ulIncludeDefault);
 	if (OS_OK != ulRet)
 	{
 		return;
@@ -165,7 +165,7 @@ void BDN_ShowBuildRun(ULONG vtyId)
 	free(pBuildrun);
 }
 
-void BDN_ShowCurrentViewBuildRun(ULONG vtyId, ULONG ulIncludeDefault)
+VOID BDN_ShowCurrentViewBuildRun(ULONG vtyId, ULONG ulIncludeDefault)
 {
 	int index  = 0;
 	int ret = OS_OK;	
@@ -204,8 +204,11 @@ void BDN_ShowCurrentViewBuildRun(ULONG vtyId, ULONG ulIncludeDefault)
 
 		if (NULL != pBuildrunTmp)
 		{	
-			strcat(pBuildrun, pBuildrunTmp);
-			strcat(pBuildrun, "\r\n#");
+			if (0 != strlen(pBuildrunTmp))
+			{
+				strcat(pBuildrun, pBuildrunTmp);
+				strcat(pBuildrun, "\r\n#");
+			}
 			
 			free(pBuildrunTmp);
 			pBuildrunTmp = NULL;

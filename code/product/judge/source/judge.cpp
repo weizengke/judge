@@ -1488,19 +1488,18 @@ ULONG Judge_BuildRun(CHAR **ppBuildrun, ULONG ulIncludeDefault)
 	else
 	{
 		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN"undo judge enable");
-	
 	}
 
 	if (OS_YES == Judge_IsVirtualJudgeEnable())
 	{
-		if (VOS_YES == ulIncludeDefault)
-		{		
-			pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN"virtual-judge enable");
-		}
+		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN"virtual-judge enable");			
 	}
 	else
 	{
-		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN"undo virtual-judge enable");
+		if (VOS_YES == ulIncludeDefault)
+		{
+			pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN"undo virtual-judge enable");
+		}
 	}
 
 	if (0 == strlen(*ppBuildrun))
@@ -1584,10 +1583,18 @@ ULONG Judge_MGR_BuildRun(CHAR **ppBuildrun, ULONG ulIncludeDefault)
 
 	}
 
-	pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"testcase-path %s", dataPath);
+	if (0 == strcmp(dataPath, "data"))
+	{
+		if (VOS_YES == ulIncludeDefault)
+		{
+			pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"testcase-path %s", dataPath);
+		}
+	}
+	else
+	{
+		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"testcase-path %s", dataPath);
+	}
 	
-
-
 	return OS_OK;
 }
 
@@ -1608,21 +1615,32 @@ ULONG Judge_VJUDGE_BuildRun(CHAR **ppBuildrun, ULONG ulIncludeDefault)
 	
 	if (OS_YES == hdu_vjudge_enable)
 	{
-		if (VOS_YES == ulIncludeDefault)
-		{
-			pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"hdu-judge enable");
-		}
+		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"hdu-judge enable");			
 	}
 	else
 	{
-		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"undo hdu-judge enable");
+		if (VOS_YES == ulIncludeDefault)
+		{
+			pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"undo hdu-judge enable");			
+		}				
 	}
 
-	pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"hdu-judge username %s password %s", hdu_username, hdu_password);
+	if (0 != strlen(hdu_username) &&
+		0 != strlen(hdu_password))
+	{
+		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"hdu-judge username %s password %s", hdu_username, hdu_password);
+	}
 	
+		
 	if (OS_YES == hdu_remote_enable)
 	{
-		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"hdu-judge remote-judge enable");
+		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"hdu-judge remote-judge enable");	
+
+		if (0 != strlen(hdu_judgerIP) &&
+			0 != hdu_sockport)
+		{
+			pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"hdu-judge ip %s port %u", hdu_judgerIP, hdu_sockport);
+		}
 	}
 	else
 	{
@@ -1630,23 +1648,8 @@ ULONG Judge_VJUDGE_BuildRun(CHAR **ppBuildrun, ULONG ulIncludeDefault)
 		{
 			pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"undo hdu-judge remote-judge enable");
 		}
-	}
-
-	pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"hdu-judge ip %s port %u", hdu_judgerIP, hdu_sockport);
-
-#if 0
-	if (OS_YES == guet_vjudge_enable)
-	{
-		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"guet-judge enable");
-		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"guet-judge username %s password %s", guet_username, guet_password);
-		
-		if (OS_YES == guet_remote_enable)
-		{
-			pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"guet-judge remote-judge enable");
-			pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"guet-judge ip %s port %u", guet_judgerIP, guet_sockport);				
-		}
 	}		
-#endif
+
 
 
 	return OS_OK;
@@ -1736,25 +1739,6 @@ int  Test4(int evtId, int cmdId, void *pData, void **ppInfo)
 void Judge_RegAppInfo()
 {
 	RegistAppInfo(&g_judgeAppInfo);
-
-#if 0
-	EVENT_RegistFunc("Test1", EVENT_NTF_JUDGE, EVENT_NTF_CMD_NONE, 100, Test1);
-	EVENT_RegistFunc("Test2", EVENT_NTF_JUDGE, EVENT_NTF_CMD_NONE, 102, Test2);
-	EVENT_RegistFunc("Test3", EVENT_NTF_CMD, EVENT_NTF_CMD_NONE, 102, Test3);
-	EVENT_RegistFunc("Test4", EVENT_NTF_JUDGE, EVENT_NTF_CMD_NONE, 102, Test4);
-	EVENT_RegistFunc("Test5", EVENT_NTF_JUDGE, EVENT_NTF_CMD_NONE, 102, Test2);
-	EVENT_RegistFunc("Test6", EVENT_NTF_JUDGE, EVENT_NTF_CMD_NONE, 106, Test2);
-	EVENT_RegistFunc("Test7", EVENT_NTF_JUDGE, 1, 99, Test2);
-	EVENT_RegistFunc("Test8", EVENT_NTF_JUDGE, EVENT_NTF_CMD_NONE, 97, Test2);
-	EVENT_RegistFunc("Test9", EVENT_NTF_JUDGE, EVENT_NTF_CMD_NONE, 98, Test2);
-	EVENT_RegistFunc("Test10", EVENT_NTF_JUDGE, 2, 120, Test2);
-	EVENT_RegistFunc("Test11", EVENT_NTF_JUDGE, EVENT_NTF_CMD_NONE, 98, Test2);
-
-	EVENT_Ntf_Show();
-
-	EVENT_Ntf_Notify(EVENT_NTF_JUDGE, 1, (void *)NULL, (void **)NULL);
-#endif
-
 }
 
 

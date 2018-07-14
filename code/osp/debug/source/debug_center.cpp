@@ -43,8 +43,9 @@ char *szModuleName[32] = {
 	"command",
 	"event",
 	"ndp",
+	"aaa",
 	"telnet",
-
+	"ftp",
 	"end",
 };
 
@@ -368,9 +369,9 @@ ULONG DEBUG_CFG_Enalbe(VOID *pRcvMsg)
 
 	if (OS_YES == ulTerm)
 	{
-		struct cmd_vty * vty = NULL;
+		CMD_VTY_S * vty = NULL;
 		
-		extern struct cmd_vty *cmd_vty_getById(ULONG vtyId);
+		extern CMD_VTY_S *cmd_vty_getById(ULONG vtyId);
 		vty = cmd_vty_getById(vtyId);
 		if (NULL != vty)
 		{

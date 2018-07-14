@@ -16,7 +16,7 @@
 
 #define APP_NAME_SIZE 64
 
-#define SOLFWARE_VERSION "V100R001C00B100"
+#define SOLFWARE_VERSION "V100R001C00B120"
 
 #define STARTUP_CFG "conf\\config.ini"
 
@@ -31,9 +31,9 @@ enum MID_ID_EM
 	MID_CMD,
 	MID_EVENT,
 	MID_NDP,
-
+	MID_AAA,
 	MID_TELNET,
-
+	MID_FTP,
 	/* 同步修改模块名数组: char *szModuleName[32] */
 	MID_ID_END
 };
