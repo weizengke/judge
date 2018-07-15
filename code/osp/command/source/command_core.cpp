@@ -3259,8 +3259,8 @@ VOID cmd_resolve_insert(CMD_VTY_S *vty)
 
 	if (vty->ulUsedLen >= vty->ulBufMaxLen)
 	{
-		CMD_debug(CMD_DEBUG_FUNC, "cmd_resolve_insert, ulUsedLen(%u)>=ulBufMaxLen(%u, ulCurrentPos=%u)",
-			vty->ulUsedLen, vty->ulBufMaxLen, vty->ulCurrentPos);
+		CMD_debug(CMD_DEBUG_FUNC, "cmd_resolve_insert, used=%u, vtyId=%uulUsedLen(%u)>=ulBufMaxLen(%u, ulCurrentPos=%u)",
+			vty->used, vty->vtyId, vty->ulUsedLen, vty->ulBufMaxLen, vty->ulCurrentPos);
 
 		return;
 	}
@@ -3351,7 +3351,7 @@ VOID cmd_read(CMD_VTY_S *vty)
 		return ;
 	}
 
-	while((vty->c = vty_getch(vty)) != EOF)
+	while((vty->c = vty_getch(vty)) > 0)
 	{
 		/* check vty is online */
 		if (0 == vty->used)
@@ -3371,7 +3371,11 @@ VOID cmd_read(CMD_VTY_S *vty)
 			ucKeyType = cmd_resolve_vty(vty);
 		}
 
-		//CMD_debug(CMD_DEBUG_INFO, "cmd_read. (key_type=%d)", key_type);
+#if 0
+		CMD_debug(CMD_DEBUG_INFO, "cmd_read. "
+			"(vtyId=%d, used=%u, ulCurrentPos=%u, ulUsedLen=%u, c=%d, szBuffer=%s)", 
+			vty->vtyId, vty->used, vty->ulCurrentPos, vty->ulUsedLen, vty->c, vty->szBuffer);
+#endif
 
 		vty->ucKeyTypeNow = ucKeyType;
 
