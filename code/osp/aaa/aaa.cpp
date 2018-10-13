@@ -1,18 +1,41 @@
-#include <iostream>
-#include <windows.h>
-#include <process.h>
+#include <stdio.h>
 #include <stdlib.h>
-#include <string>
+#include <string.h>
 #include <ctype.h>
 #include <time.h>
-#include <stdio.h>
-#include <queue>
+#include <stdarg.h>
 
-#include "osp\event\include\event_pub.h"
-#include "osp\aaa\aaa.h"
-#include "osp\command\include\icli.h"
-#include "osp\common\include\osp_common_def.h"
-#include "product\include\pdt_common_inc.h"
+#ifdef _LINUX_
+#include <arpa/inet.h>
+#include <dirent.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <sys/wait.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <termios.h>
+#include <assert.h>
+#endif
+
+#ifdef _WIN32_
+#include <conio.h>
+#include <io.h>
+#include <winsock2.h>
+#endif
+
+#include "kernel.h"
+
+#include "osp/common/include/osp_common_def.h"
+#include "product/include/pdt_common_inc.h"
+#include "osp/event/include/event_pub.h"
+#include "osp/aaa/aaa.h"
+#include "osp/command/include/icli.h"
+#include "product/main/root.h"
+
+#if (OS_YES == OSP_MODULE_AAA)
 
 using namespace std;
 
@@ -242,7 +265,7 @@ int AAA_Init()
 	return OS_OK;
 }
 
-unsigned _stdcall  AAA_TaskEntry(void *pEntry)
+int AAA_TaskEntry(void *pEntry)
 {
 	ULONG ulRet = OS_OK;
 
@@ -272,8 +295,9 @@ APP_INFO_S g_AAAAppInfo =
 
 void AAA_RegAppInfo()
 {
-	RegistAppInfo(&g_AAAAppInfo);
+	APP_RegistInfo(&g_AAAAppInfo);
 }
 
+#endif
 
 

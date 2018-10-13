@@ -1,22 +1,42 @@
-#include <iostream>
-#include <windows.h>
-#include <process.h>
+#include <stdio.h>
 #include <stdlib.h>
-//#include <thread>
-#include <string>
-//#include <mutex>
+#include <string.h>
 #include <ctype.h>
 #include <time.h>
-#include <stdio.h>
-#include <queue>
+#include <stdarg.h>
 
-#include "osp\event\include\event_pub.h"
-#include "osp\command\include\icli.h"
-#include "osp\aaa\aaa.h"
-#include "osp\common\include\osp_common_def.h"
-#include "product\include\pdt_common_inc.h"
-#include "product\judge\include\judge_inc.h"
+#ifdef _LINUX_
+#include <arpa/inet.h>
+#include <dirent.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <sys/wait.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <termios.h>
+#include <assert.h>
+#endif
 
+#ifdef _WIN32_
+#include <conio.h>
+#include <io.h>
+#include <winsock2.h>
+#endif
+
+#include "kernel.h"
+
+#include "osp/common/include/osp_common_def.h"
+#include "product/include/pdt_common_inc.h"
+#include "osp/command/include/icli.h"
+#include "osp/aaa/aaa.h"
+#include "product/main/root.h"
+#include "osp/util/util.h"
+#include "product/judge/include/judge_inc.h"
+
+#if (OS_YES == OSP_MODULE_TELNETS)
 
 using namespace std;
 
@@ -24,14 +44,14 @@ using namespace std;
 #define TELNET_AUTHMODE_PASSWORD 1
 #define TELNET_AUTHMODE_AAA      2
 
-SOCKET g_TelnetSSocket;
+socket_t g_TelnetSSocket;
 ULONG g_TelnetServerEnable = OS_NO;
 ULONG g_TelnetAuthMode = 0;
 char g_szTelnetUsername[32] = {0};
 char g_szTelnetPassword[32] = {0};
 
 int g_telnet_port = 23;
-HANDLE hTelnetLisent = NULL;
+thread_id_t hTelnetLisent = NULL;
 
 #define TELNET_Debug(x, args...) debugcenter_print(MID_TELNET, x, args)
 
@@ -90,7 +110,7 @@ void TELNET_AgingIdleVty()
 	{
 		if (g_vty[i].used == 1)
 		{
-			diff = getdiftime(t, g_vty[i].user.lastAccessTime);  
+			diff = util_getdiftime(t, g_vty[i].user.lastAccessTime);  
 
 			/* 两分钟未认证通过，终止vty */
 			if (diff > 60*2
@@ -115,7 +135,7 @@ void TELNET_AgingIdleVty()
 	return;
 }
 
-unsigned _stdcall TELNET_TimerThread(void *pEntry)
+int TELNET_TimerThread(void *pEntry)
 {
 	ULONG ulLoop = 0;
 
@@ -150,6 +170,8 @@ unsigned _stdcall TELNET_TimerThread(void *pEntry)
 ULONG TELNET_InitSocket()
 {
 	int ret=0;
+
+#ifdef _WIN32_	
 	WSADATA wsaData;
     WORD sockVersion = MAKEWORD(2, 2);
 
@@ -157,7 +179,8 @@ ULONG TELNET_InitSocket()
 	{
 		return OS_ERR;
 	}
-	
+#endif
+
 	g_TelnetSSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if(g_TelnetSSocket == INVALID_SOCKET)
 	{
@@ -167,9 +190,9 @@ ULONG TELNET_InitSocket()
 	sockaddr_in sin;
 	sin.sin_family = AF_INET;
 	sin.sin_port = htons(g_telnet_port);
-	sin.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
+	sin.sin_addr.s_addr = htonl(INADDR_ANY);
 
-	ret = bind(g_TelnetSSocket,(LPSOCKADDR)&sin,sizeof(sin));
+	ret = bind(g_TelnetSSocket,(const sockaddr*)&sin,sizeof(sin));
 	if(SOCKET_ERROR == ret)
 	{
 		TELNET_Debug(DEBUG_TYPE_ERROR, "TELNET_InitSocket bind failed.");
@@ -177,18 +200,17 @@ ULONG TELNET_InitSocket()
 		return OS_ERR;
 	}
 	
-	printf("TELNET server socket bind port %u ok...\r\n", g_telnet_port);
-	
 	ret=listen(g_TelnetSSocket, 20);
 	if (SOCKET_ERROR == ret)
 	{
 		TELNET_Debug(DEBUG_TYPE_ERROR, "TELNET_InitSocket listen failed. ");
 		closesocket(g_TelnetSSocket);
+
+#ifdef _WIN32_			
 		WSACleanup();
+#endif
 		return OS_ERR;
 	}
-
-	printf("TELNET server socket listen port %u ok...\r\n", g_telnet_port);
 
 	return OS_OK;
 }
@@ -196,7 +218,7 @@ ULONG TELNET_InitSocket()
 void TELNET_RecvBuff(CMD_VTY_S *vty, char *pbuff, int isPsw)
 {
 	int ret = 0;
-	SOCKET sClient = 0;
+	socket_t sClient = 0;
 	char buff[1] = {0};
 	char buff32[32] = {0};
 	int index = 0;
@@ -282,7 +304,7 @@ ULONG TELNET_UserAuth(char *uname, char *psw)
 ULONG TELNET_DoUserAccess(CMD_VTY_S *vty)
 {
 	int ret = 0;
-	SOCKET sClient = 0;
+	socket_t sClient = 0;
 	char buff_username[32] = {0};
 	char buff_password[32] = {0};
 
@@ -331,7 +353,7 @@ void TELNET_Send_Will(CMD_VTY_S *vty, char option)
 {
 	char buff[3] = {0};
 	char buf_option[3] = {0};
-	SOCKET sClient = 0;
+	socket_t sClient = 0;
 
 	sClient = vty->user.socket;
 	
@@ -348,7 +370,7 @@ void TELNET_Send_Do(CMD_VTY_S *vty, char option)
 {
 	char buff[3] = {0};
 	char buf_option[3] = {0};
-	SOCKET sClient = 0;
+	socket_t sClient = 0;
 
 	sClient = vty->user.socket;
 
@@ -361,9 +383,9 @@ void TELNET_Send_Do(CMD_VTY_S *vty, char option)
 	TELNET_Debug(DEBUG_TYPE_INFO, "TELNET_Send_Do. Ack(0x%x, 0x%x, 0x%x).", buff[0], buff[1], buff[2]);
 }
 
-unsigned _stdcall TELNET_SessionThread(void *pEntry)
+int TELNET_SessionThread(void *pEntry)
 {
-	SOCKET sClient = 0;
+	socket_t sClient = 0;
 	char buf_option[4] = {0};
 	char buff_hello[1024] = "\r\n=========================>>\r\nWelcome to judger-kernel.\r\n=========================>>\r\n";
 	CMD_VTY_S *vty = (CMD_VTY_S *)pEntry;
@@ -407,12 +429,12 @@ unsigned _stdcall TELNET_SessionThread(void *pEntry)
 }
 
 
-unsigned _stdcall TELNET_ListenThread(void *pEntry)
+int TELNET_ListenThread(void *pEntry)
 {
 	char buff[1024] = {0};
 	sockaddr_in remoteAddr;
-	SOCKET sClient;
-	int nAddrLen = sizeof(remoteAddr);
+	socket_t sClient;
+	socklen_t nAddrLen = sizeof(remoteAddr);
 	CMD_VTY_S *vty = NULL;
 	extern CMD_VTY_S * cmd_get_idlevty();
 	
@@ -440,7 +462,7 @@ unsigned _stdcall TELNET_ListenThread(void *pEntry)
 		
 		vty->user.socket = sClient;
 		
-		_beginthreadex(NULL, 0, TELNET_SessionThread, vty, NULL, NULL);
+		(VOID)thread_create(TELNET_SessionThread, vty);
 
 		Sleep(1);
 	}
@@ -466,7 +488,7 @@ ULONG TELNET_ServerEnable()
 	g_TelnetServerEnable = OS_YES;
 	
 	/* 启动监听线程 */
-	hTelnetLisent = (HANDLE)_beginthreadex(NULL, 0, TELNET_ListenThread, NULL, NULL, NULL);
+	hTelnetLisent = thread_create(TELNET_ListenThread, NULL);
 
 	TELNET_Debug(DEBUG_TYPE_INFO, "TELNET_ServerEnable ok.");
 	
@@ -482,7 +504,7 @@ ULONG TELNET_ServerDisable()
 		return OS_ERR;
 	}
 
-	CloseHandle(hTelnetLisent);
+	thread_close(hTelnetLisent);
 	hTelnetLisent = NULL;
 	
 	g_TelnetServerEnable = OS_NO;
@@ -574,7 +596,7 @@ int TELNET_Init()
 	return OS_OK;
 }
 
-unsigned _stdcall  TELNET_TaskEntry(void *pEntry)
+int TELNET_TaskEntry(void *pEntry)
 {
 	ULONG ulRet = OS_OK;
 
@@ -586,7 +608,7 @@ unsigned _stdcall  TELNET_TaskEntry(void *pEntry)
 	(void)BDN_RegistBuildRun(MID_TELNET, VIEW_SYSTEM, BDN_PRIORITY_HIGH + 100, TELNET_BuildRun);
 	
 	/* 启动定时器线程 */
-	_beginthreadex(NULL, 0, TELNET_TimerThread, NULL, NULL, NULL);
+	(VOID)thread_create(TELNET_TimerThread, NULL);
 	
 	/* 循环读取消息队列 */
 	for(;;)
@@ -600,15 +622,15 @@ unsigned _stdcall  TELNET_TaskEntry(void *pEntry)
 APP_INFO_S g_telnetAppInfo =
 {
 	MID_TELNET,
-	"TELNET",
+	"Telnet",
 	TELNET_Init,
 	TELNET_TaskEntry
 };
 
 void TELNET_RegAppInfo()
 {
-	RegistAppInfo(&g_telnetAppInfo);
+	APP_RegistInfo(&g_telnetAppInfo);
 }
 
-
+#endif
 

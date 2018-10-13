@@ -1,7 +1,7 @@
 #ifndef _VRP_COMMON_DEF_
 #define _VRP_COMMON_DEF_
 
-#include "product\include\pdt_common_inc.h"
+#include "product/include/pdt_common_inc.h"
 
 
 #ifndef UCHAR
@@ -12,6 +12,10 @@
 #define ULONG unsigned long
 #endif
 
+#ifndef USHORT
+#define USHORT unsigned short
+#endif
+
 #ifndef CHAR
 #define CHAR char
 #endif
@@ -20,6 +24,19 @@
 #define VOID void
 #endif
 
+#ifndef MAX_PATH
+#define MAX_PATH 260
+#endif
+
+typedef ULONG DWORD;
+
+#ifndef INVALID_SOCKET
+#define INVALID_SOCKET	(ULONG)(~0)
+#endif
+
+#ifndef SOCKET_ERROR
+#define SOCKET_ERROR	(-1)
+#endif
 
 #define M_DES(x,y) y
 

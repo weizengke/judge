@@ -1,7 +1,7 @@
 #ifndef _AAA_H_
 #define _AAA_H_
 
-#include "osp\event\include\event_pub.h"
+#include "osp/event/include/event_pub.h"
 
 #define AAA_USER_MAX_NUM 16 
 

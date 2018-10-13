@@ -1,6 +1,9 @@
 
 #include "ftp_common.h"
-#include "osp\debug\include\debug_center_inc.h"
+
+#include "osp/debug/include/debug_center_inc.h"
+
+#if (OS_YES == OSP_MODULE_FTPS)
 
 #if 0
 VOID FTP_debug(const CHAR *format, ...)
@@ -63,7 +66,7 @@ LONG FTP_SOCK_Accept(LONG lSockListen)
 {
 	LONG lSockfd;
 	struct sockaddr_in addr;
-	int len = sizeof(addr);
+	socklen_t len = sizeof(addr);
 
 	lSockfd = accept(lSockListen, (struct sockaddr *) &addr, &len);
 	if (lSockfd < 0)
@@ -171,3 +174,4 @@ ULONG FTP_Response(LONG lSock, ULONG ulCode)
 	return FTP_OK;
 }
 
+#endif

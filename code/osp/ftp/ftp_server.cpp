@@ -1,17 +1,22 @@
-
 #include "ftp_server.h"
 
-#include "osp\event\include\event_pub.h"
-#include "osp\command\include\icli.h"
-#include "osp\aaa\aaa.h"
-#include "osp\debug\include\debug_center_inc.h"
-#include "product\include\pdt_common_inc.h"
+#include "kernel.h"
 
+#include "osp/debug/include/debug_center_inc.h"
+#include "product/include/pdt_common_inc.h"
+#include "osp/event/include/event_pub.h"
+#include "osp/command/include/icli.h"
+#include "osp/aaa/aaa.h"
+#include "osp/util/util.h"
+
+#if (OS_YES == OSP_MODULE_FTPS)
+
+using namespace std;
 
 BOOL g_ulFtpEnable = FALSE;
 LONG g_sFtpListenSocket = INVALID_SOCKET;
 ULONG g_Ftpsockport = 21;
-HANDLE hFtpsLisent = NULL;
+thread_id_t hFtpsLisent = NULL;
 
 FTP_CMD_HANDLE_S ftp_cmd_resolver[] = {
 	{ FTP_CMD_ABOR, 	"ABOR", NULL },
@@ -43,7 +48,7 @@ LONG FTPS_Connect_DataSocket(FTP_USER_S *pUser)
 	char buf[1024] = {0};	
 	LONG lSockData = INVALID_SOCKET;
 	struct sockaddr_in client_addr;
-	int len = sizeof(client_addr);
+	socklen_t len = sizeof(client_addr);
 
 	/* get client address */
 	getpeername(pUser->lSockCtrl, (struct sockaddr*)&client_addr, &len);
@@ -58,14 +63,16 @@ LONG FTPS_Connect_DataSocket(FTP_USER_S *pUser)
 	return lSockData;		
 }
 
+
 ULONG FTPS_Handler_LIST(FTP_USER_S *pUser)
 {
 	ULONG ulRet = 0;
 	CHAR szCMD[FTP_CMD_MAXSIZE] = {0};
-	char data[MAXSIZE];
-	size_t num_read;									
+	int iSize = 0;	
+	char *pData = NULL;
+									
 	FILE* fd;
-	
+
 	if (NULL == pUser)
 	{
 		return FTP_ERR;
@@ -81,33 +88,31 @@ ULONG FTPS_Handler_LIST(FTP_USER_S *pUser)
 	sprintf(szCMD, "150 opening ASCII mode data connection for *.\n");
 	(VOID)FTP_Send(pUser->lSockCtrl, szCMD, strlen(szCMD));
 
-	(VOID)system("dir > tmp.txt");
-	fd = fopen("tmp.txt", "r");	
-	if (!fd) 
+		
+	string strinfo;		
+	(VOID)util_get_directory_info(pUser->szCurrentDir, strinfo);
+
+	iSize = strinfo.length();
+
+	pData = (char *)malloc(iSize + 1);
+	if (NULL == pData)
 	{
 		closesocket(pUser->lSockData);
-		pUser->lSockData = INVALID_SOCKET;		
+		pUser->lSockData = INVALID_SOCKET;
 
 		/* 200 Port command okay. */
 		sprintf(szCMD, "200 Port command okay.\n");
 		(VOID)FTP_Send(pUser->lSockCtrl, szCMD, strlen(szCMD));
-		
+
 		return FTP_ERR;
 	}
 
-	/* Seek to the beginning of the file */
-	fseek(fd, SEEK_SET, 0);
-	memset(data, 0, MAXSIZE);
-	while ((num_read = fread(data, 1, MAXSIZE, fd)) > 0)
-	{
-		if (FTP_OK != FTP_Send(pUser->lSockData, data, num_read)) 
-		{
-			FTP_debug("FTPS_Handler_List, send file error.");
-		}
+	strcpy(pData, strinfo.c_str());
 		
-		memset(data, 0, MAXSIZE);
-	}	
-	fclose(fd);
+	if (FTP_OK != FTP_Send(pUser->lSockData, pData, iSize)) 
+	{
+		FTP_debug("FTPS_Handler_List, send file error.");
+	}
 
 	/* 226 Transfer complete */
 	sprintf(szCMD, "226 Transfer complete.\n");
@@ -525,6 +530,8 @@ VOID FTPS_Run(LONG lSockCtrl)
 	
 	pstUser->lSockCtrl = lSockCtrl;
 	pstUser->lSockData = INVALID_SOCKET;
+	strcpy(pstUser->szCurrentDir, ".\/");
+	strcpy(pstUser->szRootDir, ".\/");
 	
 	/* FTP server is ready, send welcome code 220 */
 	sprintf(szCMD, "220 FTP service ready.\n");
@@ -598,7 +605,7 @@ VOID FTPS_Run(LONG lSockCtrl)
 	return;
 }
 
-unsigned _stdcall FTPS_UserThread(void *pEntry)
+int FTPS_UserThread(void *pEntry)
 {
 	LONG lSockCtrl = *(LONG*)pEntry;
 
@@ -608,7 +615,7 @@ unsigned _stdcall FTPS_UserThread(void *pEntry)
 	return FTP_OK;
 }
 
-unsigned _stdcall FTPS_ListenThread(void *pEntry)
+int FTPS_ListenThread(void *pEntry)
 {
 	LONG lSockCtrl = 0;
 	
@@ -622,7 +629,7 @@ unsigned _stdcall FTPS_ListenThread(void *pEntry)
 		}
 
 		/* create a user thread */
-		_beginthreadex(NULL, 0, FTPS_UserThread, (VOID*)&lSockCtrl, NULL, NULL);
+		(VOID)thread_create(FTPS_UserThread, (VOID*)&lSockCtrl);
 		
 		Sleep(1);
 	}
@@ -653,7 +660,7 @@ ULONG FTPS_Enable()
 	g_ulFtpEnable = TRUE;
 	
 	/* create FTP Listen Thread */
-	hFtpsLisent = (HANDLE) _beginthreadex(NULL, 0, FTPS_ListenThread, NULL, NULL, NULL);
+	hFtpsLisent = thread_create(FTPS_ListenThread, NULL);
 
 	return FTP_OK;
 }
@@ -665,7 +672,7 @@ ULONG FTPS_Disable()
 		return FTP_OK;
 	}
 
-	CloseHandle(hFtpsLisent);
+	(VOID)thread_close(hFtpsLisent);
 	hFtpsLisent = NULL;
 
 	g_ulFtpEnable = FALSE;
@@ -682,4 +689,6 @@ ULONG FTPS_Main()
 	
 	return FTP_OK;
 }
+
+#endif
 

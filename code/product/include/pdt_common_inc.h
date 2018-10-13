@@ -14,9 +14,11 @@
 #define OS_YES 1
 #define OS_NO  0
 
-#define APP_NAME_SIZE 64
 
-#define SOLFWARE_VERSION "V100R001C00B120"
+/* os version */
+#define OS_VERSION_MAJOR 1
+#define OS_VERSION_MINOR 1
+#define OS_VERSION_PATCH 130
 
 #define STARTUP_CFG "conf\\config.ini"
 
@@ -25,6 +27,7 @@ enum MID_ID_EM
 {
 	MID_NULL = 0,
 	MID_OS = 1,
+	MID_SYSMNG,
 	MID_JUDGE,
 	MID_SQL,
 	MID_DEBUG,
@@ -37,7 +40,6 @@ enum MID_ID_EM
 	/* 同步修改模块名数组: char *szModuleName[32] */
 	MID_ID_END
 };
-
 
 enum CFG_SECTION_ID_EM
 {
@@ -52,16 +54,32 @@ enum CFG_SECTION_ID_EM
 	CFG_SECTION_DIAGNOSE,
 };
 
-typedef struct tagAPP_INFO_S
-{
-	unsigned long taskMID;
-	char taskName[APP_NAME_SIZE];
-	int (*pfInitFunction)();
-	unsigned _stdcall  (*pfTaskMain)(void *);
+/* feature switch */
+#ifdef _WIN32_
+#define OSP_MODULE_JUDGE 			OS_YES
+#define OSP_MODULE_JUDGE_VJUDGE  OS_YES 
+#define OSP_MODULE_JUDGE_OI 		OS_YES 
+#define OSP_MODULE_NDP				OS_YES 
+#define OSP_MODULE_FTPS 		 	OS_YES 
+#define OSP_MODULE_TELNETS 		OS_YES 
+#define OSP_MODULE_TELNETC 		OS_YES 
+#define OSP_MODULE_DEBUG 			OS_YES 
+#define OSP_MODULE_AAA				OS_YES 
+#define OSP_MODULE_CLI 			OS_YES 
+#endif
 
-}APP_INFO_S;
+#ifdef _LINUX_
+#define OSP_MODULE_JUDGE 			OS_NO
+#define OSP_MODULE_JUDGE_VJUDGE  OS_NO 
+#define OSP_MODULE_JUDGE_OI 		OS_NO 
+#define OSP_MODULE_FTPS 		 	OS_YES
+#define OSP_MODULE_TELNETS 		OS_YES 
+#define OSP_MODULE_DEBUG 			OS_YES 
+#define OSP_MODULE_AAA				OS_YES 
+#define OSP_MODULE_CLI 			OS_YES 
+#endif
 
-extern int RegistAppInfo(APP_INFO_S *pstAppInfo);
+
 
 extern void RunDelay(int t);
 extern void MSGQueueMain();
@@ -72,7 +90,6 @@ extern void MSG_StopDot();
 
 
 extern char INI_filename[];
-extern HWND g_hWnd;
 
 #define PDT_Debug(x, args...) debugcenter_print(MID_OS, x, args)
 

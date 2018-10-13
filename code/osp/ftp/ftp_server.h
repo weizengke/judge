@@ -72,8 +72,8 @@ extern LONG FTPS_GetSocket();
 extern VOID FTPS_SetSocket(LONG lSocket);
 extern FTP_CMD_HANDLE_S * FTPS_GetHandler(CHAR *szCMD);
 extern VOID FTPS_Run(LONG lSockCtrl);
-extern unsigned _stdcall FTPS_UserThread(void *pEntry);
-extern unsigned _stdcall FTPS_ListenThread(void *pEntry);
+extern int FTPS_UserThread(void *pEntry);
+extern int FTPS_ListenThread(void *pEntry);
 extern ULONG FTPS_UserAuthen(char*user, char*pass);
 extern ULONG FTPS_Main();
 

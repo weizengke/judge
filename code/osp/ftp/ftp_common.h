@@ -2,6 +2,9 @@
 #define FTP_COMMON_H
 
 #ifdef _LINUX_
+#include <iostream>
+#include <string>
+#include <sstream>
 #include <arpa/inet.h>
 #include <ctype.h>
 #include <dirent.h>
@@ -12,10 +15,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <time.h>
+#include <dirent.h>
+
 #else
 #include <windows.h>
 #include <process.h>
@@ -29,6 +36,8 @@
 #include <string>
 #include <sstream>
 #endif
+
+#include "kernel.h"
 
 #ifndef ULONG
 #undef ULONG

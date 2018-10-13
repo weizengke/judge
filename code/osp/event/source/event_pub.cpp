@@ -1,20 +1,30 @@
-
-#include <windows.h>
-#include <process.h>
-#include <iostream>
-#include <conio.h>
+#include <stdio.h>
 #include <stdlib.h>
-#include <io.h>
+#include <string.h>
+#include <ctype.h>
 #include <time.h>
-#include <queue>
-#include <string>
-#include <sstream>
+#include <stdarg.h>
 
-#include "tlhelp32.h"
+#ifdef _LINUX_
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <termios.h>
+#include <assert.h>
+#endif
 
-#include "osp\common\include\osp_common_def.h"
-#include "osp\event\include\event_pub.h"
-#include "osp\debug\include\debug_center_inc.h"
+#ifdef _WIN32_
+#include <conio.h>
+#include <io.h>
+#include <winsock2.h>
+
+#endif
+
+#include "kernel.h"
+
+#include "osp/common/include/osp_common_def.h"
+#include "osp/event/include/event_pub.h"
+#include "osp/debug/include/debug_center_inc.h"
 
 #define EVENT_Debug(x, args...) debugcenter_print(MID_EVENT, x, args)
 /*****************************************************************************

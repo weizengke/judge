@@ -2,19 +2,10 @@
   适配OJ MySQL数据库操作
 */
 
-#include <windows.h>
-#include <iostream>
-#include <conio.h>
-#include <stdlib.h>
-#include <io.h>
-#include <time.h>
-#include <queue>
-#include <string>
-#include <sstream>
 
+#include "product/judge/include/judge_inc.h"
 
-#include "product\judge\include\judge_inc.h"
-
+#if (OS_YES == OSP_MODULE_JUDGE)
 
 MYSQL *mysql = NULL;
 char query[40960];
@@ -117,8 +108,9 @@ int SQL_Destroy()
 int SQL_getFirstACTime_contest(int contestId,int problemId,char *username,time_t &ac_time,time_t start_time,time_t end_time)
 {
 	string s_t,e_t;
-	API_TimeToString(s_t,start_time);
-	API_TimeToString(e_t,end_time);
+	
+	(VOID)util_time_to_string(s_t,start_time);
+	(VOID)util_time_to_string(e_t,end_time);
 
 	sprintf(query,"select submit_date from solution where contest_id=%d and problem_id=%d and username='%s'and verdict=%d and submit_date between '%s' and '%s' order by solution_id ASC limit 1;",contestId,problemId,username,V_AC,s_t.c_str(),e_t.c_str());
 	int ret = mysql_real_query(mysql,query,(unsigned int)strlen(query));
@@ -137,8 +129,7 @@ int SQL_getFirstACTime_contest(int contestId,int problemId,char *username,time_t
 	MYSQL_ROW row;
 	if (row = mysql_fetch_row(recordSet))
 	{
-
-		StringToTimeEX(row[0],ac_time);
+		(void)util_string_to_time(row[0], ac_time);
 	}
 	else
 	{
@@ -154,8 +145,9 @@ int SQL_getFirstACTime_contest(int contestId,int problemId,char *username,time_t
 int SQL_countACContestProblems(int contestId,char *username,time_t start_time,time_t end_time){
 
 	string s_t,e_t;
-	API_TimeToString(s_t,start_time);
-	API_TimeToString(e_t,end_time);
+	
+	(VOID)util_time_to_string(s_t,start_time);
+	(VOID)util_time_to_string(e_t,end_time);
 
 	sprintf(query,"select count(distinct(problem_id)) from solution where  verdict=%d and contest_id=%d and username='%s' and submit_date between '%s' and '%s'",V_AC,contestId,username,s_t.c_str(),e_t.c_str());
 
@@ -192,8 +184,9 @@ int SQL_getContestScore(int contestId,char *username,time_t start_time,time_t en
 	}
 
 	string s_t,e_t;
-	API_TimeToString(s_t,start_time);
-	API_TimeToString(e_t,end_time);
+	
+	(VOID)util_time_to_string(s_t,start_time);
+	(VOID)util_time_to_string(e_t,end_time);
 
 	sprintf(query,"SELECT sum(point) from contest_problem where contest_id=%d and problem_id in (select distinct(problem_id) from solution where  verdict=%d and contest_id=%d and username='%s' and submit_date between '%s' and '%s')",contestId,V_AC,contestId,username,s_t.c_str(),e_t.c_str());
 
@@ -529,7 +522,7 @@ int SQL_getSolutionByID(int solutionID, JUDGE_SOLUTION_ST *pstJudgeSolution, int
 		pstJudgeSolution->contestId = atoi(row[1]);
 		pstJudgeSolution->languageId = atoi(row[2]);
 		strcpy(pstJudgeSolution->username, row[3]);
-		StringToTimeEX(row[4],pstJudgeSolution->submitDate);
+		(void)util_string_to_time(row[4],pstJudgeSolution->submitDate);
 		*pIsExist = OS_YES;
 
 		write_log(JUDGE_INFO,"Found record. (solutionID=%d)", solutionID);
@@ -657,8 +650,8 @@ int SQL_getContestInfo(int contestId,time_t &start_time,time_t &end_time)
 	MYSQL_ROW row; //一个行数据的类型安全(type-safe)的表示
 	if(row=mysql_fetch_row(recordSet))  //获取下一条记录
 	{
-		StringToTimeEX(row[0],start_time);
-		StringToTimeEX(row[1],end_time);
+		(void)util_string_to_time(row[0],start_time);
+		(void)util_string_to_time(row[1],end_time);
 	}
 
 	mysql_free_result(recordSet);//释放结果集
@@ -777,7 +770,7 @@ void SQL_updateAttend_contest(int contestId,int verdictId,int problemId,char *nu
 
 	if(SQL_getFirstACTime_contest(contestId,problemId,username,first_ac_t,start_time,end_time))
 	{
-		AC_time=getdiftime(first_ac_t,start_time);
+		AC_time=util_getdiftime(first_ac_t,start_time);
 	}
 	else
 	{
@@ -795,9 +788,9 @@ void SQL_updateAttend_contest(int contestId,int verdictId,int problemId,char *nu
 	long ac_nCount=SQL_countProblemVerdict(contestId,problemId,V_AC,username);
 	int score_ = SQL_getContestScore(contestId,username,start_time,end_time);
 	string s_t,e_t,fAC_t;
-	API_TimeToString(s_t,start_time);
-	API_TimeToString(e_t,end_time);
-	API_TimeToString(fAC_t,first_ac_t);
+	(VOID)util_time_to_string(s_t,start_time);
+	(VOID)util_time_to_string(e_t,end_time);
+	(VOID)util_time_to_string(fAC_t,first_ac_t);
 
 	//update score solved ,wrongsubmits
 	sprintf(query,"update attend set solved=(SELECT count(DISTINCT problem_id) FROM solution WHERE contest_id=%d and username='%s' and verdict=%d and submit_date between '%s' and '%s'),%s_wrongsubmits=(SELECT count(solution_id) FROM solution WHERE contest_id=%d and problem_id=%d and username='%s' and verdict>%d and submit_date between '%s' and '%s'),score=%d  where contest_id=%d and username='%s';",contestId,username,V_AC,s_t.c_str(),e_t.c_str(),   num,contestId,problemId,username,V_AC,s_t.c_str(),fAC_t.c_str(),  score_,  contestId,username);
@@ -1031,3 +1024,4 @@ int SQL_UserLogin(const char *username, const char *password)
 	return ret;
 }
 
+#endif

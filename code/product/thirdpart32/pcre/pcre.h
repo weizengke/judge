@@ -39,18 +39,21 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef _PCRE_H
 #define _PCRE_H
 
+#define PCRE_EXP_DECL
+
 /* The current PCRE version information. */
 
-#define PCRE_MAJOR          7
-#define PCRE_MINOR          9
+#define PCRE_MAJOR          8
+#define PCRE_MINOR          00
 #define PCRE_PRERELEASE     
-#define PCRE_DATE           2009-04-11
+#define PCRE_DATE           2009-10-19
 
 /* When an application links to a PCRE DLL in Windows, the symbols that are
 imported have to be identified as such. When building PCRE, the appropriate
 export setting is defined in pcre_internal.h, which includes this file. So we
 don't change existing definitions of PCRE_EXP_DECL and PCRECPP_EXP_DECL. */
 
+#if 0
 #if defined(_WIN32) && !defined(PCRE_STATIC)
 #  ifndef PCRE_EXP_DECL
 #    define PCRE_EXP_DECL  extern __declspec(dllimport)
@@ -63,6 +66,7 @@ don't change existing definitions of PCRE_EXP_DECL and PCRECPP_EXP_DECL. */
 #      define PCRECPP_EXP_DEFN  __declspec(dllimport)
 #    endif
 #  endif
+#endif
 #endif
 
 /* By default, we use the standard "extern" declarations. */
@@ -113,7 +117,8 @@ both, so we keep them all distinct. */
 #define PCRE_NO_AUTO_CAPTURE    0x00001000
 #define PCRE_NO_UTF8_CHECK      0x00002000
 #define PCRE_AUTO_CALLOUT       0x00004000
-#define PCRE_PARTIAL            0x00008000
+#define PCRE_PARTIAL_SOFT       0x00008000
+#define PCRE_PARTIAL            0x00008000  /* Backwards compatible synonym */
 #define PCRE_DFA_SHORTEST       0x00010000
 #define PCRE_DFA_RESTART        0x00020000
 #define PCRE_FIRSTLINE          0x00040000
@@ -128,6 +133,8 @@ both, so we keep them all distinct. */
 #define PCRE_JAVASCRIPT_COMPAT  0x02000000
 #define PCRE_NO_START_OPTIMIZE  0x04000000
 #define PCRE_NO_START_OPTIMISE  0x04000000
+#define PCRE_PARTIAL_HARD       0x08000000
+#define PCRE_NOTEMPTY_ATSTART   0x10000000
 
 /* Exec-time and get/set-time error codes */
 
@@ -174,6 +181,7 @@ both, so we keep them all distinct. */
 #define PCRE_INFO_OKPARTIAL         12
 #define PCRE_INFO_JCHANGED          13
 #define PCRE_INFO_HASCRORLF         14
+#define PCRE_INFO_MINLENGTH         15
 
 /* Request types for pcre_config(). Do not re-arrange, in order to remain
 compatible. */
@@ -253,51 +261,51 @@ that is triggered by the (?) regex item. For Virtual Pascal, these definitions
 have to take another form. */
 
 #ifndef VPCOMPAT
-PCRE_EXP_DECL void *(*pcre_malloc)(size_t);
-PCRE_EXP_DECL void  (*pcre_free)(void *);
-PCRE_EXP_DECL void *(*pcre_stack_malloc)(size_t);
-PCRE_EXP_DECL void  (*pcre_stack_free)(void *);
-PCRE_EXP_DECL int   (*pcre_callout)(pcre_callout_block *);
+extern void *(*pcre_malloc)(size_t);
+extern void  (*pcre_free)(void *);
+extern void *(*pcre_stack_malloc)(size_t);
+extern void  (*pcre_stack_free)(void *);
+extern int   (*pcre_callout)(pcre_callout_block *);
 #else   /* VPCOMPAT */
-PCRE_EXP_DECL void *pcre_malloc(size_t);
-PCRE_EXP_DECL void  pcre_free(void *);
-PCRE_EXP_DECL void *pcre_stack_malloc(size_t);
-PCRE_EXP_DECL void  pcre_stack_free(void *);
-PCRE_EXP_DECL int   pcre_callout(pcre_callout_block *);
+extern void *pcre_malloc(size_t);
+extern void  pcre_free(void *);
+extern void *pcre_stack_malloc(size_t);
+extern void  pcre_stack_free(void *);
+extern int   pcre_callout(pcre_callout_block *);
 #endif  /* VPCOMPAT */
 
 /* Exported PCRE functions */
 
-PCRE_EXP_DECL pcre *pcre_compile(const char *, int, const char **, int *,
+extern pcre *pcre_compile(const char *, int, const char **, int *,
                   const unsigned char *);
-PCRE_EXP_DECL pcre *pcre_compile2(const char *, int, int *, const char **,
+extern pcre *pcre_compile2(const char *, int, int *, const char **,
                   int *, const unsigned char *);
-PCRE_EXP_DECL int  pcre_config(int, void *);
-PCRE_EXP_DECL int  pcre_copy_named_substring(const pcre *, const char *,
+extern int  pcre_config(int, void *);
+extern int  pcre_copy_named_substring(const pcre *, const char *,
                   int *, int, const char *, char *, int);
-PCRE_EXP_DECL int  pcre_copy_substring(const char *, int *, int, int, char *,
+extern int  pcre_copy_substring(const char *, int *, int, int, char *,
                   int);
-PCRE_EXP_DECL int  pcre_dfa_exec(const pcre *, const pcre_extra *,
+extern int  pcre_dfa_exec(const pcre *, const pcre_extra *,
                   const char *, int, int, int, int *, int , int *, int);
-PCRE_EXP_DECL int  pcre_exec(const pcre *, const pcre_extra *, PCRE_SPTR,
+extern int  pcre_exec(const pcre *, const pcre_extra *, PCRE_SPTR,
                    int, int, int, int *, int);
-PCRE_EXP_DECL void pcre_free_substring(const char *);
-PCRE_EXP_DECL void pcre_free_substring_list(const char **);
-PCRE_EXP_DECL int  pcre_fullinfo(const pcre *, const pcre_extra *, int,
+extern void pcre_free_substring(const char *);
+extern void pcre_free_substring_list(const char **);
+extern int  pcre_fullinfo(const pcre *, const pcre_extra *, int,
                   void *);
-PCRE_EXP_DECL int  pcre_get_named_substring(const pcre *, const char *,
+extern int  pcre_get_named_substring(const pcre *, const char *,
                   int *, int, const char *, const char **);
-PCRE_EXP_DECL int  pcre_get_stringnumber(const pcre *, const char *);
-PCRE_EXP_DECL int  pcre_get_stringtable_entries(const pcre *, const char *,
+extern int  pcre_get_stringnumber(const pcre *, const char *);
+extern int  pcre_get_stringtable_entries(const pcre *, const char *,
                   char **, char **);
-PCRE_EXP_DECL int  pcre_get_substring(const char *, int *, int, int,
+extern int  pcre_get_substring(const char *, int *, int, int,
                   const char **);
-PCRE_EXP_DECL int  pcre_get_substring_list(const char *, int *, int,
+extern int  pcre_get_substring_list(const char *, int *, int,
                   const char ***);
-PCRE_EXP_DECL int  pcre_info(const pcre *, int *, int *);
-PCRE_EXP_DECL const unsigned char *pcre_maketables(void);
-PCRE_EXP_DECL int  pcre_refcount(pcre *, int);
-PCRE_EXP_DECL pcre_extra *pcre_study(const pcre *, int, const char **);
+extern int  pcre_info(const pcre *, int *, int *);
+extern const unsigned char *pcre_maketables(void);
+extern int  pcre_refcount(pcre *, int);
+extern pcre_extra *pcre_study(const pcre *, int, const char **);
 PCRE_EXP_DECL const char *pcre_version(void);
 
 #ifdef __cplusplus

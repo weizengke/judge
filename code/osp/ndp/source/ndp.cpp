@@ -10,28 +10,43 @@
 	display ndp neighbor --- server端查看上线的客户端
 	
 */
-
-#include <windows.h>
-#include <process.h>
 #include <iostream>
-#include <conio.h>
-#include <stdlib.h>
-#include <io.h>
-#include <time.h>
-#include <queue>
-#include <string>
 #include <sstream>
 #include <list>
+#include <queue>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include <time.h>
+#include <stdarg.h>
 
-#include "tlhelp32.h"
+#ifdef _LINUX_
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <termios.h>
+#include <assert.h>
+#endif
 
-#include "osp\command\include\icli.h"
+#ifdef _WIN32_
+#include <conio.h>
+#include <io.h>
+#include <winsock2.h>
 
-#include "product\include\pdt_common_inc.h"
-#include "osp\common\include\osp_common_def.h"
-#include "osp\event\include\event_pub.h"
-#include "osp\debug\include\debug_center.h"
+#endif
 
+#include "kernel.h"
+
+#include "osp/command/include/icli.h"
+
+#include "product/include/pdt_common_inc.h"
+#include "product/main/root.h"
+#include "osp/common/include/osp_common_def.h"
+#include "osp/event/include/event_pub.h"
+#include "osp/debug/include/debug_center.h"
+
+#if (OS_YES == OSP_MODULE_NDP)
 
 using namespace std;
 
@@ -233,7 +248,7 @@ SOCKET NDP_mksock(int type)
 }
 
 
-unsigned _stdcall NDP_ServerListenThread(void *pEntry)
+int NDP_ServerListenThread(void *pEntry)
 {
 	sockaddr_in remoteAddr;
 	int nAddrLen = sizeof(remoteAddr);
@@ -271,7 +286,7 @@ unsigned _stdcall NDP_ServerListenThread(void *pEntry)
 }
 
 
-unsigned _stdcall NDP_ClientListenThread(void *pEntry)
+int NDP_ClientListenThread(void *pEntry)
 {
 	sockaddr_in remoteAddr;
 	int nAddrLen = sizeof(remoteAddr);
@@ -333,7 +348,7 @@ ULONG NDP_ServerEnable()
 
 	NDP_Debug(DEBUG_TYPE_FUNC, "NDP server socket bind port %u.", g_ulNdpServerPort);
 
-	hServerThread = (HANDLE)_beginthreadex(NULL, 0, NDP_ServerListenThread, NULL, NULL, NULL);
+	hServerThread = (HANDLE)thread_create(NDP_ServerListenThread, NULL);
 
 	return OS_OK;
 }
@@ -371,7 +386,7 @@ ULONG NDP_ClientEnable()
 
 	 NDP_Debug(DEBUG_TYPE_FUNC, "NDP client socket bind port %u.", ntohs(sin.sin_port));
 
-	hClientThread = (HANDLE)_beginthreadex(NULL, 0, NDP_ClientListenThread, NULL, NULL, NULL);
+	hClientThread = (HANDLE)thread_create(NDP_ClientListenThread, NULL);
 	
 	return OS_OK;
 }
@@ -422,8 +437,7 @@ ULONG NDP_ConnectToServer(char *zsServerip, int port)
 	int iRet = OS_OK;
 	sockaddr_in servAddr;
 	SOCKET sockConn = NDP_GetClientSocket();
-	extern char g_sysname[];
-	
+
 	if (INVALID_SOCKET == sockConn)
 	{
 		NDP_Debug(DEBUG_TYPE_ERROR, "NDP_GetClientSocket failed.");
@@ -542,7 +556,7 @@ void NDP_SetServerBindPort(int port)
 }
 
 
-unsigned _stdcall NDP_TimerThread(void *pEntry)
+int NDP_TimerThread(void *pEntry)
 {
 	ULONG ulLoop = 0;
 
@@ -621,7 +635,7 @@ int NDP_Init()
 	return OS_OK;
 }
 
-unsigned _stdcall  NDP_TaskEntry(void *pEntry)
+int NDP_TaskEntry(void *pEntry)
 
 {
 	ULONG ulRet = OS_OK;
@@ -629,7 +643,7 @@ unsigned _stdcall  NDP_TaskEntry(void *pEntry)
 	//(void)BDN_RegistBuildRun(MID_NDP, VIEW_SYSTEM, BDN_PRIORITY_NORMAL, NDP_BuildRun);
 	
 	/* 启动定时器线程 */
-	_beginthreadex(NULL, 0, NDP_TimerThread, NULL, NULL, NULL);
+	(VOID)thread_create(NDP_TimerThread, NULL);
 	
 	/* 循环读取消息队列 */
 	for(;;)
@@ -650,7 +664,8 @@ APP_INFO_S g_ndpAppInfo =
 
 void NDP_RegAppInfo()
 {
-	RegistAppInfo(&g_ndpAppInfo);
+	APP_RegistInfo(&g_ndpAppInfo);
 
 }
 
+#endif

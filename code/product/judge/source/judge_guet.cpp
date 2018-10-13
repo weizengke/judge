@@ -7,22 +7,9 @@ Create Date: 2013-12-28
 
 */
 
+#include "product/judge/include/judge_inc.h"
 
-#include <windows.h>
-#include <process.h>
-#include <iostream>
-#include <conio.h>
-#include <stdlib.h>
-#include <io.h>
-#include <time.h>
-#include <queue>
-#include <string>
-#include <sstream>
-
-#include "tlhelp32.h"
-
-#include "product\judge\include\judge_inc.h"
-
+#if (OS_YES == OSP_MODULE_JUDGE)
 
 using namespace std;
 
@@ -44,8 +31,7 @@ int guet_sockport = 7706;
 int guet_remote_enable=OS_NO;
 int guet_vjudge_enable=OS_NO;
 
-#if(JUDGE_VIRTUAL == VOS_YES)
-
+#if (OS_YES == OSP_MODULE_JUDGE_VJUDGE)
 ULONG GUET_getLanguageNameByID(ULONG id, UCHAR *ucLanguageName)
 {
 	if (id < 0 || id >= sizeof(g_aucGUETLanguageName)/VJUDGE_MAX_LANG_SIZE)
@@ -391,9 +377,9 @@ ULONG GUET_getStatusEx(char *username)
 	GetCurrentDirectory(sizeof(current_path),current_path);
 	sprintf(tmp_return_path, "%s/\OJ_TMP",current_path);
 
-	if( (_access(tmp_return_path, 0 )) == -1 )
+	if( (file_access(tmp_return_path, 0 )) == -1 )
 	{
-		CreateDirectory(tmp_return_path,NULL);
+		create_directory(tmp_return_path);
 	}
 
 	sprintf(tmp_return_path, "%s/\OJ_TMP/\guet-judge.tmp",current_path);
@@ -577,6 +563,7 @@ int GUET_VJudge(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 	return GUET_Judge_python(pstJudgeSubmission);
 }
 
+#endif
 
 
 #endif

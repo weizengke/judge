@@ -402,17 +402,17 @@ CMD_DEFINE(cmd_display_ndp_neighbor, (char*)"display ndp neighbor",
 /* BEGIN: Added by weizengke, 2014/3/3 reset */
 CMD_DEFINE(cmd_reboot_system_st, (char*)"reboot system", (char*)"reboot system", reboot_system_st)
 {
-	extern void PDT_DestroySocket();
-	PDT_DestroySocket();
+	extern void SYSMNG_DestroySocket();
+	SYSMNG_DestroySocket();
 
-	extern void PDT_InitConfigData();
-	PDT_InitConfigData();
+	extern void SYSMNG_InitConfigData();
+	SYSMNG_InitConfigData();
 	
-	extern int PDT_InitSocket();
-	PDT_InitSocket();
+	extern int SYSMNG_InitSocket();
+	SYSMNG_InitSocket();
 
-	extern int OJ_Init();
-	OJ_Init();
+	extern int Judge_Init();
+	Judge_Init();
 	
 	vty_printf(vty, "Info: reboot system ok.\r\n");
 }

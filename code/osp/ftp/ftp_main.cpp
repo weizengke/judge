@@ -1,10 +1,13 @@
 #include "ftp_server.h"
 
-#include "osp\command\include\icli.h"
-#include "osp\aaa\aaa.h"
-#include "osp\common\include\osp_common_def.h"
-#include "product\include\pdt_common_inc.h"
-#include "osp\debug\include\debug_center_inc.h"
+#include "osp/debug/include/debug_center_inc.h"
+#include "product/include/pdt_common_inc.h"
+#include "osp/event/include/event_pub.h"
+#include "osp/command/include/icli.h"
+#include "osp/aaa/aaa.h"
+#include "product/main/root.h"
+
+#if (OS_YES == OSP_MODULE_FTPS)
 
 enum FTPS_CMO_TBLID_EM {
 	FTPS_CMO_TBL_CFG = 0,		
@@ -176,7 +179,7 @@ int FTPS_Init()
 	return FTP_OK;
 }
 
-unsigned _stdcall FTPS_TaskEntry(void *pEntry)
+int FTPS_TaskEntry(void *pEntry)
 {	
 	(VOID)FTPS_RegCmd();
 
@@ -202,6 +205,7 @@ APP_INFO_S g_FTPSAppInfo =
 
 void FTPS_RegAppInfo()
 {
-	RegistAppInfo(&g_FTPSAppInfo);
+	APP_RegistInfo(&g_FTPSAppInfo);
 }
 
+#endif

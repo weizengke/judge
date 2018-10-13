@@ -3,15 +3,6 @@
 
 /* BEGIN: Added by weizengke, 2013/10/27  for debug switch*/
 
-#ifndef INVALID_SOCKET
-#define INVALID_SOCKET	(ULONG)(~0)
-#endif
-
-#ifndef SOCKET_ERROR
-#define SOCKET_ERROR	(-1)
-#endif
-
-
 
 // command match type
 enum CMD_MATCH_STATUS {
@@ -157,9 +148,13 @@ typedef struct cmd_line_st {
 
 typedef struct cmd_elmt_st {
 	CMD_ELEM_TYPE_E  eElmtType;
-	ULONG ulElmtId;  /* 命令字元素id */
+	ULONG ulElmtId;  		/* 命令字元素id */
 	CHAR *pszElmtName;    /* 命令字元素名 */
 	CHAR *pszElmtHelp;    /* 命令字帮助信息 */
+	
+	ULONG (*pfElmtHelpFunc)(VOID *pRcvMsg);
+	ULONG (*pfElmtCheckFunc)(VOID *pRcvMsg);
+	
 }CMD_ELMT_S;
 
 #define CMD_VIEW_SONS_NUM 100

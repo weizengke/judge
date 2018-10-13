@@ -6,26 +6,11 @@ Create Date: 2012-05-12
 
 */
 
+#include "product/judge/include/judge_inc.h"
 
-#include <windows.h>
-#include <process.h>
-#include <iostream>
-#include <conio.h>
-#include <stdlib.h>
-#include <io.h>
-#include <time.h>
-#include <queue>
-#include <string>
-#include <sstream>
-
-#include "tlhelp32.h"
-
-
-#include "product\judge\include\judge_inc.h"
-
+#if (OS_YES == OSP_MODULE_JUDGE)
 
 using namespace std;
-
 
 enum ENUM_PROVLEM
 {
@@ -65,7 +50,8 @@ int hdu_sockport = 0;
 int hdu_remote_enable=OS_NO;
 int hdu_vjudge_enable=OS_NO;
 
-#if(JUDGE_VIRTUAL == VOS_YES)
+
+#if (OS_YES == OSP_MODULE_JUDGE_VJUDGE)
 
 ULONG getLanguageNameByID(ULONG id, UCHAR *ucLanguageName)
 {
@@ -766,6 +752,7 @@ ULONG getStatus(string hdu_username, string pid,string lang, string &runid, stri
 ////////////////////////////////////////
 
 #define PCRE_STATIC // æ≤Ã¨ø‚±‡“Î—°œÓ
+
 
 ULONG isNeed2HTML(ENUM_PROVLEM em)
 {
@@ -1526,3 +1513,5 @@ int HDU_VJudge(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 
 #endif
 
+
+#endif /* #if (OS_YES == OSP_MODULE_JUDGE) */

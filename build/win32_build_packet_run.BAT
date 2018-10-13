@@ -18,6 +18,7 @@ setlocal enabledelayedexpansion
 
 SET extension_o=".o"
 SET extension_a=".a"
+SET extension_lib=".lib"
 SET extension_dll=".dll"
 
 SET OBJ_DIR=obj
@@ -27,7 +28,7 @@ SET ROOT_DIR=%~dp0
 
 SET OBJ_LIST=
 SET LIB_LIST=
-
+SET LIB_LIST2=
 
 echo 进入目录%ROOT_DIR%%OBJ_DIR%
 cd %ROOT_DIR%%OBJ_DIR%
@@ -45,6 +46,11 @@ FOR %%a IN (*%extension_a%) DO (
     echo %LIB_DIR%\%%a
 )
 
+FOR %%a IN (*%extension_lib%) DO (
+    SET LIB_LIST2=!LIB_LIST2! %LIB_DIR%\%%a
+    echo %LIB_DIR%\%%a
+)
+
 FOR %%a IN (*%extension_dll%) DO (
     SET LIB_LIST=!LIB_LIST! %LIB_DIR%\%%a
     echo %LIB_DIR%\%%a
@@ -54,7 +60,7 @@ echo 进入目录%ROOT_DIR%
 cd %ROOT_DIR%
 
 @ECHO on
-g++.exe -static -s -o  %BIN_DIR%/%BIN_NAME% -L"%LIB_DIR%" %OBJ_LIST% -l wsock32 %LIB_LIST%
+g++.exe -static -s -o  %BIN_DIR%/%BIN_NAME% -L%LIB_DIR% %OBJ_LIST% -lwsock32 -lcurl -lwldap32 -lws2_32 %LIB_LIST% %LIB_LIST2%
 @ECHO off
 
 echo 进入目录%ROOT_DIR%%BIN_DIR%

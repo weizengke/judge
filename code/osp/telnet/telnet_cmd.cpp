@@ -1,15 +1,40 @@
-#include <iostream>
-#include <windows.h>
-#include <process.h>
+#include <stdio.h>
 #include <stdlib.h>
-#include <string>
+#include <string.h>
 #include <ctype.h>
 #include <time.h>
-#include <stdio.h>
-#include <queue>
-#include "osp\command\include\icli.h"
-#include "osp\common\include\osp_common_def.h"
-#include "product\include\pdt_common_inc.h"
+#include <stdarg.h>
+
+#ifdef _LINUX_
+#include <arpa/inet.h>
+#include <dirent.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <sys/wait.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <termios.h>
+#include <assert.h>
+#endif
+
+#ifdef _WIN32_
+#include <conio.h>
+#include <io.h>
+#include <winsock2.h>
+
+#endif
+
+#include "kernel.h"
+
+#include "osp/common/include/osp_common_def.h"
+#include "product/include/pdt_common_inc.h"
+#include "osp/command/include/icli.h"
+#include "osp/util/util.h"
+
+#if (OS_YES == OSP_MODULE_TELNETS)
 
 using namespace std;
 
@@ -31,7 +56,7 @@ enum TELNET_CMO_CFG_ID_EM {
 	TELNET_CMO_CFG_AUTH_MODE_PASSWORD,
 	TELNET_CMO_CFG_TELNET_USER_NAME,
 	TELNET_CMO_CFG_TELNET_USER_PSW,	
-	
+	TELNET_CMO_CFG_TELNET_CLIENT_IP,
 };
 
 
@@ -75,8 +100,7 @@ VOID TELNET_SHOW_Users(ULONG vtyId)
 	char acbuff[65556] = {0};
 	char *buff = NULL;
 	CMD_VTY_S * vty = NULL;
-	extern long getdiftime(time_t maxt,time_t mint);
-	
+
 	vty = cmd_vty_getById(vtyId);
 	if (NULL == vty)
 	{
@@ -88,7 +112,7 @@ VOID TELNET_SHOW_Users(ULONG vtyId)
 	buff += sprintf(buff, "   #   Type     Delay        Network Address   Socket  Username   \r\n"
 						  " ---------------------------------------------------------------------\r\n");
 	
-	diff = getdiftime(t, g_con_vty->user.lastAccessTime);  
+	diff = util_getdiftime(t, g_con_vty->user.lastAccessTime);  
 	sec=diff%60;
 	diff=diff/60;
 	min=diff%60; 
@@ -102,7 +126,7 @@ VOID TELNET_SHOW_Users(ULONG vtyId)
 		if (g_vty[i].used)
 		{
 			sockaddr_in addr;  
-		    int addrlen = sizeof(addr);  
+		    socklen_t addrlen = sizeof(addr);  
 		    if(getpeername(g_vty[i].user.socket, (struct sockaddr*)&addr, &addrlen) == -1){          
 		        continue;  
 		    }
@@ -113,7 +137,7 @@ VOID TELNET_SHOW_Users(ULONG vtyId)
 			}
 			else
 			{
-				diff = getdiftime(t, g_vty[i].user.lastAccessTime);
+				diff = util_getdiftime(t, g_vty[i].user.lastAccessTime);
 				sec=diff%60;
 				diff=diff/60;
 				min=diff%60; 
@@ -256,6 +280,21 @@ ULONG TELNET_CFG_Callback(VOID *pRcvMsg)
 				cmd_copy_string_param(pElem, Password);
 				break;
 
+			case TELNET_CMO_CFG_TELNET_CLIENT_IP:
+				{
+					ULONG ulIp = 0;
+					char ip[25] = {0};
+					extern VOID cmd_ip_ulong_to_string(ULONG ip, CHAR *buf);
+					extern ULONG TELNETC_Run(ULONG vtyId,ULONG ulPort,CHAR * szIP);
+					
+					ulIp = cmd_get_ip_ulong_param(pElem);
+					cmd_ip_ulong_to_string(ulIp, ip);
+
+					//TELNETC_Run(vtyId, 23, ip);
+				}
+			
+				break;
+
 			default:
 				break;
 		}
@@ -380,6 +419,8 @@ ULONG TELNET_RegCmdEnable()
 	cmd_regelement_new(CMD_ELEMID_NULL,					CMD_ELEM_TYPE_KEY,	  "password",		"Telnet authentication password", vec);
 	// 12
 	cmd_regelement_new(TELNET_CMO_CFG_TELNET_USER_PSW,	CMD_ELEM_TYPE_STRING, "STRING<1-32>",	"Telnet authentication password", vec);
+	// 13
+	cmd_regelement_new(TELNET_CMO_CFG_TELNET_CLIENT_IP,	CMD_ELEM_TYPE_IP, CMD_ELMT_IP,	"IP Address", vec);
 	
 	/* 命令行注册四部曲3: 注册命令行 */
 	cmd_install_command(MID_TELNET, VIEW_SYSTEM,  " 1 2 3 4 ", vec);
@@ -388,6 +429,7 @@ ULONG TELNET_RegCmdEnable()
 	cmd_install_command(MID_TELNET, VIEW_SYSTEM,  " 2 5 7 ", vec);
 	cmd_install_command(MID_TELNET, VIEW_SYSTEM,  " 2 5 8 ", vec);
 	cmd_install_command(MID_TELNET, VIEW_SYSTEM,  " 2 9 10 11 12 ", vec);
+	//cmd_install_command(MID_TELNET, VIEW_GLOBAL,  " 2 13 ", vec);
 	
 	/* 命令行注册四部曲4: 释放命令行向量 */
 	CMD_VECTOR_FREE(vec);
@@ -405,4 +447,5 @@ ULONG TELNET_RegCmd()
 	return OS_OK;
 }
 
+#endif
 

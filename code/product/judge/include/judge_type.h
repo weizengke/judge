@@ -1,8 +1,6 @@
 #ifndef _JUDGE_TYPE_H_
 #define _JUDGE_TYPE_H_
 
-#include "product\judge\include\judge_inc.h"
-
 #define JUDGE_OJNAME_SIZE_MAX 32
 
 typedef struct tagJudge_Data_S
@@ -85,13 +83,14 @@ typedef struct tag_Judge_Submission_ST
     char compileCmd[1024];
     char runCmd[1024];
 
+#ifdef _WIN32_
 	PROCESS_INFORMATION pProRunInfo; /* 运行进程信息 */
 	PROCESS_INFORMATION pProComInfo; /* 编译进程信息 */
 
 	HANDLE hJob;         /* 作业句柄 */
-
     HANDLE hInputFile ;  /* 父进程输入文件句柄 */
     HANDLE hOutputFile;  /* 子进程标准输出句柄 */
+#endif
 
     DWORD dwProStatusCode;     /* 定义进程状态 */
 

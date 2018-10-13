@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
 	int port;
 	char languageName[100]={0};
 	char keyname[110]={0};
-
+	char szCmd[128] = {0};
 	sprintf(keyname,"Language%d",languageId);
 	GetPrivateProfileString("Language",keyname,"",languageName,sizeof(languageName),INI_filename);
 	GetPrivateProfileString("JudgeIP",languageName,"127.0.0.1",IP,sizeof(IP),INI_filename);
@@ -70,8 +70,9 @@ int main(int argc, char* argv[])
 	port=GetPrivateProfileInt("System","sock_port",PORT,INI_filename);
 
 	initSocket(port,IP);
-	
-	sprintf(buff, "judge solution %u", sulotionId);
+
+	sprintf(szCmd, "judge solution %u", sulotionId);
+	sprintf(buff, "abcddcba0001%04x%s", strlen(szCmd), szCmd);
 	send(sClient,(const char*)buff,sizeof(buff),0);
 
 	closesocket(sClient);

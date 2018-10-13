@@ -1,17 +1,34 @@
-#include <iostream>
-#include <windows.h>
-#include <process.h>
+#include <stdio.h>
 #include <stdlib.h>
-#include <string>
+#include <string.h>
 #include <ctype.h>
 #include <time.h>
-#include <stdio.h>
-#include <queue>
-#include "osp\command\include\icli.h"
+#include <stdarg.h>
 
-#include "osp\aaa\aaa.h"
-#include "osp\common\include\osp_common_def.h"
-#include "product\include\pdt_common_inc.h"
+#ifdef _LINUX_
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <termios.h>
+#include <assert.h>
+#endif
+
+#ifdef _WIN32_
+#include <conio.h>
+#include <io.h>
+#include <winsock2.h>
+
+#endif
+
+#include "kernel.h"
+
+#include "osp/common/include/osp_common_def.h"
+#include "product/include/pdt_common_inc.h"
+#include "osp/command/include/icli.h"
+#include "osp/aaa/aaa.h"
+
+
+#if (OS_YES == OSP_MODULE_AAA)
 
 using namespace std;
 
@@ -196,4 +213,4 @@ ULONG AAA_RegCmd()
 	return OS_OK;
 }
 
-
+#endif

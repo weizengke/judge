@@ -1,23 +1,37 @@
-#include <windows.h>
-#include <process.h>
+
 #include <iostream>
-#include <conio.h>
-#include <stdlib.h>
-#include <io.h>
-#include <time.h>
+#include <ctime>
 #include <queue>
 #include <string>
 #include <sstream>
+#include <stdio.h>
+#include <stdlib.h>
 
-#include "tlhelp32.h"
+#ifdef _WIN32_
+#include <io.h>
+#include <conio.h>
+#include<winsock2.h>
+#endif
 
-#include "osp\common\include\osp_common_def.h"
-#include "osp\command\include\icli.h"
+#ifdef _LINUX_
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#endif
+
+#include "kernel.h"
+
+#include "osp/common/include/osp_common_def.h"
+#include "osp/util/util.h"
+#include "product/main/root.h"
+#include "osp/command/include/icli.h"
+
+#if (OS_YES == OSP_MODULE_CLI)
 
 using namespace std;
 
 extern int cmd_init();
-extern unsigned _stdcall  cmd_main_entry(void *pEntry);
+extern int cmd_main_entry(void *pEntry);
 
 enum CMD_CMO_TBLID_EM {
 	CMD_CMO_TBL_SHOW = 0,
@@ -48,16 +62,16 @@ VOID CMD_ShowCliState(ULONG vtyId, ULONG vtyId2)
 	char *buff = buffTmp;
 	CMD_VTY_S *vty = NULL;
 	string strDateStr;
-	extern int API_TimeToString(string &strDateStr,const time_t &timeData);
-	
+
 	vty = cmd_vty_getById(vtyId2);
 	if (NULL == vty)
 	{
 		return;
 	}
 
-	API_TimeToString(strDateStr, vty->user.lastAccessTime);
-	
+
+	(VOID)util_time_to_string(strDateStr, vty->user.lastAccessTime);
+
 	buff += sprintf(buff, "Vty %u State:\r\n", vtyId2);
 	buff += sprintf(buff, "  used          : %u\r\n", vty->used);
 	buff += sprintf(buff, "  view_id       : %u\r\n", vty->view_id);
@@ -154,8 +168,8 @@ ULONG CMD_SHOW_Callback(VOID *pRcvMsg)
 
 	if (OS_YES == isSaveCfg)
 	{
-		extern void PDT_ShowCfg(ULONG vtyId);
-		PDT_ShowCfg(vtyId);
+		extern void SYSMNG_ShowCfg(ULONG vtyId);
+		SYSMNG_ShowCfg(vtyId);
 
 		return 0;
 	}	
@@ -205,9 +219,18 @@ ULONG CMD_Save_Config(ULONG vtyId)
 	CHAR *pBuildrun = NULL;
 	FILE * fp= NULL;
 	extern ULONG BDN_SystemBuildRun(CHAR **ppBuildrun, ULONG ulIncludeDefault);
-	
-	sprintf(filename, "conf\\config.cfg");
 
+	sprintf(filename, "conf\/%s", g_startup_config);
+
+	if( (file_access("conf", 0 )) == -1 )
+	{
+		if (false == create_directory("conf"))
+		{
+			vty_printf(vtyId, "Error: create directory conf failed.\r\n");
+			return OS_ERR;
+		}
+	}
+		
 	fp = fopen(filename,"w+");
 	if (NULL == fp)
 	{
@@ -377,9 +400,10 @@ ULONG CMD_ADP_RegCmd()
 	return 0;
 }
 
-
-ULONG CMD_ADP_Init()
+int CMD_ADP_Init()
 {
+	(VOID)cmd_init();
+	
 	(VOID)CMD_ADP_RegCmd();
 	
 	/* 注册命令行处理回调 */
@@ -390,12 +414,13 @@ APP_INFO_S g_CMDAppInfo =
 {
 	MID_CMD,
 	"Command",
-	cmd_init,
+	CMD_ADP_Init,
 	cmd_main_entry
 };
 
 void Cmd_RegAppInfo()
 {
-	RegistAppInfo(&g_CMDAppInfo);
+	APP_RegistInfo(&g_CMDAppInfo);
 }
 
+#endif

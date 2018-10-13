@@ -1,19 +1,32 @@
 
-#include <windows.h>
-#include <process.h>
-#include <iostream>
-#include <conio.h>
+#include <stdio.h>
 #include <stdlib.h>
-#include <io.h>
+#include <string.h>
+#include <ctype.h>
 #include <time.h>
-#include <queue>
-#include <string>
-#include <sstream>
+#include <stdarg.h>
 
-#include "tlhelp32.h"
+#ifdef _LINUX_
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <termios.h>
+#include <assert.h>
+#endif
 
-#include "osp\common\include\osp_common_def.h"
-#include "osp\command\include\icli.h"
+#ifdef _WIN32_
+#include <conio.h>
+#include <io.h>
+#include <winsock2.h>
+
+#endif
+
+#include "kernel.h"
+
+#include "osp/common/include/osp_common_def.h"
+#include "osp/command/include/icli.h"
+
+#if (OS_YES == OSP_MODULE_CLI)
 
 typedef struct BDN_EVENT_Ntf_Node
 {
@@ -225,5 +238,5 @@ VOID BDN_ShowCurrentViewBuildRun(ULONG vtyId, ULONG ulIncludeDefault)
 	free(pBuildrun);
 }
 
-
+#endif
 

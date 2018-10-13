@@ -1,7 +1,7 @@
 #ifndef _COMMAND_H_
 #define _COMMAND_H_
 
-#ifdef UCHAR
+#ifndef UCHAR
 #undef UCHAR
 #define UCHAR unsigned char
 #endif
@@ -19,6 +19,27 @@
 #ifndef VOID
 #undef VOID
 #define VOID void
+#endif
+
+#ifndef BOOL
+#undef BOOL
+#define BOOL bool
+#endif
+
+#ifndef FALSE
+#undef FALSE
+#define FALSE false
+#endif
+
+#ifndef TRUE
+#undef TRUE
+#define TRUE true
+#endif
+
+#ifdef _WIN32_
+typedef SOCKET socket_t;
+#else
+typedef int socket_t;
 #endif
 
 /* 命令字类型 */
@@ -100,7 +121,7 @@ typedef struct vty_user_st {
 	int type;  /* 0:console, 1:telnet */
 	int state;  /* 0:idle, 1:access */
 	int terminal_debugging;
-	SOCKET socket;
+	socket_t socket;
 	char user_name[32];
 	char user_psw[32];
 	time_t lastAccessTime;	
@@ -114,7 +135,7 @@ typedef struct cmd_vty_st {
 	ULONG ulBufMaxLen;   /* 命令行输入的最大长度    */
 	ULONG ulUsedLen;     /* 当前命令行输入的长度    */
 	ULONG ulCurrentPos;  /* 当前命令行光标所在位置  */
-	CHAR c;   			 /* 当前输入的字符		    */
+	UCHAR c;   			 /* 当前输入的字符		    */
 	/* BEGIN: for support TAB agian and agian */
 	UCHAR ucKeyTypePre;	    					/* 上次输入类型   */
 	UCHAR ucKeyTypeNow;							/* 本次输入类型   */

@@ -26,7 +26,7 @@
 	            			   - CMD_ELMT_S 3
 	            			   - CMD_ELMT_S <CR>
 */
-#include <windows.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -35,21 +35,30 @@
 #include <stdarg.h>
 
 #ifdef _LINUX_
-#include <curses.h>
-#include <termios.h>
 #include <unistd.h>
-#else
-#include <conio.h>
-#include <io.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <termios.h>
+#include <assert.h>
 #endif
 
-#include "osp\command\include\icli.h"
-#include "osp\command\include\command_def.h"
-#include "osp\command\include\command_type.h"
-#include "osp\command\include\command_core.h"
+#ifdef _WIN32_
+#include <conio.h>
+#include <io.h>
+#include <winsock2.h>
+#endif
 
-#include "product\include\pdt_common_inc.h"
-#include "osp\debug\include\debug_center_inc.h"
+#include "kernel.h"
+
+#include "osp/command/include/icli.h"
+#include "osp/command/include/command_def.h"
+#include "osp/command/include/command_type.h"
+#include "osp/command/include/command_core.h"
+
+#include "product/include/pdt_common_inc.h"
+#include "osp/debug/include/debug_center_inc.h"
+
+#if (OS_YES == OSP_MODULE_CLI)
 
 CHAR g_CmdSysname[CMD_SYSNAME_SIZE] = "system";
 CMD_VTY_S g_vty[CMD_VTY_MAXUSER_NUM]; /*telnet用户 */
@@ -81,9 +90,9 @@ KEY_HANDLE_S key_resolver[] = {
 
 CHAR *cmd_get_sysname()
 {
-	extern char *PDT_GetSysname();
+	extern char *SYSMNG_GetSysname();
 
-	return PDT_GetSysname();
+	return SYSMNG_GetSysname();
 }
 
 ULONG cmd_regcallback(ULONG ulMid, ULONG (*pfCallBackFunc)(VOID *pRcvMsg))
@@ -442,9 +451,9 @@ VOID cmd_put_one(CMD_VTY_S *vty, CHAR c)
 	cmd_vty_printf(vty, "%c", c);
 }
 
-ULONG cmd_getch()
+UCHAR cmd_getch()
 {
-	ULONG c = 0;
+	UCHAR c = 0;
 	#ifdef _LINUX_
 	struct termios org_opts, new_opts;
 	ULONG res = 0;
@@ -459,22 +468,25 @@ ULONG cmd_getch()
 	//------  restore old settings ---------
 	res = tcsetattr(STDIN_FILENO, TCSANOW, &org_opts);
 	assert(res == 0);
+
 	#else
-	c = getch();
+	c = getch();	
 	#endif
 
+	CMD_debug(CMD_DEBUG_INFO, "cmd_getch. (c=0x%x)", c);
+	
 	return c;
 }
 
-int vty_getch(CMD_VTY_S *vty)
+CHAR vty_getch(CMD_VTY_S *vty)
 {
 	int ret = 0;
-	CHAR buff[1] = {0};
+	UCHAR buff[1] = {0};
 
 	/* 串口模式 */
 	if (CMD_VTY_CONSOLE_ID == vty->vtyId)
 	{
-		buff[0] = cmd_getch();
+		return cmd_getch();
 	}
 	else
 	{
@@ -487,8 +499,8 @@ int vty_getch(CMD_VTY_S *vty)
 		}
 	}
 
-	//CMD_debug(CMD_DEBUG_INFO, "vty_getch. (c=0x%x)", buff[0]);
-
+	CMD_debug(CMD_DEBUG_INFO, "vty_getch. (c=0x%x)", buff[0]);
+	
 	return buff[0];
 }
 
@@ -1531,7 +1543,7 @@ ULONG cmd_complete_command(CMD_VECTOR_S *icmd_vec, CMD_VTY_S *vty,
 				continue;
 			}
 
-			CMD_debug(CMD_DEBUG_FUNC, "cmd_complete_command, eElmtType=%u", pstCmdElem->eElmtType);
+			CMD_debug(CMD_DEBUG_FUNC, "cmd_complete_command, eElmtType=%u, str=%s", pstCmdElem->eElmtType, str);
 			
 			/* BEGIN: Added by weizengke, 2013/11/19 */
 			/* match STRING , INTEGER 
@@ -1540,36 +1552,15 @@ ULONG cmd_complete_command(CMD_VECTOR_S *icmd_vec, CMD_VTY_S *vty,
 			/* match param */
 			if (CMD_YES == cmd_elem_is_para_type(pstCmdElem->eElmtType))
 			{
-				/* 无条件补全 */
-				if (0 == strnicmp(str, CMD_END, strlen(str)))
+				if (0 == strnicmp(str, CMD_END, strlen(str))
+					|| 0 == strnicmp(pstCmdElem->pszElmtName, CMD_END, strlen(pstCmdElem->pszElmtName))
+					|| CMD_OK == cmd_match_command_param(str, pstCmdElem))
 				{
-					CMD_debug(CMD_DEBUG_FUNC, "cmd_complete_command, input cr, eElmtType=%u, pszElmtName=%s, str=%s",
+					CMD_debug(CMD_DEBUG_FUNC, "cmd_complete_command, eElmtType=%u, pszElmtName=%s, str=%s",
 												pstCmdElem->eElmtType,
 												pstCmdElem->pszElmtName,
 												str);
 
-					ppstCmdElem[ulMatchNum] = pstCmdElem;	
-					ulMatchNum++;
-
-				}
-				/* 无条件补全 */
-				else if (0 == strnicmp(pstCmdElem->pszElmtName, CMD_END, strlen(pstCmdElem->pszElmtName)))
-				{
-					CMD_debug(CMD_DEBUG_FUNC, "cmd_complete_command, cr, eElmtType=%u, pszElmtName=%s, str=%s",
-												pstCmdElem->eElmtType,
-												pstCmdElem->pszElmtName,
-												str);
-
-					ppstCmdElem[ulMatchNum] = pstCmdElem;	
-					ulMatchNum++;
-				}
-				/* 有条件补全 */
-				else if (CMD_OK == cmd_match_command_param(str, pstCmdElem))
-				{					
-					CMD_debug(CMD_DEBUG_FUNC, "cmd_complete_command, param, eElmtType=%u, pszElmtName=%s",
-												pstCmdElem->eElmtType,
-												pstCmdElem->pszElmtName);
-					
 					if (cmd_match_unique_elmtid(ppstCmdElem, pstCmdElem->ulElmtId, ulMatchNum))
 					{
 						ppstCmdElem[ulMatchNum] = pstCmdElem;
@@ -2556,7 +2547,7 @@ ULONG cmd_resolve_vty(CMD_VTY_S *vty)
 		case CMD_KEY_DELETE_VTY:
 			key_type = CMD_KEY_CODE_DELETE;
 			break;
-		case CMD_KEY_BACKSPACE:  /*  */
+		case CMD_KEY_BACKSPACE_VTY:
 			key_type = CMD_KEY_CODE_BACKSPACE;
 			break;
 		case CMD_KEY_SPACE:
@@ -2595,17 +2586,26 @@ ULONG cmd_resolve_vty(CMD_VTY_S *vty)
 
 ULONG cmd_resolve(CMD_VTY_S *vty)
 {
-	CHAR c = vty->c;
+	UCHAR c = vty->c;
 	ULONG key_type = CMD_KEY_CODE_NOTCARE;
 
 	switch (c) {
 	case CMD_KEY_ARROW1:
 		c = cmd_getch();
+	
 		#ifdef _LINUX_
 		if (c == CMD_KEY_ARROW2)
 		{
 			c = cmd_getch();
 		#endif
+
+			#ifdef _LINUX_
+			if (c == CMD_KEY_ARROW3)
+			{
+				c = cmd_getch();
+			}
+			#endif
+		
 			switch (c)
 			{
 				case CMD_KEY_UP:
@@ -2623,7 +2623,9 @@ ULONG cmd_resolve(CMD_VTY_S *vty)
 				case CMD_KEY_DELETE:
 					key_type = CMD_KEY_CODE_DELETE;
 					break;
+			
 				/* BEGIN: Added by weizengke, 2014/4/6 support page up & down*/
+				#if 0
 				case CMD_KEY_PGUP:
 					{
 						extern HWND g_hWnd;
@@ -2640,6 +2642,7 @@ ULONG cmd_resolve(CMD_VTY_S *vty)
 						key_type = CMD_KEY_CODE_FILTER;
 					}
 					break;
+				#endif
 				/* END:   Added by weizengke, 2014/4/6 */
 				default:
 					key_type = CMD_KEY_CODE_FILTER;
@@ -2676,9 +2679,12 @@ ULONG cmd_resolve(CMD_VTY_S *vty)
 		key_type = CMD_KEY_CODE_BACKSPACE;
 		break;
 	case CMD_KEY_SPACE:
+#if 0
 	case CMD_KEY_CTRL_H:
+#endif		
 		/* Linux 下空格后回车无法tab补全与'?'联想 待修复*/
 		break;
+		
 	case CMD_KEY_CTRL_W:
 		/* del the last elem */
 		key_type = CMD_KEY_CODE_DEL_LASTWORD;
@@ -3026,7 +3032,8 @@ VOID cmd_resolve_quest(CMD_VTY_S *vty)
 	ULONG ulMatchNum = 0;
 	ULONG i = 0;
 	ULONG ulNoMatchPos = CMD_NULL_DWORD;
-
+	BOOL bShowHelphead = FALSE;
+	
 	/* BEGIN: Added by weizengke, 2013/10/4   PN:need print '?' */
 	cmd_put_one(vty, '?');
 	/* END:   Added by weizengke, 2013/10/4   PN:need print '?' */
@@ -3050,6 +3057,9 @@ VOID cmd_resolve_quest(CMD_VTY_S *vty)
 	v = cmd_str2vec(vty->szBuffer);
 	if (v == NULL)
 	{
+		/* 没有输入时，提示当前视图 */
+		bShowHelphead = TRUE;
+		
 		v = cmd_vector_init();
 		if(NULL == v)
 		{
@@ -3067,8 +3077,13 @@ VOID cmd_resolve_quest(CMD_VTY_S *vty)
 
 	cmd_vty_printf(vty, "%s", CMD_ENTER);
 	if (ulMatchNum > 0) 
-	{
-	    cmd_vty_printf(vty,"%s commands:\r\n",cmd_view_getViewName(vty->view_id));
+	{	
+		/* 没有输入时，提示当前视图 */
+		if (TRUE == bShowHelphead)
+		{
+			cmd_vty_printf(vty,"%s commands:\r\n",cmd_view_getViewName(vty->view_id));
+		}
+	    
 		for (i = 0; i < ulMatchNum; i++)
 		{
 			cmd_vty_printf(vty, " %-25s%s\r\n", pstCmdElem[i]->pszElmtName,pstCmdElem[i]->pszElmtHelp);
@@ -3111,7 +3126,7 @@ VOID cmd_resolve_up(CMD_VTY_S *vty)
 	strcpy(vty->szBuffer, vty->pszHistory[vty->ulhpos]);
 	vty->ulCurrentPos = vty->ulUsedLen = strlen(vty->pszHistory[vty->ulhpos]);
 	cmd_vty_printf(vty, "%s", vty->szBuffer);
-
+	
 	return;
 }
 
@@ -3191,6 +3206,9 @@ VOID cmd_resolve_delete(CMD_VTY_S *vty)
 
 	size = vty->ulUsedLen - vty->ulCurrentPos;
 
+	CMD_debug(CMD_DEBUG_FUNC, "cmd_resolve_delete. (ulUsedLen=%u, ulCurrentPos=%u)",
+		vty->ulUsedLen, vty->ulCurrentPos);
+		
 	CMD_DBGASSERT((vty->ulUsedLen >= vty->ulCurrentPos),
 		"cmd_resolve_delete. (ulUsedLen=%u, ulCurrentPos=%u)",
 		vty->ulUsedLen, vty->ulCurrentPos);
@@ -3225,6 +3243,9 @@ VOID cmd_resolve_backspace(CMD_VTY_S *vty)
 	}
 
 	size = vty->ulUsedLen - vty->ulCurrentPos;
+
+	CMD_debug(CMD_DEBUG_FUNC, "cmd_resolve_backspace. (ulUsedLen=%u, ulCurrentPos=%u)",
+		vty->ulUsedLen, vty->ulCurrentPos);
 
 	CMD_DBGASSERT((vty->ulUsedLen >= vty->ulCurrentPos),
 		"cmd_resolve_backspace. (ulUsedLen=%u, ulCurrentPos=%u)",
@@ -3480,12 +3501,12 @@ int cmd_init()
 
 int cmd_main_entry(void *pEntry)
 {
-    extern ULONG PDT_IsCfgRecoverOver();
+    extern ULONG SYSMNG_IsCfgRecoverOver();
 	
 	for (;;)
 	{
 		/* 配置恢复还没结束，不进入命令行界面 */
-		if (OS_NO == PDT_IsCfgRecoverOver())
+		if (OS_NO == SYSMNG_IsCfgRecoverOver())
 		{
 			Sleep(10);
 			continue;
@@ -3497,3 +3518,4 @@ int cmd_main_entry(void *pEntry)
 	return 0;
 }
 
+#endif

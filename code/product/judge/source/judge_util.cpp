@@ -1,8 +1,7 @@
-#include <iostream>
-#include <stdlib.h>
 
-#include "product\judge\include\judge_inc.h"
+#include "product/judge/include/judge_inc.h"
 
+#if (OS_YES == OSP_MODULE_JUDGE)
 
 using namespace std;
 
@@ -34,7 +33,7 @@ void find_next_nonspace(int & c1, int & c2, FILE *& f1, FILE *& f2, int & ret) {
 				c1 = fgetc(f1);
 			} else {
 				if (g_DEBUG)
-					printf("%d=%c\t%d=%c", c1, c1, c2, c2);
+					printf("\r\n%d=%c %d=%c", c1, c1, c2, c2);
 				;
 				ret = V_PE;
 			}
@@ -120,77 +119,27 @@ int compare(const char *file1, const char *file2) {
 	return compare_zoj(file1, file2);
 }
 
-
-int StringToTimeEX(const string &strDateStr,time_t &timeData)
-{
-    char *pBeginPos = (char*) strDateStr.c_str();
-    char *pPos = strstr(pBeginPos,"-");
-    if(pPos == NULL)
-    {
-        printf("strDateStr[%s] err \n", strDateStr.c_str());
-        return -1;
-    }
-    int iYear = atoi(pBeginPos);
-    int iMonth = atoi(pPos + 1);
-    pPos = strstr(pPos + 1,"-");
-    if(pPos == NULL)
-    {
-        printf("strDateStr[%s] err \n", strDateStr.c_str());
-        return -1;
-    }
-    int iDay = atoi(pPos + 1);
-    int iHour=0;
-    int iMin=0;
-    int iSec=0;
-    pPos = strstr(pPos + 1," ");
-    //为了兼容有些没精确到时分秒的
-    if(pPos != NULL)
-    {
-        iHour=atoi(pPos + 1);
-        pPos = strstr(pPos + 1,":");
-        if(pPos != NULL)
-        {
-            iMin=atoi(pPos + 1);
-            pPos = strstr(pPos + 1,":");
-            if(pPos != NULL)
-            {
-                iSec=atoi(pPos + 1);
-            }
-        }
-    }
-
-    struct tm sourcedate;
-    memset((void*)&sourcedate,0,sizeof(sourcedate));
-    sourcedate.tm_sec = iSec;
-    sourcedate.tm_min = iMin;
-    sourcedate.tm_hour = iHour;
-    sourcedate.tm_mday = iDay;
-    sourcedate.tm_mon = iMonth - 1;
-    sourcedate.tm_year = iYear - 1900;
-    timeData = mktime(&sourcedate);
-    return 0;
-}
-int API_TimeToString(string &strDateStr,const time_t &timeData)
-{
-    char chTmp[25];
-    memset(chTmp,0,sizeof(chTmp));
-
-    struct tm *p;
-    p = localtime(&timeData);
-
-    p->tm_year = p->tm_year + 1900;
-
-    p->tm_mon = p->tm_mon + 1;
-
-	sprintf(chTmp,"%04d-%02d-%02d %02d:%02d:%02d",p->tm_year, p->tm_mon, p->tm_mday,p->tm_hour,p->tm_min,p->tm_sec);
-
-    strDateStr = chTmp;
-    return 0;
-}
-
-long getdiftime(time_t maxt,time_t mint)  //获取时间差 返回秒数
-{
-	return (long)difftime(maxt,mint);
+int string_cmp(const void *a, const void*b) {
+    char *s1 = (char *)a;
+    char *s2 = (char *)b;
+	int len1 = strlen(s1);
+	int len2 = strlen(s2);
+	
+	if (len1 == len2)
+	{
+		return strcmp(s1, s2);
+	}
+	else 
+	{
+		if (len1 > len2)
+		{
+			return 1;
+		}
+		else
+		{
+			return -1;
+		}
+	}
 }
 
 string GetLocalTimeAsString(const char* format) {
@@ -208,7 +157,7 @@ string getCurrentTime()
 	string time_string;
 
 	time(&s_t);
-	API_TimeToString(time_string,s_t);
+	util_time_to_string(time_string,s_t);
 
 	return time_string;
 }
@@ -225,4 +174,4 @@ string&  replace_all_distinct(string&   str,const   string&   old_value,const   
 	return   str;
 }
 
-
+#endif

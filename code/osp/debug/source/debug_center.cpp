@@ -1,21 +1,37 @@
+
 #include <iostream>
-#include <windows.h>
-#include <stdlib.h>
-#include <process.h>
-#include <string>  
 #include <sstream>  
 #include <algorithm> 
-
-//#include <mutex>
+#include <queue>
+#include <stdlib.h>
 #include <ctype.h>
 #include <time.h>
+#include <string.h>
 #include <stdio.h>
-#include <queue>
+#include <stdarg.h>
 
+#ifdef _WIN32_
+#include <windows.h>
+#include <conio.h>
+#include <io.h>
+#include <winsock2.h>
+#endif
 
-#include "osp\debug\include\debug_center_inc.h"
+#include "kernel.h"
+
+#include "product/main/root.h"
+
+#include "osp/common/include/osp_common_def.h"
+#include "product/include/pdt_common_inc.h"
+#include "osp/event/include/event_pub.h"
+#include "osp/command/include/icli.h"
+#include "osp/debug/include/debug_center_inc.h"
+
+#if (OS_YES == OSP_MODULE_DEBUG)
 
 using namespace std;
+
+char logPath[MAX_PATH]="logfile";
 
 enum DEBUG_CMO_TBLID_EM {
 	DEBUG_TBL_SHOW = 0,
@@ -32,12 +48,24 @@ enum DEBUG_CMO_CFG_ID_EM {
 	DEBUG_CMO_CFG_ENABLE,	
 	DEBUG_CMO_CFG_ENABLE_ALL,
 	DEBUG_CMO_CFG_TERMINAL,
+	DEBUG_CMO_CFG_COMMON,
+	DEBUG_CMO_CFG_JUDGE,
+	DEBUG_CMO_CFG_MYSQL,
+	DEBUG_CMO_CFG_DEBUG_CENTER,
+	DEBUG_CMO_CFG_CLI,
+	DEBUG_CMO_CFG_EVT,
+	DEBUG_CMO_CFG_NDP,
+	DEBUG_CMO_CFG_AAA,
+	DEBUG_CMO_CFG_TELNET,
+	DEBUG_CMO_CFG_FTP,
+	
 };
 
 char *szModuleName[32] = {
 	"none",
 	"common",
 	"judge",
+	"sysmng",
 	"mysql",
 	"debug-center",
 	"command",
@@ -111,7 +139,7 @@ void debugcenter_print(MID_ID_EM mid, DEBUG_TYPE_EM type, const char *format, ..
 
 	stMsgQ.mid = mid;
 	stMsgQ.type = type;
-    stMsgQ.thread_id = GetCurrentThreadId();
+    stMsgQ.thread_id = thread_get_self();
 	stMsgQ.stTime = *p;
 
 	g_stMsgQueue.push(stMsgQ);
@@ -142,7 +170,7 @@ void pdt_debug_print(const char *format, ...)
 
 	stMsgQ.mid = MID_NULL;
 	stMsgQ.type = DEBUG_TYPE_NONE;
-    stMsgQ.thread_id = GetCurrentThreadId();
+    stMsgQ.thread_id = thread_get_self();
 	stMsgQ.stTime = *p;
 
 	g_stMsgQueue.push(stMsgQ);
@@ -157,7 +185,7 @@ void RunDelay(int t)
 
 int g_dotprint = 0;
 
-unsigned _stdcall msg_dot_thread(void *pEntry)
+int msg_dot_thread(void *pEntry)
 {
 	int i;
 
@@ -174,8 +202,7 @@ unsigned _stdcall msg_dot_thread(void *pEntry)
 
 void MSG_StartDot()
 {
-	_beginthreadex(NULL, 0, msg_dot_thread, NULL, NULL, NULL);
-	//_beginthread(msg_dot_thread,0,NULL);
+	(void)thread_create(msg_dot_thread, NULL);
 }
 
 void MSG_StopDot()
@@ -190,10 +217,16 @@ void write_log(int level, const char *fmt, ...) {
 	time_t  timep = time(NULL);
 	int l;
 	struct tm *p;
+
+	if( (file_access(logPath, 0 )) == -1 )
+	{
+		create_directory(logPath);
+	}
+
     p = localtime(&timep);
     p->tm_year = p->tm_year + 1900;
     p->tm_mon = p->tm_mon + 1;
-	sprintf(buffer,"log/%04d-%02d-%02d.log", p->tm_year, p->tm_mon, p->tm_mday);
+	sprintf(buffer,"%s/%04d-%02d-%02d.log", logPath, p->tm_year, p->tm_mon, p->tm_mday);
 
 	FILE *fp = fopen(buffer, "a+");
 	if (fp == NULL) {
@@ -455,12 +488,22 @@ ULONG DEBUG_RegCmdConfig()
 	CMD_VECTOR_NEW(vec);
 
 	/* ÃüÁîÐÐ×¢²áËÄ²¿Çú2: ¶¨ÒåÃüÁî×Ö */
-	cmd_regelement_new(DEBUG_CMO_CFG_UNDO,       CMD_ELEM_TYPE_KEY,   "undo", 	    	"Undo operation", vec);	
-	cmd_regelement_new(CMD_ELEMID_NULL,          CMD_ELEM_TYPE_KEY,   "debugging", 	    "Debugging switch", vec);	
+	cmd_regelement_new(DEBUG_CMO_CFG_UNDO,       CMD_ELEM_TYPE_KEY,   "undo", 	    "Undo operation", vec);	
+	cmd_regelement_new(CMD_ELEMID_NULL,          CMD_ELEM_TYPE_KEY,   "debugging", 	"Debugging switch", vec);	
 	cmd_regelement_new(DEBUG_CMO_CFG_ENABLE,     CMD_ELEM_TYPE_KEY,   "enable", 		"Enable the debugging", vec);
 	cmd_regelement_new(DEBUG_CMO_CFG_ENABLE_ALL, CMD_ELEM_TYPE_KEY,   "all", 			"Enable all the debugging", vec);
-	cmd_regelement_new(DEBUG_CMO_CFG_TERMINAL, 	 CMD_ELEM_TYPE_KEY,   "terminal", 			"Enable all the debugging", vec);
-		
+	cmd_regelement_new(DEBUG_CMO_CFG_TERMINAL,   CMD_ELEM_TYPE_KEY,   "terminal", 	"Terminal", vec);
+	cmd_regelement_new(DEBUG_CMO_CFG_COMMON,     CMD_ELEM_TYPE_KEY,   "common", 		"Common Module", vec);
+	cmd_regelement_new(DEBUG_CMO_CFG_JUDGE,      CMD_ELEM_TYPE_KEY,   "judge", 		"Judge Module", vec);
+	cmd_regelement_new(DEBUG_CMO_CFG_MYSQL,      CMD_ELEM_TYPE_KEY,   "mysql", 		"Mysql Module", vec);
+	cmd_regelement_new(DEBUG_CMO_CFG_DEBUG_CENTER, CMD_ELEM_TYPE_KEY, "debug-center", "Debug Module", vec);
+	cmd_regelement_new(DEBUG_CMO_CFG_CLI,        CMD_ELEM_TYPE_KEY,   "command", 		"Command Module", vec);
+	cmd_regelement_new(DEBUG_CMO_CFG_EVT,        CMD_ELEM_TYPE_KEY,   "event", 		"Event Module", vec);
+	cmd_regelement_new(DEBUG_CMO_CFG_NDP,        CMD_ELEM_TYPE_KEY,   "ndp", 			"NDP Module", vec);
+	cmd_regelement_new(DEBUG_CMO_CFG_AAA,        CMD_ELEM_TYPE_KEY,   "aaa", 			"AAA Module", vec);
+	cmd_regelement_new(DEBUG_CMO_CFG_TELNET,     CMD_ELEM_TYPE_KEY,   "telnet", 		"Telnet Module", vec);
+	cmd_regelement_new(DEBUG_CMO_CFG_FTP,        CMD_ELEM_TYPE_KEY,   "ftp", 		    "FTP Module", vec);
+	
 	/* ÃüÁîÐÐ×¢²áËÄ²¿Çú3: ×¢²áÃüÁîÐÐ */
 	cmd_install_command(MID_DEBUG, VIEW_USER, " 1 2 3 ", vec); /* undo debugging enable */
 	cmd_install_command(MID_DEBUG, VIEW_USER, " 2 3 ", vec);   /* debugging enable */
@@ -482,7 +525,7 @@ ULONG DEBUG_RegCmd()
 	(VOID)DEBUG_RegCmdConfig();
 }
 
-unsigned _stdcall  DEBUG_MainEntry(void *pEntry)
+int DEBUG_MainEntry(void *pEntry)
 {
     MSGQUEUE_S stMsgQ;
 	char module[32] = {0};
@@ -544,6 +587,7 @@ APP_INFO_S g_DebugAppInfo =
 
 void Debug_RegAppInfo()
 {
-	RegistAppInfo(&g_DebugAppInfo);
+	APP_RegistInfo(&g_DebugAppInfo);
 }
 
+#endif

@@ -72,44 +72,47 @@
 #define cmd_vector_size(v)		    ((v)->ulSize)
 
 #ifdef _LINUX_
-#define CMD_KEY_ARROW1	0x1b  		 //0xffffffe0
-#define CMD_KEY_ARROW2	0x5b		 //0x0
-#define CMD_KEY_UP		0x41         //0x48
-#define CMD_KEY_DOWN 	0x42		 //0x50
-#define CMD_KEY_RIGHT 	0x43		 //0x4d
-#define CMD_KEY_LEFT 	0x44		 //0x4b
+#define CMD_KEY_ARROW1	0x1b  		 
+#define CMD_KEY_ARROW2	0x5b
+#define CMD_KEY_ARROW3	0x33
+#define CMD_KEY_UP		0x41  /* 1b 5b 41 */
+#define CMD_KEY_DOWN 	0x42
+#define CMD_KEY_RIGHT 	0x43
+#define CMD_KEY_LEFT 	0x44
 #define CMD_KEY_HOME	0x47
-#define CMD_KEY_END		0x4f
-#define CMD_KEY_PGUP	0x49
-#define CMD_KEY_PHDN	0x51
-#define CMD_KEY_BACKSPACE  0x7e		 //0x08
-#define CMD_KEY_SPACE   0x20		 //0x8
-#define CMD_KEY_CTRL_H	(0x1f | 0x7f)
-#else
-#define CMD_KEY_ARROW1	0xffffffe0   //0x1b
-#define CMD_KEY_ARROW2	0x0			 //0x5b
-#define CMD_KEY_UP		0x48
-#define CMD_KEY_DOWN 	0x50
-#define CMD_KEY_RIGHT 	0x4d
-#define CMD_KEY_LEFT 	0x4b
-#define CMD_KEY_HOME	0x47
-#define CMD_KEY_END		0x4f
+#define CMD_KEY_END	0x4f
 #define CMD_KEY_PGUP	0x49
 #define CMD_KEY_PHDN	0x51
 
-#define CMD_KEY_DELETE  0x53
+#define CMD_KEY_DELETE     0x7e   /* 1b 5b 33 7e */
+#define CMD_KEY_BACKSPACE  0x7f
+#define CMD_KEY_CTRL_H	(0x1f | 0x7f)
+#else
+#define CMD_KEY_ARROW1	0xe0
+#define CMD_KEY_ARROW2	0x0
+#define CMD_KEY_UP		0x48          /* 0xe048 */
+#define CMD_KEY_DOWN 	0x50		  /* 0xe050 */
+#define CMD_KEY_RIGHT 	0x4d		  /* 0xe04d */
+#define CMD_KEY_LEFT 	0x4b		  /* 0xe04b */
+#define CMD_KEY_HOME	0x47		  /* 0xe047 */
+#define CMD_KEY_END	0x4f		  /* 0xe04f */
+#define CMD_KEY_PGUP	0x49		  /* 0xe049 */
+#define CMD_KEY_PHDN	0x51		  /* 0xe051 */
+
+#define CMD_KEY_DELETE  0x53		  /* 0xe053 */
 #define CMD_KEY_BACKSPACE  0x08
-#define CMD_KEY_SPACE   0x20
+
 #define CMD_KEY_CTRL_H	(0x1f | 0x7f)
 #endif
 
 #define CMD_KEY_CTRL_W	0x17
-#define CMD_KEY_CR	    0xd  /* '\r' */
-#define CMD_KEY_LF	    0xa  /* '\n' */
-#define CMD_KEY_TAB	    0x9  /* '\n' */
+#define CMD_KEY_CR	    0x0d  /* '\r' */
+#define CMD_KEY_LF	    0x0a  /* '\n' */
+#define CMD_KEY_TAB	0x09  /* '\n' */
 #define CMD_KEY_QUEST	0x3f /* '?'  */
-
-#define CMD_KEY_DELETE_VTY 0x7f
+#define CMD_KEY_SPACE 0x20
+#define CMD_KEY_BACKSPACE_VTY 0x08
+#define CMD_KEY_DELETE_VTY     0x7f
 
 #define CMD_SYSNAME_SIZE    24
 

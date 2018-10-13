@@ -1,20 +1,8 @@
 
-#include <windows.h>
-#include <process.h>
-#include <iostream>
-#include <conio.h>
-#include <stdlib.h>
-#include <io.h>
-#include <time.h>
-#include <queue>
-#include <string>
-#include <sstream>
 
-#include "tlhelp32.h"
+#include "product/judge/include/judge_inc.h"
 
-#include"product\thirdpart32\cjson\cJSON.h"
-
-#include "product\judge\include\judge_inc.h"
+#if (OS_YES == OSP_MODULE_JUDGE)
 
 using namespace std;
 
@@ -29,7 +17,7 @@ VOID Judge_ShowBrief(ULONG vtyId)
 	extern char g_sysname[];
 	extern queue <JUDGE_DATA_S> g_JudgeQueue;
 	
-	API_TimeToString(strDateStr, g_lastjudgetime);
+	(VOID)util_time_to_string(strDateStr, g_lastjudgetime);
 
 	buff += sprintf(buff, "# Local Judger Info\r\n");
 	buff += sprintf(buff, "  Global Judge Is %s\r\n",
@@ -56,7 +44,9 @@ VOID Judge_ShowBrief(ULONG vtyId)
 		   "------------------------\r\n");
 
 	buff += sprintf(buff, " %-8s %-10s %-10s %-8s %-8s %-15s %-8d\r\n",
-		  " HDU ", hdu_username, hdu_password,
+		  " HDU ", 
+		   0 == strlen(hdu_username)?"-":hdu_username, 
+		   0 == strlen(hdu_password)?"-":hdu_password,
 		   (hdu_vjudge_enable==OS_YES)?"Enable":"Disable",
 		   (hdu_remote_enable==OS_YES)?"Enable":"Disable",
 		   hdu_judgerIP, hdu_sockport);
@@ -72,11 +62,11 @@ VOID Judge_ShowBrief(ULONG vtyId)
 		   "========================\r\n");
 
 	buff += sprintf(buff, "# MySQL Info\r\n"
-		  "  URL	   : %s\r\n"
+		  "  URL       : %s\r\n"
 		  "  Username  : %s\r\n"
 		  "  Password  : %s\r\n"
 		  "  Table-Name: %s\r\n"
-		  "  Port	   : %d\r\n",
+		  "  Port      : %d\r\n",
 		Mysql_url,Mysql_username,Mysql_password,Mysql_table,Mysql_port);
 
 	buff += sprintf(buff, " =================================================="
@@ -94,6 +84,7 @@ ULONG Judge_CFG_JudgeSolution(ULONG solutionId)
 
 	return 0;
 }
+
 
 
 ULONG Judge_CFG_Show(VOID *pRcvMsg)
@@ -155,6 +146,7 @@ ULONG Judge_CFG_Config(VOID *pRcvMsg)
 	ULONG isHDUJudgeIp= 0;
 	char ip[25] = {0};
 	ULONG port = 0;
+	ULONG isIgnoreExtraSpace= 0;
 
 	vtyId = cmd_get_vty_id(pRcvMsg);
 	iElemNum = cmd_get_elem_num(pRcvMsg);
@@ -218,7 +210,7 @@ ULONG Judge_CFG_Config(VOID *pRcvMsg)
 			case JUDGE_CMO_CFG_TESTCASE_PATH:
 				extern char dataPath[];
 				cmd_copy_string_param(pElem, szpath);
-				if( (_access(szpath, 0 )) == -1 )
+				if( (file_access(szpath, 0 )) == -1 )
 			    {
 			    	vty_printf(vtyId, "Error: Path '%s' is not exist.\r\n", szpath);
 			        return OS_ERR;
@@ -264,6 +256,10 @@ ULONG Judge_CFG_Config(VOID *pRcvMsg)
 
 			case JUDGE_CMO_CFG_HDU_REMOTE_PORT:	
 				port = cmd_get_ulong_param(pElem);
+				break;
+
+			case JUDGE_CMO_CFG_EXTRA_SPACE:
+				isIgnoreExtraSpace = OS_YES;
 				break;
 				
 			default:
@@ -345,6 +341,14 @@ ULONG Judge_CFG_Config(VOID *pRcvMsg)
 		hdu_sockport = port;		
 		return 0;
 	}
+
+	if (OS_YES == isIgnoreExtraSpace
+		&& OS_YES == isEnable)
+	{
+		extern int g_judge_ignore_extra_space_enable;
+		g_judge_ignore_extra_space_enable = (OS_YES == isundo)?OS_NO:OS_YES;
+		return 0;	
+	}
 	
 	return 0;
 
@@ -425,7 +429,7 @@ ULONG Judge_RegCmdConfig()
 	// 9
 	cmd_regelement_new(JUDGE_CMO_CFG_MODE, CMD_ELEM_TYPE_KEY, "mode", "Mode of judger, default is ACM mode.", vec);
 	// 10
-	cmd_regelement_new(JUDGE_CMO_CFG_MODE_ACM, CMD_ELEM_TYPE_KEY, "acm", "ACM mode", vec);
+	cmd_regelement_new(JUDGE_CMO_CFG_MODE_ACM, CMD_ELEM_TYPE_KEY, "acm", "ACM mode, the default mode.", vec);
 	// 11
 	cmd_regelement_new(JUDGE_CMO_CFG_MODE_OI, CMD_ELEM_TYPE_KEY, "oi", "OI mode", vec);
 	// 12
@@ -457,10 +461,14 @@ ULONG Judge_RegCmdConfig()
 	// 25
 	cmd_regelement_new(JUDGE_CMO_CFG_HDU_REMOTE_IP,	CMD_ELEM_TYPE_IP, 	 CMD_ELMT_IP,	"IP address", vec);
 	// 26
-	cmd_regelement_new(CMD_ELEMID_NULL, 			CMD_ELEM_TYPE_KEY,	  "port", "Socket port of HDU remote judger", vec);
+	cmd_regelement_new(CMD_ELEMID_NULL, 				CMD_ELEM_TYPE_KEY,	  "port", "Socket port of HDU remote judger", vec);
 	// 27
 	cmd_regelement_new(JUDGE_CMO_CFG_HDU_REMOTE_PORT, CMD_ELEM_TYPE_INTEGER, "INTEGER<1-65535>", "Socket port of HDU remote judger",vec);
-	
+	// 28
+	cmd_regelement_new(CMD_ELEMID_NULL,				CMD_ELEM_TYPE_KEY, 	  "ignore",	"Ignore", vec);
+	// 29
+	cmd_regelement_new(JUDGE_CMO_CFG_EXTRA_SPACE,		CMD_ELEM_TYPE_KEY, 	  "extra-space",	"Extra space", vec);
+
 	/* 命令行注册四部曲3: 注册命令行 */
 	cmd_install_command(MID_JUDGE, VIEW_SYSTEM, " 2 3 4 ", vec);
 	cmd_install_command(MID_JUDGE, VIEW_SYSTEM, " 2 8 ", vec);
@@ -483,6 +491,9 @@ ULONG Judge_RegCmdConfig()
 	cmd_install_command(MID_JUDGE, VIEW_VJUDGE_MGR, " 1 18 19 8 ", vec);
 	cmd_install_command(MID_JUDGE, VIEW_VJUDGE_MGR, " 18 20 21 22 23 ", vec);
 	cmd_install_command(MID_JUDGE, VIEW_VJUDGE_MGR, " 18 24 25 26 27 ", vec);
+	
+	cmd_install_command(MID_JUDGE, VIEW_JUDGE_MGR, " 28 29 8 ", vec);
+	cmd_install_command(MID_JUDGE, VIEW_JUDGE_MGR, " 1 28 29 8 ", vec);
 	/* 命令行注册四部曲4: 释放命令行向量 */
 	CMD_VECTOR_FREE(vec);
 
@@ -502,3 +513,4 @@ ULONG Judge_RegCmd()
 	(VOID)Judge_RegCmdConfig();
 }
 
+#endif
