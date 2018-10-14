@@ -70,7 +70,7 @@ OJ_WEB=D\:\\tomcat6\\webapps\\ROOT\\
 OJ_PATH=D\:\\OJ\\
 OJ_DATA_PATH=D\:\\OJ\\data\\
 OJ_JUDGE_LOG=D\:\\OJ\\OJ_JUDGE_LOG\\
-OJ_LANG_PATH=D\:\\OJ\\conf\\Language.xml
+OJ_LANG_PATH=D\:\\OJ\\conf\\Language.xml ------> 这个很重要决定了WEB支持的语言
 OJ_JUDGER_IP=127.0.0.1   ------> 这个很重要，用于WEB与OJ-Kernel通信的IP
 OJ_JUDGER_PORT=5000      ------> 这个很重要，用于WEB与OJ-Kernel通信的端口号，必须与OJ-Kernel的配置一致
 ```
