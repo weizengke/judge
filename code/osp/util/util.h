@@ -15,6 +15,7 @@ extern long util_strtol(char *str, int base);
 extern int util_freset(const char *filename);
 extern int util_fread(const char *filename, char * buffer, int buf_size);
 extern int util_fwrite(const char *filename, const char *fmt, ...);
+extern int util_remove(char * filename);
 extern int util_string_to_time(const string &string_time,time_t &time_data);
 extern int util_time_to_string(string &time_string,const time_t &time_data);
 extern long util_getdiftime(time_t maxt,time_t mint);

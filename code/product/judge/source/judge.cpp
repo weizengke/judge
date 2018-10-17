@@ -48,6 +48,11 @@ int g_judge_auto_detect_interval = 10;
 time_t g_lastjudgetime = 0;
 int g_judge_ignore_extra_space_enable = OS_NO;
 
+/* 全局APIKooh标记 */
+ULONG g_ulNeedApiHookFlag = OS_TRUE;
+
+char szApiHookDllPath[MAX_PATH] = "hook.dll"; 
+
 queue <JUDGE_DATA_S> g_JudgeQueue; /* 全局队列 */
 
 ULONG Judge_DebugSwitch(ULONG st)
@@ -56,19 +61,6 @@ ULONG Judge_DebugSwitch(ULONG st)
 
 	return OS_TRUE;
 }
-
-#if (OS_YES == OSP_MODULE_JUDGE_VJUDGE)
-int Judge_IsVirtualJudgeEnable()
-{
-	if (g_vjudge_enable == OS_YES)
-	{
-		return OS_YES;
-	}
-
-	return OS_NO;
-}
-#endif
-
 
 void Judge_InitJudgePath(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 {
@@ -165,9 +157,11 @@ void Judge_InitSubmissionData(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 	pstJudgeSubmission->limitIndex = 1;
 	pstJudgeSubmission->nProcessLimit = 1;
 
+#if (OS_YES == OSP_MODULE_JUDGE_LOCAL)
 	pstJudgeSubmission->hInputFile = INVALID_HANDLE_VALUE;
 	pstJudgeSubmission->hOutputFile = INVALID_HANDLE_VALUE;
-
+#endif
+	
 	if( (file_access(workPath, 0 )) == -1 )
 	{
 		create_directory(workPath);
@@ -178,7 +172,7 @@ void Judge_InitSubmissionData(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 	srand((int)time(0)*3);
 	pstJudgeSubmission->ulSeed = timep + rand();
 
-	sprintf(pstJudgeSubmission->subPath, "%d_%u\\", pstJudgeSubmission->stSolution.solutionId, pstJudgeSubmission->ulSeed);
+	sprintf(pstJudgeSubmission->subPath, "%d_%u\/", pstJudgeSubmission->stSolution.solutionId, pstJudgeSubmission->ulSeed);
 
 	char fullPath[1024] = {0};
 	sprintf(fullPath, "%s%s", workPath, pstJudgeSubmission->subPath);
@@ -188,7 +182,7 @@ void Judge_InitSubmissionData(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 		Sleep(10);
 		pstJudgeSubmission->ulSeed = timep + rand();
 
-		sprintf(pstJudgeSubmission->subPath, "%d_%u\\", pstJudgeSubmission->stSolution.solutionId, pstJudgeSubmission->ulSeed);
+		sprintf(pstJudgeSubmission->subPath, "%d_%u\/", pstJudgeSubmission->stSolution.solutionId, pstJudgeSubmission->ulSeed);
 		sprintf(fullPath, "%s%s", workPath, pstJudgeSubmission->subPath);
 	}
 
@@ -196,6 +190,7 @@ void Judge_InitSubmissionData(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 
 }
 
+#if (OS_YES == OSP_MODULE_JUDGE_LOCAL)
 int Judge_DisableAllPriv(HANDLE ProcessHandle)
 {
 	HANDLE hToken;
@@ -412,11 +407,6 @@ BOOL Judge_ExistException(DWORD dw)
 		return FALSE;
 	}
 }
-
-
-/* 全局APIKooh标记 */
-ULONG g_ulNeedApiHookFlag = OS_TRUE;
-char szApiHookDllPath[MAX_PATH] = "hook.dll"; 
 
 int EnableDebugPriv(const char * name)
 {
@@ -896,21 +886,19 @@ int Judge_RunLocalSolution(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 		{
 			int verdict_ = compare(srcPath,ansPath);
 			
-			if (OS_NO == g_judge_ignore_extra_space_enable)
-			{
-				pstJudgeSubmission->stSolution.verdictId = verdict_;
-			}
-			else 
+			pstJudgeSubmission->stSolution.verdictId = verdict_;
+
+			if (OS_YES == g_judge_ignore_extra_space_enable)
 			{
 				/* 使能忽略多余空格，切ac */
 				if (V_PE == verdict_)
 				{
 					pstJudgeSubmission->stSolution.verdictId = V_AC;
-				}
+				}				
 			}
 			
 		}
-
+		
 l:		write_log(JUDGE_INFO,"ID:%d Test%d ,%s ,%d(%d)ms %d(%d)kb ,Return code:%u",
 					pstJudgeSubmission->stSolution.solutionId, icaseId,
 					VERDICT_NAME[pstJudgeSubmission->stSolution.verdictId],
@@ -1054,7 +1042,33 @@ int Judge_Local(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 
 	return OS_TRUE;
 }
+#endif
 
+#if (OS_YES == OSP_MODULE_JUDGE_VJUDGE)
+/*****************************************************************************
+ Prototype    : Judge_IsVirtualJudgeEnable
+ Description  : 判断是否支持vjudge
+ Input        : None
+ Output       : None
+ Return Value : 
+ Calls        : 
+ Called By    : 
+ 
+  History        :
+  1.Date         : 2018/10/13
+    Author       : Jungle
+    Modification : Created function
+
+*****************************************************************************/
+int Judge_IsVirtualJudgeEnable()
+{
+	if (g_vjudge_enable == OS_YES)
+	{
+		return OS_YES;
+	}
+
+	return OS_NO;
+}
 
 /*****************************************************************************
 *   Prototype    : Judge_SendToJudger
@@ -1108,7 +1122,6 @@ int Judge_SendToJudger(int solutionId, int port,char *ip)
 	return OS_OK;
 }
 
-#if (OS_YES == OSP_MODULE_JUDGE_VJUDGE)
 int Judge_Remote(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 {
 	int ret = OS_OK;
@@ -1197,7 +1210,7 @@ int Judge_Remote(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 }
 #endif
 
-unsigned _stdcall  Judge_Proc(void *pData)
+int Judge_Proc(void *pData)
 {
 	int ret = OS_OK;
 	int isExist = OS_NO;
@@ -1286,7 +1299,12 @@ unsigned _stdcall  Judge_Proc(void *pData)
 		stJudgeSubmission.stProblem.time_limit *=stJudgeSubmission.limitIndex;
 		stJudgeSubmission.stProblem.memory_limit *=stJudgeSubmission.limitIndex;
 
+		#if (OS_YES == OSP_MODULE_JUDGE_LOCAL)
 		ret = Judge_Local(&stJudgeSubmission);
+		#else
+		stJudgeSubmission.stSolution.verdictId = V_SK;
+		Judge_Debug(DEBUG_TYPE_ERROR, "local-judge is not support.");
+		#endif
 	}
 	
 	write_log(JUDGE_INFO,"Do Judge finish. (solutionId=%d)", stJudgeSubmission.stSolution.solutionId);
@@ -1324,9 +1342,9 @@ unsigned _stdcall  Judge_Proc(void *pData)
 		SQL_updateProblem_contest(stJudgeSubmission.stSolution.contestId, stJudgeSubmission.stSolution.problemId);
 	}
 
-	//DeleteFile(stJudgeSubmission.sourcePath);
-	//DeleteFile(stJudgeSubmission.DebugFile);
-	//DeleteFile(stJudgeSubmission.exePath);
+	//util_remove(stJudgeSubmission.sourcePath);
+	//util_remove(stJudgeSubmission.DebugFile);
+	//util_remove(stJudgeSubmission.exePath);
 
 	string time_string_;
 	(VOID)util_time_to_string(time_string_, stJudgeSubmission.stSolution.submitDate);

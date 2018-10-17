@@ -149,6 +149,11 @@ int util_fwrite(const char *filename, const char *fmt, ...)
 	return 0;
 }
 
+int util_remove(char * filename)
+{
+	return remove(filename);
+}
+
 int util_string_to_time(const string &string_time,time_t &time_data)
 {
     char *pBeginPos = (char*) string_time.c_str();

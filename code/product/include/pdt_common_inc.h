@@ -18,9 +18,9 @@
 /* os version */
 #define OS_VERSION_MAJOR 1
 #define OS_VERSION_MINOR 1
-#define OS_VERSION_PATCH 130
+#define OS_VERSION_PATCH 131
 
-#define STARTUP_CFG "conf\\config.ini"
+#define STARTUP_CFG "conf\/config.ini"
 
 /* Ä£¿éid¶¨Òå */
 enum MID_ID_EM
@@ -57,6 +57,7 @@ enum CFG_SECTION_ID_EM
 /* feature switch */
 #ifdef _WIN32_
 #define OSP_MODULE_JUDGE 			OS_YES
+#define OSP_MODULE_JUDGE_LOCAL   OS_YES
 #define OSP_MODULE_JUDGE_VJUDGE  OS_YES 
 #define OSP_MODULE_JUDGE_OI 		OS_YES 
 #define OSP_MODULE_NDP				OS_YES 
@@ -69,9 +70,10 @@ enum CFG_SECTION_ID_EM
 #endif
 
 #ifdef _LINUX_
-#define OSP_MODULE_JUDGE 			OS_NO
-#define OSP_MODULE_JUDGE_VJUDGE  OS_NO 
-#define OSP_MODULE_JUDGE_OI 		OS_NO 
+#define OSP_MODULE_JUDGE 			OS_YES
+#define OSP_MODULE_JUDGE_LOCAL   OS_NO
+#define OSP_MODULE_JUDGE_VJUDGE  OS_YES 
+#define OSP_MODULE_JUDGE_OI 		OS_YES 
 #define OSP_MODULE_FTPS 		 	OS_YES
 #define OSP_MODULE_TELNETS 		OS_YES 
 #define OSP_MODULE_DEBUG 			OS_YES 

@@ -18,21 +18,22 @@ char Mysql_Character[255];
 
 /* BEGIN: Added by weizengke, 2014/7/10  for 多线程判题信号量保护数据库访问 */
 
-HANDLE hSemaphore_SQL;
+mutex_t hSemaphore_SQL;
 
 void SQL_CreateSem()
 {
-	hSemaphore_SQL = CreateSemaphore(NULL, 1, 1, "SQL_SEM");
+	hSemaphore_SQL = mutex_create("SQL_SEM");
 }
 void SQL_SemP()
 {
-	WaitForSingleObject(hSemaphore_SQL, INFINITE);
+	(void)mutex_lock(hSemaphore_SQL);
 }
 
 void SQL_SemV()
 {
-	ReleaseSemaphore(hSemaphore_SQL, 1, NULL);
+	(void)mutex_unlock(hSemaphore_SQL);
 }
+
 /* END:   Added by weizengke, 2014/7/10 */
 
 

@@ -20,10 +20,35 @@
 #define M_DES(x,y) y
 #endif
 
+mutex_t mutex_create(char *name)
+{
+	return CreateSemaphore(NULL, 1, 1, name);
+}
+
+int mutex_lock(mutex_t mutex)
+{
+	if (WaitForSingleObject(mutex, INFINITE) != 0)
+	{
+		return 1;
+	}
+
+	return 0;
+}
+
+int mutex_unlock(mutex_t mutex)
+{
+	if (ReleaseSemaphore(mutex, 1, NULL) != 0)
+	{
+		return 1;
+	}
+
+	return 0;
+}
+
+
 #if M_DES("thread", 1)
 //int pthread_create(pthread_t *tidp, const pthread_attr_t *attr, (void*)(*start_rtn)(void*), void *arg);
 #define start_thread (HANDLE)_beginthreadex
-
 
 typedef unsigned (__stdcall *w32_thread_func)(void*);
 
@@ -150,17 +175,27 @@ bool win32_create_directory(char *path)
 	return true;
 }
 
-bool create_directory(char *path_name)
-{
-	return win32_create_directory(path_name);
-}
-
 #endif
 
 
 int file_access(const char *pathname, int mode)
 {
 	return _access(pathname, mode);
+}
+
+bool create_directory(char *path_name)
+{
+	return win32_create_directory(path_name);
+}
+
+bool get_current_directory(int buf_len, char* current_path)
+{
+	if (0 != GetCurrentDirectory(buf_len, current_path))
+	{	
+		return true;
+	}
+
+	return false;
 }
 
 

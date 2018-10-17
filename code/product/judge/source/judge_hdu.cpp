@@ -1057,7 +1057,7 @@ ULONG getProblemInfo(string pid)
 
 	if (access(g_Vjudgetfilename, 0) == 0)
 	{
-		DeleteFile(g_Vjudgetfilename);
+		util_remove(g_Vjudgetfilename);
 	}
 
     if ( curl ) {
@@ -1084,7 +1084,9 @@ ULONG getProblemInfo(string pid)
 int DLL_GetProblemInfoFromHDU(int pid)
 {
 	char tmp[10]={0};
-	itoa(pid,tmp,10);
+	
+	sprintf(tmp, "%d", pid);
+	
 	string pid_s = tmp;
 
 	if (OS_TRUE != getProblemInfo(pid_s))
@@ -1109,11 +1111,15 @@ ULONG DLL_HDULogin()
 ULONG DLL_HDUSubmit(int pid, int langid, string source)
 {
 	char tmp[10]={0};
-	itoa(pid,tmp,10);
+	
+	sprintf(tmp, "%d", pid);
+	
 	string pid_s = tmp;
 
 	char tmplang[10]={0};
-	itoa(langid,tmplang,10);
+
+	sprintf(tmplang, "%d", langid);
+	
 	string lang_string = tmplang;
 
 	if (OS_TRUE != HDU_submit(pid_s, lang_string, source))
@@ -1126,11 +1132,15 @@ ULONG DLL_HDUSubmit(int pid, int langid, string source)
 ULONG DLL_HDUGetStatus(string hdu_username, int pid, int langid, string &runid, string &result,string& ce_info,string &tu,string &mu)
 {
 	char tmp[10]={0};
-	itoa(pid,tmp,10);
+	
+	sprintf(tmp, "%d", pid);
+	
 	string pid_s = tmp;
 
 	char tmplang[10]={0};
-	itoa(langid,tmplang,10);
+	
+	sprintf(tmplang, "%d", langid);
+	
 	string lang_string = tmplang;
 
 	if (OS_TRUE != getStatus(hdu_username, pid_s, lang_string, runid, result, ce_info, tu, mu))
@@ -1201,7 +1211,8 @@ int Judge_Via_CurlLib(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 	char current_path[MAX_PATH] = {0};
 	char tmp_source_path[MAX_PATH] = {0};
 	char tmp_return_path[MAX_PATH] = {0};
-	GetCurrentDirectory(sizeof(current_path),current_path);
+	
+	get_current_directory(sizeof(current_path),current_path);
 
 	sprintf(tmp_source_path, "%s//%s",current_path,pstJudgeSubmission->sourcePath);
 	sprintf(tmp_return_path, "%s//OJ_TMP//hdujudge-%d.tmp",current_path,pstJudgeSubmission->stSolution.solutionId);
@@ -1358,7 +1369,7 @@ int Judge_Via_CurlLib(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 
 	}while(0);
 
-	DeleteFile(g_Vjudgetfilename);
+	util_remove(g_Vjudgetfilename);
 
 	return OS_OK;
 }
@@ -1369,7 +1380,7 @@ int Judge_Via_python()
 	char current_path[MAX_PATH] = {0};
 	char tmp_source_path[MAX_PATH] = {0};
 	char tmp_return_path[MAX_PATH] = {0};
-	GetCurrentDirectory(sizeof(current_path),current_path);
+	get_current_directory(sizeof(current_path),current_path);
 
 	sprintf(tmp_source_path, "%s//%s",current_path,sourcePath);
 	sprintf(tmp_return_path, "%s//OJ_TMP//hdujudge-%d.tmp",current_path,GL_solutionId);
@@ -1492,7 +1503,7 @@ int Judge_Via_python()
 
 	} while (0);
 
-	DeleteFile(tmp_return_path);
+	util_remove(tmp_return_path);
 
 	return OS_TRUE;
 

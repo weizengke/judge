@@ -83,13 +83,15 @@ typedef struct tag_Judge_Submission_ST
     char compileCmd[1024];
     char runCmd[1024];
 
-#ifdef _WIN32_
+#if (OS_YES == OSP_MODULE_JUDGE_LOCAL)
+	#ifdef _WIN32_
 	PROCESS_INFORMATION pProRunInfo; /* 运行进程信息 */
 	PROCESS_INFORMATION pProComInfo; /* 编译进程信息 */
 
 	HANDLE hJob;         /* 作业句柄 */
     HANDLE hInputFile ;  /* 父进程输入文件句柄 */
     HANDLE hOutputFile;  /* 子进程标准输出句柄 */
+	#endif
 #endif
 
     DWORD dwProStatusCode;     /* 定义进程状态 */

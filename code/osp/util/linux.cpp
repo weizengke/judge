@@ -49,6 +49,39 @@ int geterror()
 	return errno;
 }
 
+mutex_t mutex_create(char *name)
+{	
+	mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+	
+	if (pthread_mutex_init(&mutex, NULL) != 0)
+	{
+		return PTHREAD_MUTEX_INITIALIZER;
+	}
+
+	return mutex;	
+}
+
+int mutex_lock(mutex_t mutex)
+{
+	if (pthread_mutex_lock(&mutex) != 0)
+	{
+		return 1;
+	}
+
+	return 0;
+}
+
+int mutex_unlock(mutex_t mutex)
+{
+	if (pthread_mutex_unlock(&mutex) != 0)
+	{
+		return 1;
+	}
+
+	return 0;
+}
+
+
 void* thread_start_func(void *th_ptr)
 {
     thread_t *th = (thread_t *)th_ptr;
@@ -109,6 +142,18 @@ bool create_directory(char *path_name)
 	}
 	
 	return true;
+}
+
+bool get_current_directory(int buf_len, char* current_path)
+{
+	char *file_path_getcwd;
+
+	if (NULL != getcwd(current_path, buf_len))
+	{
+		return true;
+	}
+	
+	return false;
 }
 
 #endif

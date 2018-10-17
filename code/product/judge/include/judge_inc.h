@@ -13,9 +13,16 @@
 #include <stdarg.h>
 
 #ifdef _LINUX_
-#include <unistd.h>
-#include <sys/types.h>
+#include <arpa/inet.h>
+#include <dirent.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <sys/wait.h>
 #include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
 #include <termios.h>
 #include <assert.h>
 #endif
@@ -28,12 +35,11 @@
 
 #ifdef _WIN32_
 #include "product/thirdpart32/common/psapi.h"
-#include "product/thirdpart32/curl/curl.h"
-#include "product/thirdpart32/pcre/pcre.h"
 #endif
 
+#include "product/thirdpart32/curl/curl.h"
+#include "product/thirdpart32/pcre/pcre.h"
 #include "product/thirdpart32/mysql/include/mysql.h"
-
 #include "product/thirdpart32/cjson/cJSON.h"
 
 #include "kernel.h"

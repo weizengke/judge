@@ -374,7 +374,7 @@ ULONG GUET_getStatusEx(char *username)
 	string tu;
 	string mu;
 
-	GetCurrentDirectory(sizeof(current_path),current_path);
+	get_current_directory(sizeof(current_path),current_path);
 	sprintf(tmp_return_path, "%s/\OJ_TMP",current_path);
 
 	if( (file_access(tmp_return_path, 0 )) == -1 )
@@ -430,7 +430,7 @@ int GUET_Judge_python(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 	char current_path[MAX_PATH] = {0};
 	char tmp_source_path[MAX_PATH] = {0};
 	char tmp_return_path[MAX_PATH] = {0};
-	GetCurrentDirectory(sizeof(current_path),current_path);
+	get_current_directory(sizeof(current_path),current_path);
 
 	sprintf(tmp_source_path, "%s\\%s",current_path,pstJudgeSubmission->sourcePath);
 	sprintf(tmp_return_path, "%s\\OJ_TMP\\guetjudge-%d.tmp",current_path,pstJudgeSubmission->stSolution.solutionId);
@@ -552,7 +552,7 @@ int GUET_Judge_python(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 
 	} while (0);
 
-	DeleteFile(tmp_return_path);
+	util_remove(tmp_return_path);
 
 	return OS_TRUE;
 

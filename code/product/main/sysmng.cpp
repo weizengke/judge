@@ -260,8 +260,6 @@ int SYSMNG_ListenThread(void *pEntry)
 
 			write_log(JUDGE_INFO,"Recieve packet from (ip:%s, port:%u):\r\n%s",inet_ntoa(remoteAddr.sin_addr), htons(remoteAddr.sin_port), buff1024);
 			PDT_Debug(DEBUG_TYPE_MSG, "Recieve packet from (ip:%s, port:%u):\r\n%s",inet_ntoa(remoteAddr.sin_addr), htons(remoteAddr.sin_port), buff1024);
-			
-			PDT_Debug(DEBUG_TYPE_MSG, "Recieve packet from (ip:%s, port:%u):\r\n%s",inet_ntoa(remoteAddr.sin_addr), htons(remoteAddr.sin_port), buff1024);
 			PDT_Debug(DEBUG_TYPE_MSG, "Message:%s", buff);
 
 			/* 需要检查发送源的合法性 */
@@ -401,6 +399,12 @@ void SYSMNG_InitConfigData()
 	extern int hdu_vjudge_enable;
 
 #if (OS_YES == OSP_MODULE_JUDGE)
+	
+	if( (file_access(INI_filename, 0 )) == -1 )
+	{
+		printf("\r\nWarnning: config.ini path '%s' is not exist, please check.", INI_filename);
+		write_log(JUDGE_ERROR,"config.ini path '%s' is not exist, please check.", dataPath);
+	}
 
 	util_ini_get_string("System","startup_config","config.cfg",g_startup_config,sizeof(g_startup_config),INI_filename);
 	util_ini_get_string("System","sysname","Judge-Kernel",g_sysname,sizeof(g_sysname),INI_filename);
@@ -414,11 +418,11 @@ void SYSMNG_InitConfigData()
 	g_vjudge_enable=util_ini_get_int("Judge","vjudge_enable",OS_NO,INI_filename);
 	isRestrictedFunction=util_ini_get_int("Judge","isRestrictedFunction",0,INI_filename);
 	util_ini_get_string("Judge","WorkingPath","",workPath,sizeof(workPath),INI_filename);
-	util_ini_get_string("Judge","DataPath","D:\\OJ\\data\\",dataPath,sizeof(dataPath),INI_filename);
+	util_ini_get_string("Judge","DataPath","data\/",dataPath,sizeof(dataPath),INI_filename);
 
     if( (file_access(dataPath, 0 )) == -1 )
     {
-    	printf("Warnning: Data path '%s' is not exist, please check.", dataPath);
+    	printf("\r\nWarnning: Data path '%s' is not exist, please check.", dataPath);
     	write_log(JUDGE_ERROR,"Judge data path '%s' is not exist, please check.", dataPath);
     }
     
