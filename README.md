@@ -1,4 +1,4 @@
-# Windows下最好的Online Judge
+# 最好的跨平台Online Judge
 
 ## Table of contents
 * [演示地址](#演示地址)
@@ -14,24 +14,28 @@
   * [Judger基础配置](#judger基础配置)
   * [Virtual Judge配置](#virtual-judge配置)
   * [Telnet配置](#telnet配置)
-  * [Mysql配置](#mysql配置)
+  * [FTP配置](#FTP配置)
   * [日常维护命令](#日常维护命令)
-
+* [Linux下部署](#Linux下部署)  
+  
 ## 演示地址： 
-[http://114.115.142.44](http://114.115.142.44)
+敬请期待
 
 ## 平台简介
+没错，我们支持Windows平台，也支持Linux平台（Linux下当前仅支持Virtual Judge）。<br>
 Online Judge平台系统（简称OJ）是一个B/S架构的源程序判题系统。用户可以在线提交多种程序（如C、C++、Java）源代码，系统对源代码进行编译和执行，并通过预先设计的测试用例来检验程序源代码的正误。
 用户可以在Online Judge系统上练习编程，参加竞赛，与其他用户讨论交流，提高自己的编程水平，并可以用于数据结构、程序设计教学的实验和考试。
 
 ## 支持特性:
-1. Online Judge理论上支持所有可命令行编译和运行的程序语言；支持按语言分布式部署；支持动态添加程序语言。
-2. Online Judge支持Virtual Judge：http://acm.hdu.edu.cn 。
-3. Online Judge Kernel支持命令行管理，命令行特性支持命令联想、自动补全等功能，极大方便了系统的管理。
-4. 支持ACM和OI模式的判题，可以通过命令行judge mode acm(oi)灵活切换，默认为ACM模式；比赛支持ACM和CodeJam两种模式。
+1. Online Judge Kernel支持所有可命令行编译和运行的程序语言；支持按语言分布式部署；支持动态添加程序语言。
+2. Online Judge Kernel支持Virtual Judge：http://acm.hdu.edu.cn 。
+3. Online Judge Kernel支持命令行管理，命令行特性支持命令联想、自动补全等功能，极大方便了系统的管理。（这是我们的特色）
+4. Online Judge Kernel支持ACM和OI模式的判题，可以通过命令行judge mode acm(oi)灵活切换，默认为ACM模式；
 5. Online Judge Kernel支持作为Telnet服务器，被远程连接管理。
 6. Online Judge Kernel支持作为FTP服务器，提供FTP服务。 
 7. Online Judge Kernel支持API Hook安全防护。 
+8. Online Judge Web Platform支持ACM和CodeJam两种竞赛模式。
+9. Online Judge Kernel支持采集知名OJ的最近比赛信息（[Codeforces](http://codeforces.com/contests)、[ZOJ](http://acm.zju.edu.cn/onlinejudge/showContests.do)、[HDU](http://acm.hdu.edu.cn/contests/contest_list.php)、[AtCoder](http://atcoder.jp)、[HihoCoder](https://hihocoder.com/contests)，持续添加）。
 
 ## 目录说明：
 1. judger-kernel：OJ的判题核心代码，C语言
@@ -70,7 +74,7 @@ OJ_WEB=D\:\\tomcat6\\webapps\\ROOT\\
 OJ_PATH=D\:\\OJ\\
 OJ_DATA_PATH=D\:\\OJ\\data\\
 OJ_JUDGE_LOG=D\:\\OJ\\OJ_JUDGE_LOG\\
-OJ_LANG_PATH=D\:\\OJ\\conf\\Language.xml ------> 这个很重要决定了WEB支持的语言
+OJ_LANG_PATH=D\:\\OJ\\conf\\Language.xml
 OJ_JUDGER_IP=127.0.0.1   ------> 这个很重要，用于WEB与OJ-Kernel通信的IP
 OJ_JUDGER_PORT=5000      ------> 这个很重要，用于WEB与OJ-Kernel通信的端口号，必须与OJ-Kernel的配置一致
 ```
@@ -80,7 +84,7 @@ OJ_JUDGER_PORT=5000      ------> 这个很重要，用于WEB与OJ-Kernel通信�
 <property name="password" value="rootpwd"></property>
 ```
 ### 部署判题核心
-- 创建目录D:\OJ，并拷贝judger-kernel/build/bin32到OJ目录下，如：![输入图片说明](https://gitee.com/uploads/images/2017/1206/212651_0331a9c6_6154.jpeg "OJ-ls.jpg")
+- 创建目录D:\OJ，并拷贝judger-kernel/build/release到OJ目录下，如：![输入图片说明](https://gitee.com/uploads/images/2017/1206/212651_0331a9c6_6154.jpeg "OJ-ls.jpg")
 
 - 预配置OJ启动配置文件D:\OJ\conf\config.ini
 ```
@@ -388,7 +392,27 @@ return
 #
 judger-judge-mgr]
 ```
-
+* ignore extra-space enable<br>
+  1）命令行功能：<br>
+     **ignore extra-space enable** 命令用于配置judger的判题时忽略多余的空格换行，以便不报格式错误<br>
+  2）视图：<br>
+     judge-mgr视图<br>
+  3）使用举例<br>
+```
+#配置judger使能忽略多余空格换行
+judger>system-view
+judger]judge-mgr
+judger-judge-mgr]
+judger-judge-mgr]ignore extra-space enable
+judger-judge-mgr]display this
+#
+judge-mgr
+ ignore extra-space enable
+#
+return
+#
+judger-judge-mgr]
+```
 ### Virtual Judge配置
 * virtual-judge enable<br>
   当前仅支持hdu的虚拟判题。<br>
@@ -515,7 +539,7 @@ Judge-Kernel]undo telnet server enable
   1）命令行功能：<br>
      **telnet authentication-mode none** 命令用于配置Telnet服务器的认证方式为不认证，即telnet登陆后不需要输入账号和密码。<br>
      **telnet authentication-mode password** 命令用于配置Telnet服务器的认证方式为密码认证，即telnet登陆后需要输入账号和密码。<br>
-     **telnet authentication-mode password** 命令用于配置Telnet服务器的认证方式为AAA认证，即telnet登陆后需要输入AAA账号和密码。<br>
+     **telnet authentication-mode aaa** 命令用于配置Telnet服务器的认证方式为AAA认证，即telnet登陆后需要输入AAA账号和密码。<br>
      缺省情况下，Telnet服务器的认证方式为不认证<br>
      Telnet服务器的认证方式多次配置以最后一次为准。<br>
   2）视图：<br>
@@ -535,27 +559,43 @@ Judge-Kernel]
 Judge-Kernel]telnet username admin password admin@123
 ```
 ```
-#配置Telnet服务器的认证方式为AAA认证，并创建一个aaa用户
+#配置Telnet服务器的认证方式为AAA认证，并创建一个aaa用户并且服务类型为telnet
 Judge-Kernel>system-view 
 Judge-Kernel]telnet authentication-mode aaa
 Info: Please create AAA username and password.                                                                                      
 Judge-Kernel]
 Judge-Kernel]aaa
-Judge-Kernel-aaa]local-user root password Root@123 
+Judge-Kernel-aaa]local-user root password Root@123 service-type telnet
 ```
-### Mysql配置
-* mysql url<br>
+### FTP配置
+* ftp server enable<br>
+  使能ftp 服务器功能后，才能通过ftp协议传输下载文件。<br>
+  需要同时创建一个服务类型为ftp的AAA用户，才能连接<br>
   1）命令行功能：<br>
-     **mysql url STRING<1-256> port INTEGER<1-65535> username STRING<1-24> password STRING<1-24> table STRING<1-24>** <br>
-       命令用于配置mysql账户的地址、端口号、用户名和密码、以及关联的数据库名称。<br>
-       缺省情况下，配置为mysql url localhost port 3306 username root password rootpwd table gdoj。<br>
+     **ftp server enable** 命令用于使能ftp服务器<br>
+     **undo ftp server enable** 命令用于去使能ftp服务器<br>
+     缺省情况下，ftp服务器处于去使能状态<br>
   2）视图：<br>
      系统视图<br>
   3）使用举例<br>
 ```
-#使能Telnet服务器
+#使能ftp服务器
 Judge-Kernel>system-view 
-Judge-Kernel]mysql url localhost port 3306 username root password rootpwd table gdoj
+Judge-Kernel]ftp server enable
+```
+```
+#去使能ftp服务器
+Judge-Kernel>system-view 
+Judge-Kernel]undo ftp server enable
+```
+```
+#创建一个aaa用户并且服务类型为ftp
+Judge-Kernel>system-view 
+Judge-Kernel]telnet authentication-mode aaa
+Info: Please create AAA username and password.                                                                                      
+Judge-Kernel]
+Judge-Kernel]aaa
+Judge-Kernel-aaa]local-user ftp password Root@123 service-type ftp
 ```
 ### 日常维护命令
 * display judge brief<br>
@@ -635,10 +675,7 @@ telnet server enable
 telnet authentication-mode aaa
 #
 aaa
- local-user admin password Root@123
-#
-mysql url localhost port 3306 username root password rootpwd table gdoj
-#
+ local-user admin password Root@123 service-type telnet
 #
 judge-mgr
  testcase-path D:\OJ\data\
@@ -666,10 +703,7 @@ sysname judger
 telnet server enable
 #
 aaa
- local-user admin password Root@123
-#
-mysql url localhost port 3306 username root password rootpwd table gdoj
-#
+ local-user admin password Root@123 service-type telnet
 #
 judge-mgr
  mode oi
@@ -712,6 +746,6 @@ judge enable
 system-view
 Judge-Kernel>
 ```
+## Linux下部署： 
+目前Linux下除了本地判题，Kernel其他特性都支持，文档暂没有时间写。主要就是在bin目录下直接./vos.o启动kernel。
 
- 
- 更换代码仓库到码云（Change to gitee）: https://gitee.com/jungle/online-judge
