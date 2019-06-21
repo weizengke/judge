@@ -140,6 +140,7 @@ enum CMD_KEY_CODE_EM {
 };
 
 typedef struct cmd_line_st {
+	ULONG ulIndex;
 	ULONG ulMid;			 	/* 模块id */
 	ULONG ulViewId;				/* 视图id */
 	ULONG ulElmtNum;			/* 命令行元素个数 */
@@ -149,11 +150,11 @@ typedef struct cmd_line_st {
 typedef struct cmd_elmt_st {
 	CMD_ELEM_TYPE_E  eElmtType;
 	ULONG ulElmtId;  		/* 命令字元素id */
-	CHAR *pszElmtName;    /* 命令字元素名 */
-	CHAR *pszElmtHelp;    /* 命令字帮助信息 */
+	CHAR szElmtName[CMD_MAX_CMD_ELEM_SIZE];    /* 命令字元素名 */
+	CHAR szElmtHelp[CMD_MAX_CMD_ELEM_HELP_SIZE];    /* 命令字帮助信息 */
 	
-	ULONG (*pfElmtHelpFunc)(VOID *pRcvMsg);
-	ULONG (*pfElmtCheckFunc)(VOID *pRcvMsg);
+	PFELMTHELPFUNC pfElmtHelpFunc;/* 自定义帮助回调 */
+	PFELMTCHECKFUNC pfElmtCheckFunc;	/* 自定义检查回调 */
 	
 }CMD_ELMT_S;
 

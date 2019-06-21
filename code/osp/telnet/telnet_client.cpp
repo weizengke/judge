@@ -35,7 +35,7 @@ using namespace std;
 
 #define TELNETC_DATABUF_SIZE 1024
 
-#define TELNET_Debug(x, args...) debugcenter_print(MID_TELNET, x, args)
+#define TELNET_Debug(x, format, ...) debugcenter_print(MID_TELNET, x, format, ##__VA_ARGS__)
 
 
 LONG TELNETC_Connect(ULONG ulPort, CHAR* szIP)
@@ -158,6 +158,8 @@ ULONG TELNETC_Read(LONG lSock)
 			printf("\r\n error send.");
 		}
 	}
+
+	return 0;
 }
 
 ULONG TELNETC_Run(ULONG ulVtyID, ULONG ulPort, CHAR *szIP)

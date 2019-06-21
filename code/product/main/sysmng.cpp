@@ -23,7 +23,9 @@
 #ifdef _WIN32_
 #include <conio.h>
 #include <io.h>
-#include<winsock2.h>
+#include <winsock2.h>
+#include <TlHelp32.h>
+
 #endif
 
 #include "kernel.h"
@@ -36,7 +38,7 @@
 #include "product/judge/include/judge_inc.h"
 #include "product/main/sysmng.h"
 
-
+#include "product/thirdpart32/stack_walker/stackwalker.h"
 
 
 using namespace std;
@@ -52,7 +54,7 @@ socket_t g_sListen;
 int g_sock_port = SOCKET_PORT;
 char judgePath[MAX_PATH];
 
-#define SYSMNG_Debug(x, args...) debugcenter_print(MID_SYSMNG, x, args)
+#define SYSMNG_Debug(x, format, ...) debugcenter_print(MID_SYSMNG, x, format, ##__VA_ARGS__)
 
 char *SYSMNG_GetSysname()
 {
@@ -76,10 +78,6 @@ VOID SYSMNG_InitWindows()
 			::SendMessage(g_hWnd,WM_SETICON,ICON_SMALL,(LPARAM)hIcon);
 		}
 
-	}
-	else
-	{
-		pdt_debug_print("Set judge kernel ico failed. ");
 	}
 #endif
 
@@ -149,7 +147,6 @@ void SYSMNG_ShowCfg(ULONG vtyId)
 	FILE * fp=fopen(cfgpath,"r");
 	if (NULL == fp)
 	{
-		pdt_debug_print("No startup configuration file.");
 		fclose(fp);
 		return;
 	}
@@ -166,29 +163,194 @@ void SYSMNG_ShowCfg(ULONG vtyId)
 	return;
 }
 
+
 #ifdef _WIN32_
+
+#ifdef _MSC_VER
+#if 0
+void dumpStack(void)
+{
+	const UINT max_name_length = 256;	// Max length of symbols' name.
+ 
+	CONTEXT context;			// Store register addresses.
+	STACKFRAME64 stackframe;		// Call stack.
+	HANDLE process, thread;			// Handle to current process & thread.
+						// Generally it can be subsitituted with 0xFFFFFFFF & 0xFFFFFFFE.
+	PSYMBOL_INFO symbol;			// Debugging symbol's information.
+	IMAGEHLP_LINE64 source_info;		// Source information (file name & line number)
+	DWORD displacement;			// Source line displacement.
+ 
+	// Initialize PSYMBOL_INFO structure.
+	// Allocate a properly-sized block.
+	symbol = (PSYMBOL_INFO)malloc(sizeof(SYMBOL_INFO) + (max_name_length - 1) * sizeof(TCHAR));	
+	memset(symbol, 0, sizeof(SYMBOL_INFO) + (max_name_length - 1) * sizeof(TCHAR));
+	symbol->SizeOfStruct = sizeof(SYMBOL_INFO);	// SizeOfStruct *MUST BE* set to sizeof(SYMBOL_INFO).
+	symbol->MaxNameLen = max_name_length;
+ 
+	// Initialize IMAGEHLP_LINE64 structure.
+	memset(&source_info, 0, sizeof(IMAGEHLP_LINE64));
+	source_info.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
+	
+	// Initialize STACKFRAME64 structure.
+	RtlCaptureContext(&context);			// Get context.
+	memset(&stackframe, 0, sizeof(STACKFRAME64));
+	stackframe.AddrPC.Offset = context.Eip;		// Fill in register addresses (EIP, ESP, EBP).
+	stackframe.AddrPC.Mode = AddrModeFlat;
+	stackframe.AddrStack.Offset = context.Esp;
+	stackframe.AddrStack.Mode = AddrModeFlat;
+	stackframe.AddrFrame.Offset = context.Ebp;
+	stackframe.AddrFrame.Mode = AddrModeFlat;
+ 
+	process = GetCurrentProcess();	// Get current process & thread.
+	thread = GetCurrentThread();
+ 
+	// Initialize dbghelp library.
+	if(!SymInitialize(process, NULL, TRUE))
+		return ;
+ 
+	puts("Call stack: \r\n");
+ 
+	// Enumerate call stack frame.
+	while(StackWalk64(IMAGE_FILE_MACHINE_I386, process, thread, &stackframe, 
+		&context, NULL, SymFunctionTableAccess64, SymGetModuleBase64, NULL))
+	{
+		if(stackframe.AddrFrame.Offset == 0)	// End reaches.
+			break;
+		
+		if(SymFromAddr(process, stackframe.AddrPC.Offset, NULL, symbol))// Get symbol.
+			printf(" > %s\n", symbol->Name);
+ 
+		if(SymGetLineFromAddr64(process, stackframe.AddrPC.Offset, 
+			&displacement, &source_info)) {				// Get source information.
+				printf("\t[%s:%d] at addr 0x%08LX\n", 
+					source_info.FileName, 
+					source_info.LineNumber,
+					stackframe.AddrPC.Offset);
+		} else {
+			if(GetLastError() == 0x1E7) {		// If err_code == 0x1e7, no symbol was found.
+				printf("\tNo debug symbol loaded for this function.\n");
+			}
+		}
+	}
+ 
+	SymCleanup(process);	// Clean up and exit.
+	free(symbol);
+}
+#endif
+HANDLE g_hHandle;
+CONTEXT g_context;
+HANDLE g_hThread;
+	
+void InitTrack()
+{
+    g_hHandle = GetCurrentProcess();
+    SymInitialize(g_hHandle, NULL, TRUE);
+}
+
+void StackTrack()
+{ 
+	int len = 0;
+	char buff[4096] = {0};
+	
+	g_hThread = GetCurrentThread();
+	STACKFRAME sf = { 0 };
+	sf.AddrPC.Offset = g_context.Eip;
+	sf.AddrPC.Mode = AddrModeFlat;
+	sf.AddrFrame.Offset = g_context.Ebp;
+	sf.AddrFrame.Mode = AddrModeFlat;    
+	sf.AddrStack.Offset = g_context.Esp;
+	sf.AddrStack.Mode = AddrModeFlat;  
+	
+	typedef struct tag_SYMBOL_INFO 
+	{        
+		IMAGEHLP_SYMBOL symInfo;        
+		TCHAR szBuffer[MAX_PATH];   
+	} SYMBOL_INFO, *LPSYMBOL_INFO;
+	
+	DWORD dwDisplament = 0;   
+	SYMBOL_INFO stack_info = { 0 };
+	PIMAGEHLP_SYMBOL pSym = (PIMAGEHLP_SYMBOL)&stack_info; 
+	pSym->SizeOfStruct = sizeof(IMAGEHLP_SYMBOL);   
+	pSym->MaxNameLength = sizeof(SYMBOL_INFO) - offsetof(SYMBOL_INFO, symInfo.Name);
+	IMAGEHLP_LINE ImageLine = { 0 };    
+	ImageLine.SizeOfStruct = sizeof(IMAGEHLP_LINE);
+
+	len += sprintf(buff + len, "\r\ncallstack:");
+		
+	while (StackWalk(IMAGE_FILE_MACHINE_I386, g_hHandle, g_hThread, &sf, &g_context, NULL, SymFunctionTableAccess, SymGetModuleBase, NULL))
+	{       
+			SymGetSymFromAddr(g_hHandle, sf.AddrPC.Offset, &dwDisplament, pSym); 
+			SymGetLineFromAddr(g_hHandle, sf.AddrPC.Offset, &dwDisplament, &ImageLine);  
+
+			//printf("> %08x+%s(FILE[%s]LINE[%d])\n", pSym->Address, pSym->Name, ImageLine.FileName, ImageLine.LineNumber);
+
+			len += sprintf(buff + len, "\r\n> %08x+%s(FILE[%s]LINE[%d])",
+							pSym->Address, pSym->Name, ImageLine.FileName, ImageLine.LineNumber);
+	}
+
+	write_log(JUDGE_INFO,"%s", buff);
+
+	return;
+}
+
+void UninitTrack()
+{
+    SymCleanup(g_hHandle);
+}
+
+#if 0
+#define OPEN_STACK_TRACK\
+	HANDLE hThread = GetCurrentThread();\
+	GetThreadContext(hThread, &g_context);\
+	__asm{call $ + 5}\
+	__asm{pop eax}\
+	__asm{mov g_context.Eip, eax}\
+	__asm{mov g_context.Ebp, ebp}\
+	__asm{mov g_context.Esp, esp}\
+	InitTrack();\
+	StackTrack();\
+	UninitTrack();
+#else
+#define OPEN_STACK_TRACK
+#endif
+
+#endif
+
 long WINAPI SYSMNG_ExceptionFilter(EXCEPTION_POINTERS * excp)
 {
 	int err = GetLastError();
-	extern socket_t g_TelnetSSocket;
 
-	pdt_debug_print("Exception in thread main...[ErrorCode=%u]", err);
+	printf("\r\nWarning: An exceptions happened, please check the system logfile. (ErrorCode=%u)", err);
 	
-	write_log(JUDGE_ERROR,
-		"!!! Exception in thread main, please mail to 269574524@qq for help. (ErrorCode:%u)", err);
+	write_log(JUDGE_ERROR,"Warning: An exceptions happened, please check the system logfile. (ErrorCode=%u)", err);
+
+#ifdef _MSC_VER
+
+	OPEN_STACK_TRACK
+
+	//dumpStack();
+
+#endif	
+
+	Sleep(5000);
 
 	closesocket(g_sListen);
 
 #if (OS_YES == OSP_MODULE_TELNETS)
+	extern socket_t g_TelnetSSocket;
 	closesocket(g_TelnetSSocket);
+#endif
+
+#if (OS_YES == OSP_MODULE_TELNETS)
+	extern LONG g_sFtpListenSocket;
+	closesocket(g_sFtpListenSocket);
 #endif
 
 	#ifdef _WIN32_
 	WSACleanup();
     #endif
 	
-    Sleep(5000);
-    ShellExecuteA(NULL,"open","judge.exe",NULL,NULL,SW_SHOWNORMAL);
+    ShellExecuteA(NULL,"open","judger.exe",NULL,NULL,SW_SHOWNORMAL);
 
 	return EXCEPTION_EXECUTE_HANDLER;
 }
@@ -231,8 +393,7 @@ int SYSMNG_ListenThread(void *pEntry)
 	socket_t sClient;
 	socklen_t nAddrLen = sizeof(remoteAddr);
 	char buff[1024] = {0};
-	char buff1024[1024] = {0};
-	char *pBuf = NULL;
+
 	while(TRUE)
 	{
 		sClient = accept(g_sListen, (SOCKADDR*)&remoteAddr, &nAddrLen);
@@ -242,37 +403,23 @@ int SYSMNG_ListenThread(void *pEntry)
 		}
 
 		memset(buff,0,sizeof(buff));
-		memset(buff1024,0,sizeof(buff1024));
-		pBuf = buff1024;
 		
 		int ret = recv(sClient, (char*)buff, sizeof(buff), 0);
 		if(ret>0)
 		{
-			int i = 0;
-			for (i = 0; i < 64; i++)
-			{
-				pBuf += sprintf(pBuf,"%02x ", buff[i]);
-				if ((i + 1 )  % 16 == 0)
-				{
-					pBuf += sprintf(pBuf,"\r\n");
-				}
-			}
-
-			write_log(JUDGE_INFO,"Recieve packet from (ip:%s, port:%u):\r\n%s",inet_ntoa(remoteAddr.sin_addr), htons(remoteAddr.sin_port), buff1024);
-			PDT_Debug(DEBUG_TYPE_MSG, "Recieve packet from (ip:%s, port:%u):\r\n%s",inet_ntoa(remoteAddr.sin_addr), htons(remoteAddr.sin_port), buff1024);
-			PDT_Debug(DEBUG_TYPE_MSG, "Message:%s", buff);
+			write_log(JUDGE_INFO,"Recieve packet from (ip:%s, port:%u)",inet_ntoa(remoteAddr.sin_addr), htons(remoteAddr.sin_port));
+			//PDT_Debug(DEBUG_TYPE_MSG, "Recieve packet from (ip:%s, port:%u):\r\n%s",inet_ntoa(remoteAddr.sin_addr), htons(remoteAddr.sin_port), buff1024);
+			//PDT_Debug(DEBUG_TYPE_MSG, "Message:%s", buff);
 
 			/* 需要检查发送源的合法性 */
 
 			(VOID)SYSMNG_PacketParse(buff, strlen(buff));
-			
 		}
-
 	
 		Sleep(1);
 	}
 
-	write_log(JUDGE_ERROR,"ListenThread Crash");
+	write_log(JUDGE_ERROR,"SYSMNG listen thread crash.");
 	closesocket(sClient);
 
 	return 0;
@@ -594,7 +741,7 @@ ULONG SYSMNG_CfgCallback(VOID *pRcvMsg)
 			OS_VERSION_MAJOR, OS_VERSION_MINOR, OS_VERSION_PATCH,
 			__TIME__,
 			__DATE__);
-		
+
 		return OS_OK;
 	}
 
@@ -650,7 +797,7 @@ ULONG SYSMNG_RegCmd()
 	/* 命令行注册四部曲2: 定义命令字 */
 	cmd_regelement_new(SYSMNG_CMO_VERSION,				CMD_ELEM_TYPE_KEY,	  "version",		   "Version", vec);
 	cmd_regelement_new(CMD_ELEMID_NULL,					CMD_ELEM_TYPE_KEY,	  "sysname",		   "Change System Name", vec);
-	cmd_regelement_new(SYSMNG_CMO_SYSNAME_STRING,			CMD_ELEM_TYPE_STRING, "STRING<1-24>",	   "System Name",   vec);
+	cmd_regelement_new(SYSMNG_CMO_SYSNAME_STRING,		CMD_ELEM_TYPE_STRING, "STRING<1-24>",	   "System Name",   vec);
 	cmd_regelement_new(SYSMNG_CMO_DIR,					CMD_ELEM_TYPE_KEY,	  "directory",		   "Directory", vec);
 	
 	/* 命令行注册四部曲3: 注册命令行 */
@@ -713,6 +860,8 @@ int SYSMNG_TaskEntry(void *pEntry)
 {
 	ULONG ulRet = OS_OK;
 
+	(VOID)DEBUG_PUB_RegModuleDebugs(MID_SYSMNG, "sysmng", "System management");
+	
 	(VOID)SYSMNG_RegCmd();
 	
 	(VOID)cmd_regcallback(MID_SYSMNG, SYSMNG_CmdCallback);	

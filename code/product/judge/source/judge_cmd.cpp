@@ -76,11 +76,11 @@ VOID Judge_ShowBrief(ULONG vtyId)
 
 }
 
-ULONG Judge_CFG_JudgeSolution(ULONG solutionId)
+ULONG Judge_CFG_JudgeSolution(ULONG vtyId, ULONG solutionId)
 {
 
-	extern int Judge_PushQueue(int solutionId);
-	Judge_PushQueue(solutionId);
+	extern void Judge_PushQueue(int vtyId, int solutionId);
+	Judge_PushQueue(vtyId, solutionId);
 
 	return 0;
 }
@@ -100,6 +100,9 @@ ULONG Judge_CFG_Show(VOID *pRcvMsg)
 
 	OS_DBGASSERT(iElemNum, "Judge_CFG_Show, element num is 0");
 
+	//char buff[128] = {0};
+	//sprintf(buff, "abcddcba0001%s", 0001);
+	
 	for (iLoop = 0; iLoop < iElemNum; iLoop++)
 	{	
 		pElem = cmd_get_elem_by_index(pRcvMsg, iLoop);
@@ -110,12 +113,15 @@ ULONG Judge_CFG_Show(VOID *pRcvMsg)
 			case JUDGE_CMO_SHOW_JUDGE_BRIEF:	
 				Judge_ShowBrief(vtyId);
 				break;
-				
+			case JUDGE_CMO_SHOW_JUDGE_COLLECT_CONTESTS:
+				extern void judge_contests_show(int vtyId);
+				judge_contests_show(vtyId);
+				break;
 			default:
 				break;
 		}
 	}
-
+	
 	return 0;
 
 }
@@ -146,8 +152,9 @@ ULONG Judge_CFG_Config(VOID *pRcvMsg)
 	ULONG isHDUJudgeIp= 0;
 	char ip[25] = {0};
 	ULONG port = 0;
-	ULONG isIgnoreExtraSpace= 0;
-
+	ULONG isIgnoreExtraSpace = 0;
+	ULONG isContestColect = 0;
+	
 	vtyId = cmd_get_vty_id(pRcvMsg);
 	iElemNum = cmd_get_elem_num(pRcvMsg);
 
@@ -261,6 +268,21 @@ ULONG Judge_CFG_Config(VOID *pRcvMsg)
 			case JUDGE_CMO_CFG_EXTRA_SPACE:
 				isIgnoreExtraSpace = OS_YES;
 				break;
+
+			case JUDGE_CMO_CFG_CONTEST_COLECT:
+				isContestColect = OS_YES;
+				break;
+
+			case JUDGE_CMO_CFG_CONTEST_COLECT_PATH:
+				extern char g_judge_recent_json_path[];
+				cmd_copy_string_param(pElem, szpath);
+				strcpy(g_judge_recent_json_path, szpath);
+				break;
+				
+			case JUDGE_CMO_CFG_CONTEST_COLECT_INTERVAL:	
+				extern int g_judge_contest_colect_interval;
+				g_judge_contest_colect_interval = cmd_get_ulong_param(pElem);
+				break;
 				
 			default:
 				break;
@@ -269,7 +291,7 @@ ULONG Judge_CFG_Config(VOID *pRcvMsg)
 
 	if (0 != ulSolutionId)
 	{
-		(VOID)Judge_CFG_JudgeSolution(ulSolutionId);
+		(VOID)Judge_CFG_JudgeSolution(vtyId, ulSolutionId);
 		return 0;
 	}
 	
@@ -349,6 +371,23 @@ ULONG Judge_CFG_Config(VOID *pRcvMsg)
 		g_judge_ignore_extra_space_enable = (OS_YES == isundo)?OS_NO:OS_YES;
 		return 0;	
 	}
+
+	if (OS_YES == isContestColect
+		&& OS_YES == isEnable)
+	{
+		extern int g_judge_recent_enable;
+		g_judge_recent_enable = (OS_YES == isundo)?OS_NO:OS_YES;
+		
+		if (OS_YES != isundo)
+		{
+			extern int judge_recent_generate(void *p);
+			extern int g_judge_recent_running;
+			g_judge_recent_running = 0;
+			(void)thread_create(judge_recent_generate, NULL);
+		}
+
+		return 0;	
+	}
 	
 	return 0;
 
@@ -391,11 +430,13 @@ ULONG Judge_RegCmdShow()
 	/* 命令行注册四部曲2: 定义命令字 */
 	cmd_regelement_new(CMD_ELEMID_NULL, 			CMD_ELEM_TYPE_KEY,    "display",  "Display", vec);
 	cmd_regelement_new(CMD_ELEMID_NULL, 			CMD_ELEM_TYPE_KEY,    "judge", 	  "Judge", vec);
-	cmd_regelement_new(JUDGE_CMO_SHOW_JUDGE_BRIEF,  CMD_ELEM_TYPE_KEY,    "brief",    "Judge brief Information", vec);
-
+	cmd_regelement_new(JUDGE_CMO_SHOW_JUDGE_BRIEF,  CMD_ELEM_TYPE_KEY,  "brief",    "Judge brief Information", vec);
+	cmd_regelement_new(JUDGE_CMO_SHOW_JUDGE_COLLECT_CONTESTS,  CMD_ELEM_TYPE_KEY,  "collect-contests",   "Collect-contests Information", vec);
+	
 	/* 命令行注册四部曲3: 注册命令行 */
 	cmd_install_command(MID_JUDGE, VIEW_GLOBAL, " 1 2 3 ", vec);
-
+	cmd_install_command(MID_JUDGE, VIEW_GLOBAL, " 1 2 4 ", vec);
+	
 	/* 命令行注册四部曲4: 释放命令行向量 */
 	CMD_VECTOR_FREE(vec);
 
@@ -468,7 +509,15 @@ ULONG Judge_RegCmdConfig()
 	cmd_regelement_new(CMD_ELEMID_NULL,				CMD_ELEM_TYPE_KEY, 	  "ignore",	"Ignore", vec);
 	// 29
 	cmd_regelement_new(JUDGE_CMO_CFG_EXTRA_SPACE,		CMD_ELEM_TYPE_KEY, 	  "extra-space",	"Extra space", vec);
-
+	// 30
+	cmd_regelement_new(JUDGE_CMO_CFG_CONTEST_COLECT,  CMD_ELEM_TYPE_KEY, 	  "contests-collect", "contests-collect", vec);
+	// 31
+	cmd_regelement_new(CMD_ELEMID_NULL,  				CMD_ELEM_TYPE_KEY, 	  "save-file", "contests-collect save file", vec);
+	// 32
+	cmd_regelement_new(JUDGE_CMO_CFG_CONTEST_COLECT_PATH,  CMD_ELEM_TYPE_STRING, "STRING<1-255>", "contests-collect save file, default is otheroj.json", vec);
+	// 33
+	cmd_regelement_new(JUDGE_CMO_CFG_CONTEST_COLECT_INTERVAL, CMD_ELEM_TYPE_INTEGER, "INTEGER<5-1440>", "Interval minute of auto-detect, default is 30 mins",vec);
+	
 	/* 命令行注册四部曲3: 注册命令行 */
 	cmd_install_command(MID_JUDGE, VIEW_SYSTEM, " 2 3 4 ", vec);
 	cmd_install_command(MID_JUDGE, VIEW_SYSTEM, " 2 8 ", vec);
@@ -494,6 +543,12 @@ ULONG Judge_RegCmdConfig()
 	
 	cmd_install_command(MID_JUDGE, VIEW_JUDGE_MGR, " 28 29 8 ", vec);
 	cmd_install_command(MID_JUDGE, VIEW_JUDGE_MGR, " 1 28 29 8 ", vec);
+
+	cmd_install_command(MID_JUDGE, VIEW_SYSTEM, " 30 8 ", vec);
+	cmd_install_command(MID_JUDGE, VIEW_SYSTEM, " 1 30 8 ", vec);
+	cmd_install_command(MID_JUDGE, VIEW_SYSTEM, " 30 31 32 ", vec);
+	cmd_install_command(MID_JUDGE, VIEW_SYSTEM, " 30 16 33 ", vec);
+	
 	/* 命令行注册四部曲4: 释放命令行向量 */
 	CMD_VECTOR_FREE(vec);
 
@@ -511,6 +566,10 @@ ULONG Judge_RegCmd()
 	(VOID)Judge_RegCmdShow();
 
 	(VOID)Judge_RegCmdConfig();
+
+	(VOID)DEBUG_PUB_RegModuleDebugs(MID_JUDGE, "judge", "Judge kernel");
+	
+	return 0;
 }
 
 #endif

@@ -65,6 +65,6 @@ const int MAX_WAITTIME = 10000 ;
 
 #define JUDGE_MAX_AUTOJUDGE 100
 
-#define Judge_Debug(x, args...) debugcenter_print(MID_JUDGE, x, args)
+#define Judge_Debug(x, format, ...) debugcenter_print(MID_JUDGE, x, format, ##__VA_ARGS__)
 
 #endif

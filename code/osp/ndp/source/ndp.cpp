@@ -103,7 +103,7 @@ typedef list<NDP_NEIGHBORS_ST *> NDP_NEIGHBORS_LIST;
 
 NDP_NEIGHBORS_LIST g_NdpNeighborsList;
 
-#define NDP_Debug(x, args...) debugcenter_print(MID_NDP, x, args)
+#define NDP_Debug(x, format, ...) debugcenter_print(MID_NDP, x, format, ##__VA_ARGS__)
 
 
 char* GetIpFromULong(ULONG uIp)   

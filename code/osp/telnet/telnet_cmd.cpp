@@ -32,6 +32,7 @@
 #include "osp/common/include/osp_common_def.h"
 #include "product/include/pdt_common_inc.h"
 #include "osp/command/include/icli.h"
+#include "osp/debug/include/debug_center_inc.h"
 #include "osp/util/util.h"
 
 #if (OS_YES == OSP_MODULE_TELNETS)
@@ -385,6 +386,7 @@ ULONG TELNET_RegCmdShow()
 	/* 命令行注册四部曲4: 释放命令行向量 */
 	CMD_VECTOR_FREE(vec);
 
+	return 0;
 }
 
 ULONG TELNET_RegCmdEnable()
@@ -434,6 +436,7 @@ ULONG TELNET_RegCmdEnable()
 	/* 命令行注册四部曲4: 释放命令行向量 */
 	CMD_VECTOR_FREE(vec);
 
+	return 0;
 }
 
 ULONG TELNET_RegCmd()
@@ -443,6 +446,8 @@ ULONG TELNET_RegCmd()
 	(VOID)TELNET_RegCmdShow();
 	
 	(VOID)TELNET_RegCmdEnable();
+
+	(VOID)DEBUG_PUB_RegModuleDebugs(MID_TELNET, "telnet", "Telnet protocol");
 	
 	return OS_OK;
 }

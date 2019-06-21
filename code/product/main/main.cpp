@@ -103,6 +103,9 @@ int APP_Run()
 			(VOID)thread_create(g_pstAppArray[ix].pfTaskMain, NULL);
 
 			printf("%s APP running ok...\r\n", g_pstAppArray[ix].taskName);
+			write_log(JUDGE_INFO, "%s APP running ok...", g_pstAppArray[ix].taskName);
+			
+			Sleep(100);
 		}
 	}
 

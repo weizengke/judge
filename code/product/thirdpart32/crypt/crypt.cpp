@@ -30,7 +30,9 @@ int Encrypt_sha256(char *plaintext, char *ciphertext)
 	//base64_decode(output, sizeof(output) - 1, decode);
 	//printf("\r\n decode=%s\r\n", decode);	
 
-	//for (i = 0; i < 32; i++) printf("%02x%s", decode[i], ((i%4)==3)?" ":"");	
+	//for (i = 0; i < 32; i++) printf("%02x%s", decode[i], ((i%4)==3)?" ":"");
+
+	return 0;
 }
 
 

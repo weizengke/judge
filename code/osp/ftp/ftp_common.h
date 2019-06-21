@@ -113,7 +113,7 @@ extern LONG FTP_SOCK_Connect(ULONG ulPort, CHAR* szIP);
 */
 extern LONG FTP_SOCK_Accept(LONG lSockListen);
 
-#define FTP_debug(args...) debugcenter_print(MID_FTP, DEBUG_TYPE_INFO, args)
+#define FTP_debug(format, ...) debugcenter_print(MID_FTP, DEBUG_TYPE_INFO, format, ##__VA_ARGS__)
 
 #endif
 

@@ -79,5 +79,6 @@ extern VOID cmd_resolve_backspace(CMD_VTY_S *vty);
 extern VOID cmd_resolve_insert(CMD_VTY_S *vty);
 extern VOID cmd_resolve_del_lastword(CMD_VTY_S *vty);
 
+extern ULONG cmd_get_command_string(CMD_LINE_S *pstLine, CHAR *pszCmdString, int iSize);
 
 #endif _COMMAND_CORE_H_

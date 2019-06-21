@@ -149,7 +149,7 @@ ULONG FTP_RecvCommand(LONG lSock, CHAR* szCmd, CHAR* arg)
 		return FTP_ERR;
 	}
 
-	sscanf(buffer,"%s %s", szCmd, arg);
+	sscanf(buffer,"%5s %512s", szCmd, arg);
 
 	FTP_debug("FTP_RecvCommand. (cmd:%s, arg:%s)", szCmd, arg);
 

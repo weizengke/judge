@@ -23,6 +23,9 @@
 #undef VOID
 #define VOID void
 #endif
+
+
+
 enum DEBUG_TYPE_EM
 {
 	DEBUG_TYPE_NONE,
@@ -68,12 +71,13 @@ extern int g_debug_switch;
 extern void RunDelay(int t);
 extern void MSGQueueMain();
 extern void debugcenter_print(MID_ID_EM mid, DEBUG_TYPE_EM type, const char *format, ...);
-extern void pdt_debug_print(const char *format, ...);
 
 extern void MSG_StartDot();
 extern void MSG_StopDot();
 
-#define DEBUG_Debug(x, args...) debugcenter_print(MID_DEBUG, x, args)
+#define DEBUG_Debug(x, format, ...) debugcenter_print(MID_DEBUG, x, format, ##__VA_ARGS__)
+
+extern ULONG DEBUG_PUB_RegModuleDebugs(ULONG ulMid, CHAR *szModuleName, CHAR *szModuleHelp);
 
 #endif
 

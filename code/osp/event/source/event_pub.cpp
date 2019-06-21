@@ -26,7 +26,6 @@
 #include "osp/event/include/event_pub.h"
 #include "osp/debug/include/debug_center_inc.h"
 
-#define EVENT_Debug(x, args...) debugcenter_print(MID_EVENT, x, args)
 /*****************************************************************************
  Prototype    : EVENT_InitTbl
  Description  : 初始化事件table
@@ -189,17 +188,11 @@ ULONG EVENT_Notify(EVENT_NTF_NODE *pstEventTbl, ULONG evtId, ULONG keyId, ULONG 
 	pstHead =  pstEventTbl + evtId;
 	pstHead = pstHead->pNext;
 
-	EVENT_Debug(DEBUG_TYPE_INFO, "EVENT_Notify [%s]...", pstHead->moduleName);
-	
 	while (NULL != pstHead)
 	{
-		EVENT_Debug(DEBUG_TYPE_INFO, "EVENT_Notify [%s]...", pstHead->moduleName);
-
 		ret = pstHead->pfCallBackFunc(keyId, cmdId, pData, ppInfo);
 		if (OS_OK != ret)
 		{
-			EVENT_Debug(DEBUG_TYPE_ERROR, "EVENT_Notify [%s] failed. (ret=%d)", pstHead->moduleName, ret);
-
 			/* 遇错即返回 */
 			return ret;
 		}

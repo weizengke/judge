@@ -25,6 +25,7 @@
 #include "osp/common/include/osp_common_def.h"
 #include "product/include/pdt_common_inc.h"
 #include "osp/command/include/icli.h"
+#include "osp/debug/include/debug_center_inc.h"
 #include "osp/aaa/aaa.h"
 
 
@@ -200,6 +201,7 @@ ULONG AAA_RegCmdEnable()
 	/* 命令行注册四部曲4: 释放命令行向量 */
 	CMD_VECTOR_FREE(vec);
 
+	return 0;
 }
 
 ULONG AAA_RegCmd()
@@ -209,6 +211,8 @@ ULONG AAA_RegCmd()
 	(VOID)cmd_regcallback(MID_AAA, AAA_CMD_Callback);	
 
 	(VOID)AAA_RegCmdEnable();
+
+	(VOID)DEBUG_PUB_RegModuleDebugs(MID_AAA, "aaa", "Authentication Authorization Accounting");
 	
 	return OS_OK;
 }

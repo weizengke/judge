@@ -154,6 +154,18 @@ typedef struct tagCMD_VECTOR_S {
 	VOID **ppData;
 } CMD_VECTOR_S;
 
+#define CMD_MAX_CMD_ELEM_SIZE 64
+#define CMD_MAX_CMD_ELEM_HELP_SIZE 256
+
+typedef struct tagCMD_ELMTHELP_S {
+	CHAR szElmtName[CMD_MAX_CMD_ELEM_SIZE];
+	CHAR szElmtHelp[CMD_MAX_CMD_ELEM_HELP_SIZE];
+} CMD_ELMTHELP_S;
+
+typedef ULONG (*PFELMTHELPFUNC)(VOID *pRcvMsg, CMD_ELMTHELP_S **ppstCmdElmtHelp, ULONG *pulNum);  
+typedef ULONG (*PFELMTCHECKFUNC)(VOID *pRcvMsg); 
+
+
 /* 
 cmd_vector_new函数功能: 创建命令行向量
 用于注册命令行时使用
@@ -167,6 +179,15 @@ cmd_vector_free函数功能:释放命令行向量
 用于注册命令行时使用
 */
 extern VOID cmd_vector_free(CMD_VECTOR_S **ppVec);
+
+extern ULONG cmd_regelement(ULONG cmd_elem_id,
+								CMD_ELEM_TYPE_E cmd_elem_type,
+								CHAR *cmd_name,
+								CHAR *cmd_help,
+								PFELMTHELPFUNC pfElmtHelpFunc,
+								PFELMTCHECKFUNC pfElmtCheckFunc,
+								CMD_VECTOR_S * pVec);
+
 
 /* 
 cmd_regelement_new函数功能:注册命令元素

@@ -28,13 +28,15 @@
 #endif
 
 #ifdef _WIN32_
+#include <windows.h>
+#include <tlhelp32.h>
 #include <conio.h>
 #include <io.h>
-#include <winsock2.h>
 #endif
 
 #ifdef _WIN32_
 #include "product/thirdpart32/common/psapi.h"
+#include "product/thirdpart32/dbghelp/DbgHelp.h"
 #endif
 
 #include "product/thirdpart32/curl/curl.h"

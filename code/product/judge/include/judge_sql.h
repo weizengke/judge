@@ -11,13 +11,13 @@ extern char Mysql_table[255];
 extern int  Mysql_port;
 extern char Mysql_Character[255];  //±àÂë
 
-#define SQL_Debug(x, args...) debugcenter_print(MID_SQL, x, args)
+#define SQL_Debug(x, format, ...) debugcenter_print(MID_SQL, x, format, ##__VA_ARGS__)
 
 extern int SQL_InitMySQL();
 extern void SQL_getUnJudgeSolutions(JUDGE_DATA_S *pJudgeData, int *n, int iMax);
 extern int SQL_getSolutionSource(JUDGE_SUBMISSION_ST *pstJudgeSubmission);
-extern int SQL_getSolutionByID(int solutionID, JUDGE_SOLUTION_ST *pstJudgeSolution, int *pIsExist);
-extern int SQL_getProblemInfo(JUDGE_PROBLEM_INFO_ST *pstProblem);
+extern int SQL_getSolutionByID(int solutionID, JUDGE_SOLUTION_S *pstJudgeSolution, int *pIsExist);
+extern int SQL_getProblemInfo(JUDGE_PROBLEM_INFO_S *pstProblem);
 extern int SQL_getProblemInfo_contest(int contestId,int problemId,char *num);
 extern int SQL_getContestInfo(int contestId,time_t &start_time,time_t &end_time);
 extern int SQL_getContestAttend(int contestId,char *username,char num,long &ac_time,int &wrongsubmits);

@@ -15,9 +15,9 @@
 				你听，
 				你听，
 				雨打风吹未停。
-					
+
 	存储结构: 命令行向量 - 命令行元素向量
-	
+
 	g_pstCmdVec - CMD_LINE_S 1 - CMD_ELMT_S 1
 	                           - CMD_ELMT_S 2
 	                           - CMD_ELMT_S <CR>
@@ -86,7 +86,7 @@ KEY_HANDLE_S key_resolver[] = {
 
 };
 
-#define CMD_debug(x, args...) debugcenter_print(MID_CMD, x, args)
+#define CMD_debug(x, format, ...) debugcenter_print(MID_CMD, x, format, ##__VA_ARGS__)
 
 CHAR *cmd_get_sysname()
 {
@@ -116,7 +116,7 @@ ULONG cmd_regcallback(ULONG ulMid, ULONG (*pfCallBackFunc)(VOID *pRcvMsg))
 		pstEvtNtfNodeNew->pNext = NULL;
 		return CMD_OK;
 	}
-    
+
 	pstNow = g_pstCMDRunNtfList;
 	pstPre = pstNow;
 
@@ -273,7 +273,7 @@ ULONG cmd_get_ip_ulong_param(VOID *pElemMsg)
 	{
 		return 0xFFFFFFFF;
 	}
-			
+
 	return cmd_ip_string_to_ulong(pElem->aszElmtArray);
 }
 
@@ -308,7 +308,7 @@ ULONG cmd_run_notify(CMD_LINE_S * pstCmdLine, CMD_VTY_S *vty, CHAR **argv, ULONG
 
 		CMD_debug(DEBUG_TYPE_FUNC,
 			"cmd_run_notify: 0x%x, %d, %s, %s, %s, %d",
-			cmd_elem->ulElmtId, cmd_elem->eElmtType, cmd_elem->pszElmtName, cmd_elem->pszElmtHelp, argv[i], argc);
+			cmd_elem->ulElmtId, cmd_elem->eElmtType, cmd_elem->szElmtName, cmd_elem->szElmtHelp, argv[i], argc);
 
 		if (CMD_ELEMID_NULL == cmd_elem->ulElmtId)
 		{
@@ -370,7 +370,7 @@ VOID vty_printf(ULONG vtyId, CHAR *format, ...)
 		vprintf(format, args);
 	}
 	else
-	{		
+	{
 		vsnprintf(buffer, BUFSIZE, format, args);
 		send(vty->user.socket, buffer, strlen(buffer),0);
 	}
@@ -412,7 +412,13 @@ VOID vty_print2all(CHAR *format, ...)
 	va_start(args, format);
 
 	/* com */
-	vprintf(format, args);
+	if (NULL != g_con_vty
+		&& g_con_vty->used
+		&& g_con_vty->user.state
+		&& g_con_vty->user.terminal_debugging)
+	{
+		vprintf(format, args);
+	}	
 
 	/* vty */
 	vsnprintf(buffer, BUFSIZE, format, args);
@@ -425,6 +431,8 @@ VOID vty_print2all(CHAR *format, ...)
 			send(g_vty[i].user.socket, buffer, strlen(buffer),0);
 		}
 	}
+
+
 
 	va_end(args);
 }
@@ -470,11 +478,11 @@ UCHAR cmd_getch()
 	assert(res == 0);
 
 	#else
-	c = getch();	
+	c = getch();
 	#endif
 
-	CMD_debug(CMD_DEBUG_INFO, "cmd_getch. (c=0x%x)", c);
-	
+	//CMD_debug(CMD_DEBUG_INFO, "cmd_getch. (c=0x%x)", c);
+
 	return c;
 }
 
@@ -499,8 +507,8 @@ CHAR vty_getch(CMD_VTY_S *vty)
 		}
 	}
 
-	CMD_debug(CMD_DEBUG_INFO, "vty_getch. (c=0x%x)", buff[0]);
-	
+	//CMD_debug(CMD_DEBUG_INFO, "vty_getch. (c=0x%x)", buff[0]);
+
 	return buff[0];
 }
 
@@ -588,7 +596,7 @@ CMD_VECTOR_S *cmd_vector_init()
 
 	v->ulSize = 0;
 	v->ppData = NULL;
-	
+
 	return v;
 }
 
@@ -641,7 +649,7 @@ CMD_VECTOR_S *cmd_vector_copy(CMD_VECTOR_S *v)
 		return NULL;
 	}
 	memset(new_v->ppData, 0, size);
-	
+
 	memcpy(new_v->ppData, v->ppData, size);
 
 	return new_v;
@@ -650,7 +658,7 @@ CMD_VECTOR_S *cmd_vector_copy(CMD_VECTOR_S *v)
 VOID cmd_vector_insert(CMD_VECTOR_S *v, VOID *val)
 {
 	ULONG size = sizeof(void *) * (v->ulSize + 1);
-	
+
 	v->ppData = (void**)realloc(v->ppData, size);
 	if (!v->ppData)
 	{
@@ -658,9 +666,9 @@ VOID cmd_vector_insert(CMD_VECTOR_S *v, VOID *val)
 		CMD_DBGASSERT(0,"cmd_vector_insert, no enough memory for data.");
 		return ;
 	}
-	
+
 	memset(&v->ppData[v->ulSize], 0, sizeof(void *) * 1);
-	
+
 	v->ppData[v->ulSize] = val;
 	v->ulSize += 1;
 
@@ -770,12 +778,14 @@ CMD_VECTOR_S *cmd_cmd2vec(CMD_VECTOR_S * pVec, ULONG *pCmdLine, ULONG n)
 	if(NULL == pVec
 		|| NULL == pCmdLine)
 	{
+		CMD_DBGASSERT(0, "cmd cmd2vec, pVec or pCmdLine is null.");
 		return NULL;
 	}
 
 	vec = cmd_vector_init();
 	if(NULL == vec)
 	{
+		CMD_debug(CMD_DEBUG_ERROR, "cmd_cmd2vec, cmd_vector_init failed.");
 		return NULL;
 	}
 
@@ -789,7 +799,10 @@ CMD_VECTOR_S *cmd_cmd2vec(CMD_VECTOR_S * pVec, ULONG *pCmdLine, ULONG n)
 
 		if (pCmdLine[i] - 1 >= cmd_vector_size(pVec))
 		{
-			CMD_DBGASSERT(0, 
+			CMD_debug(CMD_DEBUG_ERROR, "cmd cmd2vec, cmdline index(%u) cannot more than %u.",
+				pCmdLine[i], cmd_vector_size(pVec));
+			
+			CMD_DBGASSERT(0,
 				"cmd cmd2vec, cmdline index(%u) cannot more than %u.",
 				pCmdLine[i], cmd_vector_size(pVec));
 			return NULL;
@@ -806,26 +819,11 @@ CMD_VECTOR_S *cmd_cmd2vec(CMD_VECTOR_S * pVec, ULONG *pCmdLine, ULONG n)
 
 		pstCmdElmtTmp->ulElmtId = pstCmdElem->ulElmtId;
 		pstCmdElmtTmp->eElmtType = pstCmdElem->eElmtType;
-
-		pstCmdElmtTmp->pszElmtName = (CHAR *)malloc(strlen(pstCmdElem->pszElmtName) + 1);
-		if (NULL == pstCmdElmtTmp->pszElmtName)
-		{
-			free(pstCmdElmtTmp);
-			return NULL;
-		}
-		memset(pstCmdElmtTmp->pszElmtName, 0, strlen(pstCmdElem->pszElmtName) + 1);
-		strcpy(pstCmdElmtTmp->pszElmtName, pstCmdElem->pszElmtName);
-
-		pstCmdElmtTmp->pszElmtHelp = (CHAR *)malloc(strlen(pstCmdElem->pszElmtHelp) + 1);
-		if (NULL == pstCmdElmtTmp->pszElmtHelp)
-		{
-			free(pstCmdElmtTmp->pszElmtName);
-			free(pstCmdElmtTmp);
-			return NULL;
-		}
-		memset(pstCmdElmtTmp->pszElmtHelp, 0, strlen(pstCmdElem->pszElmtHelp) + 1);
-		strcpy(pstCmdElmtTmp->pszElmtHelp, pstCmdElem->pszElmtHelp);
-
+		strcpy(pstCmdElmtTmp->szElmtName, pstCmdElem->szElmtName);
+		strcpy(pstCmdElmtTmp->szElmtHelp, pstCmdElem->szElmtHelp);
+		pstCmdElmtTmp->pfElmtCheckFunc = pstCmdElem->pfElmtCheckFunc;
+		pstCmdElmtTmp->pfElmtHelpFunc = pstCmdElem->pfElmtHelpFunc;
+			
 		cmd_vector_insert(vec, (void *)pstCmdElmtTmp);
 	}
 
@@ -836,15 +834,42 @@ CMD_VECTOR_S *cmd_cmd2vec(CMD_VECTOR_S * pVec, ULONG *pCmdLine, ULONG n)
 
 /* end vector */
 
+ULONG cmd_get_command_string(CMD_LINE_S *pstLine, CHAR *pszCmdString, int iSize)
+{
+	ULONG ulLoop = 0;
+	int iLen = 0;
+	CMD_ELMT_S *pstElmt = NULL;
+		
+	if (NULL == pstLine ||
+		NULL == pszCmdString)
+	{	
+		return CMD_ERR;
+	}
+	
+	for (ulLoop = 0; ulLoop < pstLine->ulElmtNum; ulLoop++)
+	{
+		if (0 != ulLoop)
+		{
+			iLen += sprintf(pszCmdString + iLen, " ");
+		}
+
+		pstElmt = (CMD_ELMT_S *)pstLine->pstElmtVec->ppData[ulLoop];
+			
+		iLen += sprintf(pszCmdString + iLen, pstElmt->szElmtName);		
+	}
+
+	return CMD_OK;
+}
+
 
 /* cmd */
-static ULONG cmd_match_unique_string(CMD_ELMT_S **pstCmdElem, CHAR *str, ULONG size)
+static ULONG cmd_match_unique_string(CMD_ELMT_S *pstCmdElem, CHAR *str, ULONG size)
 {
 	ULONG i;
 
 	for (i = 0; i < size; i++)
 	{
-		if (pstCmdElem[i]->pszElmtName != NULL && strcmp(pstCmdElem[i]->pszElmtName, str) == 0)
+		if (strcmp(pstCmdElem[i].szElmtName, str) == 0)
 		{
 			return 0;
 		}
@@ -853,16 +878,17 @@ static ULONG cmd_match_unique_string(CMD_ELMT_S **pstCmdElem, CHAR *str, ULONG s
 	return 1;
 }
 
-static ULONG cmd_match_unique_elmtid(CMD_ELMT_S **pstCmdElem, ULONG ulElmtId, ULONG size)
+static ULONG cmd_match_unique_elmtid(CMD_ELMT_S *pstCmdElem, ULONG ulElmtId, ULONG size)
 {
 	ULONG i;
 
 	for (i = 0; i < size; i++)
 	{
-		CMD_debug(CMD_DEBUG_FUNC, "cmd_match_unique_elmtid. (ulElmtId=%u, %u)",
-									pstCmdElem[i]->ulElmtId,
+		CMD_debug(CMD_DEBUG_FUNC, "cmd_match_unique_elmtid. (ulElmtId=0x%x, 0x%x)",
+									pstCmdElem[i].ulElmtId,
 									ulElmtId);
-		if (pstCmdElem[i]->ulElmtId == ulElmtId)
+		
+		if (pstCmdElem[i].ulElmtId == ulElmtId)
 		{
 			return 0;
 		}
@@ -1051,27 +1077,22 @@ ULONG cmd_match_command_integer(CHAR *icmd, CMD_ELMT_S *pstElmt)
 	CHAR *pline = NULL;
 	CHAR type_string[256] = {0};
 	ULONG icmd_i = 0;
-	
+
 	if (icmd == NULL || pstElmt == NULL)
 	{
 		return CMD_ERR;
 	}
 
-	if (NULL == pstElmt->pszElmtName)
-	{
-		return CMD_ERR;
-	}
-
-	pleft  = strchr(pstElmt->pszElmtName, '<');
-	pline  = strchr(pstElmt->pszElmtName, '-');
-	pright = strchr(pstElmt->pszElmtName, '>');
+	pleft  = strchr(pstElmt->szElmtName, '<');
+	pline  = strchr(pstElmt->szElmtName, '-');
+	pright = strchr(pstElmt->szElmtName, '>');
 
 	if (pleft == NULL || pline == NULL || pright == NULL)
 	{
 		return CMD_ERR;
 	}
 
-	sscanf(pstElmt->pszElmtName,"%[A-Z]<%u-%u>", type_string, &a, &b);
+	sscanf(pstElmt->szElmtName,"%[A-Z]<%u-%u>", type_string, &a, &b);
 	if (0 != strcmp(type_string, CMD_INTEGER))
 	{
 		return CMD_ERR;
@@ -1109,27 +1130,22 @@ ULONG cmd_match_command_string(CHAR *icmd, CMD_ELMT_S *pstElmt)
 	CHAR *pline = NULL;
 	CHAR type_string[256] = {0};
 	ULONG icmd_len = 0;
-	
+
 	if (icmd == NULL || pstElmt == NULL)
 	{
 		return CMD_ERR;
 	}
-	
-	if (NULL == pstElmt->pszElmtName)
-	{
-		return CMD_ERR;
-	}
 
-	pleft  = strchr(pstElmt->pszElmtName, '<');
-	pline  = strchr(pstElmt->pszElmtName, '-');
-	pright = strchr(pstElmt->pszElmtName, '>');
+	pleft  = strchr(pstElmt->szElmtName, '<');
+	pline  = strchr(pstElmt->szElmtName, '-');
+	pright = strchr(pstElmt->szElmtName, '>');
 
 	if (pleft == NULL || pline == NULL || pright == NULL)
 	{
 		return CMD_ERR;
 	}
 
-	sscanf(pstElmt->pszElmtName,"%[A-Z]<%u-%u>", type_string, &a, &b);
+	sscanf(pstElmt->szElmtName,"%[A-Z]<%u-%u>", type_string, &a, &b);
 	if (0 != strcmp(type_string, CMD_STRING))
 	{
 		return CMD_ERR;
@@ -1147,17 +1163,17 @@ ULONG cmd_match_command_string(CHAR *icmd, CMD_ELMT_S *pstElmt)
 	return CMD_ERR;
 }
 
-ULONG cmd_ip_string_to_ulong(CHAR *ip)  
-{  
+ULONG cmd_ip_string_to_ulong(CHAR *ip)
+{
 	ULONG re = 0;
 	UCHAR tmp = 0;
 
-	while (1) 
+	while (1)
 	{
 		if (*ip != '\0' && *ip != '.')
 		{
 			tmp = tmp * 10 + *ip - '0';
-		} 
+		}
 		else
 		{
 			re = (re << 8) + tmp;
@@ -1165,26 +1181,26 @@ ULONG cmd_ip_string_to_ulong(CHAR *ip)
 			{
 				break;
 			}
-			
+
 			tmp = 0;
 		}
-		
+
 		ip++;
 	}
-      
-    return re; 
-}   
-  
-VOID cmd_ip_ulong_to_string(ULONG ip, CHAR *buf)  
-{  
-    sprintf(buf, "%u.%u.%u.%u",  
-        (UCHAR)*((CHAR *)&ip + 3),  
-        (UCHAR)*((CHAR *)&ip + 2),  
-        (UCHAR)*((CHAR *)&ip + 1),  
-        (UCHAR)*((CHAR *)&ip + 0));  
+
+    return re;
+}
+
+VOID cmd_ip_ulong_to_string(ULONG ip, CHAR *buf)
+{
+    sprintf(buf, "%u.%u.%u.%u",
+        (UCHAR)*((CHAR *)&ip + 3),
+        (UCHAR)*((CHAR *)&ip + 2),
+        (UCHAR)*((CHAR *)&ip + 1),
+        (UCHAR)*((CHAR *)&ip + 0));
 
 	return;
-}  
+}
 
 ULONG cmd_string_is_ip(CHAR *str)
 {
@@ -1194,14 +1210,14 @@ ULONG cmd_string_is_ip(CHAR *str)
 	ULONG ulIndex = 0;
 	ULONG ulValue = 0;
 	ULONG ulIsDotOrEnd = 0;
-	
+
 	if (NULL == str)
 	{
 		return 0;
 	}
-	
+
 	ulLen = strlen(str);
-	if(ulLen < 7 || ulLen > 15) return 0;   
+	if(ulLen < 7 || ulLen > 15) return 0;
 
 	for (ulLoop = 0; ulLoop < ulLen; ulLoop++)
 	{
@@ -1212,7 +1228,7 @@ ULONG cmd_string_is_ip(CHAR *str)
 			{
 				return 0;
 			}
-			
+
 			ulIsDotOrEnd = 1;
 			aulArr[ulIndex++] = ulValue;
 			ulValue = 0;
@@ -1220,20 +1236,20 @@ ULONG cmd_string_is_ip(CHAR *str)
 		else
 		{
 			ulIsDotOrEnd = 0;
-			
+
 			/* not digit */
 			if (!isdigit(str[ulLoop]))
 			{
 				return 0;
 			}
-			
+
 			ulValue = ulValue * 10 + (str[ulLoop] - '0');
 
 			if (ulValue > 255)
 			{
 				return 0;
 			}
-		}				
+		}
 	}
 
 	if (0 == ulIsDotOrEnd)
@@ -1241,7 +1257,7 @@ ULONG cmd_string_is_ip(CHAR *str)
 		aulArr[ulIndex++] = ulValue;
 		ulValue = 0;
 	}
-	
+
 	if (4 != ulIndex)
 	{
 		return 0;
@@ -1257,17 +1273,12 @@ ULONG cmd_match_command_ip(CHAR *icmd, CMD_ELMT_S *pstElmt)
 	{
 		return CMD_ERR;
 	}
-	
-	if (NULL == pstElmt->pszElmtName)
+
+	if (0 != strcmp(pstElmt->szElmtName, CMD_IP))
 	{
 		return CMD_ERR;
 	}
 
-	if (0 != strcmp(pstElmt->pszElmtName, CMD_IP))
-	{
-		return CMD_ERR;
-	}
-	
 	if (1 == cmd_string_is_ip(icmd))
 	{
 		return CMD_OK;
@@ -1276,41 +1287,45 @@ ULONG cmd_match_command_ip(CHAR *icmd, CMD_ELMT_S *pstElmt)
 	{
 		return CMD_ERR;
 	}
-	
+
 }
 
 ULONG cmd_match_command_param(CHAR *icmd, CMD_ELMT_S *pstElmt)
 {
 	ULONG ulRet = CMD_ERR;
-	
+
 	if (icmd == NULL || pstElmt == NULL)
 	{
 		return CMD_ERR;
 	}
 
-	CMD_debug(CMD_DEBUG_INFO, "cmd_match_command_param. icmd=%s, pszElmtName=%s",
-				icmd, pstElmt->pszElmtName);
+	if (NULL != pstElmt->pfElmtCheckFunc)
+	{
+		return pstElmt->pfElmtCheckFunc(icmd);
+	}
 	
+	//CMD_debug(CMD_DEBUG_INFO, "cmd_match_command_param. icmd=%s, pszElmtName=%s",icmd, pstElmt->pszElmtName);
+
 	switch(pstElmt->eElmtType)
 	{
 		case CMD_ELEM_TYPE_INTEGER:
-			ulRet = cmd_match_command_integer(icmd, pstElmt);	
-			
+			ulRet = cmd_match_command_integer(icmd, pstElmt);
+
 			break;
-			
+
 		case CMD_ELEM_TYPE_STRING:
-			ulRet = cmd_match_command_string(icmd, pstElmt);	
-			
+			ulRet = cmd_match_command_string(icmd, pstElmt);
+
 			break;
-			
-		case CMD_ELEM_TYPE_IP:			
+
+		case CMD_ELEM_TYPE_IP:
 			ulRet = cmd_match_command_ip(icmd, pstElmt);
-			
+
 			break;
 
 		case CMD_ELEM_TYPE_MAC:
-			break;		
-			
+			break;
+
 		default:
 			break;
 	}
@@ -1359,8 +1374,14 @@ static ULONG cmd_filter_command(CMD_VTY_S *vty, CHAR *cmd, CMD_VECTOR_S *v, ULON
 			/* match STRING , INTEGER */
 			if (CMD_OK != cmd_match_command_param(cmd, pstCmdElem))
 			{
-				if(strnicmp(cmd, pstCmdElem->pszElmtName, strlen(cmd)) != 0)
+				if(strnicmp(cmd, pstCmdElem->szElmtName, strlen(cmd)) != 0)
 				{
+					#if 0
+					CMD_debug(CMD_DEBUG_INFO, "cmd_filter_command set null. "
+								"(cmd=%s, szElmtName=%s)",
+								vty->szBuffer, pstCmdElem->szElmtName);
+					#endif
+					
 					cmd_vector_get(v, i) = NULL;
 					continue;
 				}
@@ -1378,9 +1399,9 @@ static ULONG cmd_filter_command(CMD_VTY_S *vty, CHAR *cmd, CMD_VECTOR_S *v, ULON
 }
 
 ULONG cmd_match_command(CMD_VECTOR_S *icmd_vec, CMD_VTY_S *vty,
-		CMD_ELMT_S **ppstMatchCmdElem, ULONG *pulMatchNum)
+		CMD_ELMT_S *pstMatchCmdElem, ULONG *pulMatchNum)
 {
-	ULONG i = 0;	
+	ULONG i = 0;
 	ULONG isize = 0;
 	ULONG size = 0;
 	CMD_VECTOR_S *cmd_vec_copy = cmd_vector_copy(g_pstCmdVec);
@@ -1402,7 +1423,7 @@ ULONG cmd_match_command(CMD_VECTOR_S *icmd_vec, CMD_VTY_S *vty,
 			return CMD_NO_MATCH;
 		}
 	}
-	
+
 	for(i = 0; i < cmd_vector_size(cmd_vec_copy); i++)
 	{
 		CMD_LINE_S *pstCmdLine = NULL;
@@ -1430,10 +1451,12 @@ ULONG cmd_match_command(CMD_VECTOR_S *icmd_vec, CMD_VTY_S *vty,
 			CMD_ELMT_S *pstCmdElem = (CMD_ELMT_S *)cmd_vector_get(pstCmdLine->pstElmtVec, isize);
 			CHAR *str = (CHAR*)cmd_vector_get(icmd_vec, isize);
 
-			if (str == NULL || strnicmp(str, pstCmdElem->pszElmtName, strlen(str)) == 0)
+			if (str == NULL || strnicmp(str, pstCmdElem->szElmtName, strlen(str)) == 0)
 			{
-				if (cmd_match_unique_string(ppstMatchCmdElem, pstCmdElem->pszElmtName, size))
-					ppstMatchCmdElem[size++] = pstCmdElem;
+				if (cmd_match_unique_string(pstMatchCmdElem, pstCmdElem->szElmtName, size))
+				{
+					memcpy(&pstMatchCmdElem[size++], pstCmdElem, sizeof(CMD_ELMT_S));
+				}
 			}
 
 		}
@@ -1479,7 +1502,7 @@ ULONG cmd_match_command(CMD_VECTOR_S *icmd_vec, CMD_VTY_S *vty,
 
 *****************************************************************************/
 ULONG cmd_complete_command(CMD_VECTOR_S *icmd_vec, CMD_VTY_S *vty,
-									 CMD_ELMT_S **ppstCmdElem, ULONG *pulMatchNum, ULONG *pulNoMatchPos)
+									 CMD_ELMT_S *pstCmdElem, ULONG *pulMatchNum, ULONG *pulNoMatchPos)
 {
 
 
@@ -1487,10 +1510,10 @@ ULONG cmd_complete_command(CMD_VECTOR_S *icmd_vec, CMD_VTY_S *vty,
 	CMD_VECTOR_S *cmd_vec_copy = cmd_vector_copy(g_pstCmdVec);
 	ULONG ulMatchNum = 0;
 	CHAR *str = NULL;
-	CMD_ELMT_S *pstCmdElem = NULL;
+	CMD_ELMT_S *pstCmdElemTmp = NULL;
 	CMD_LINE_S *pstCmdLine = NULL;
 
-	if (icmd_vec == NULL || vty == NULL || ppstCmdElem == NULL || pulMatchNum == NULL)
+	if (icmd_vec == NULL || vty == NULL || pstCmdElem == NULL || pulMatchNum == NULL)
 	{
 		return CMD_ERR;
 	}
@@ -1510,7 +1533,7 @@ ULONG cmd_complete_command(CMD_VECTOR_S *icmd_vec, CMD_VTY_S *vty,
 			CMD_debug(CMD_DEBUG_ERROR, "cmd_complete_command, cannot match at pos %u", *pulNoMatchPos);
 
 			cmd_vector_deinit(cmd_vec_copy, 0);
-			
+
 			return CMD_OK;
 		}
 	}
@@ -1528,7 +1551,12 @@ ULONG cmd_complete_command(CMD_VECTOR_S *icmd_vec, CMD_VTY_S *vty,
 				continue;
 			}
 
-			//CMD_debug(CMD_DEBUG_FUNC, "cmd_complete_command, view_id=%d.", pstCmdLine->ulViewId);
+			{	
+				char szBuf[CMD_BUFFER_SIZE] = {0};
+				(VOID)cmd_get_command_string(pstCmdLine, szBuf, CMD_BUFFER_SIZE);
+				CMD_debug(CMD_DEBUG_FUNC, "cmd_complete_command, ulIndex=%u, command=%s.", pstCmdLine->ulIndex, szBuf);
+			}
+
 
 			if (pstCmdLine->ulViewId != VIEW_GLOBAL
 				&& pstCmdLine->ulViewId != vty->view_id)
@@ -1537,62 +1565,89 @@ ULONG cmd_complete_command(CMD_VECTOR_S *icmd_vec, CMD_VTY_S *vty,
 			}
 
 			str = (CHAR*)cmd_vector_get(icmd_vec, cmd_vector_size(icmd_vec) - 1);
-			pstCmdElem = (CMD_ELMT_S *)cmd_vector_get(pstCmdLine->pstElmtVec, cmd_vector_size(icmd_vec) - 1);
-			if (pstCmdElem == NULL)
+			pstCmdElemTmp = (CMD_ELMT_S *)cmd_vector_get(pstCmdLine->pstElmtVec, cmd_vector_size(icmd_vec) - 1);
+			if (pstCmdElemTmp == NULL)
 			{
 				continue;
 			}
 
-			CMD_debug(CMD_DEBUG_FUNC, "cmd_complete_command, eElmtType=%u, str=%s", pstCmdElem->eElmtType, str);
-			
+			CMD_debug(CMD_DEBUG_FUNC, "cmd_complete_command, ulElmtId=0x%x, eElmtType=%u, str=%s, szElmtName=%s, pfElmtHelpFunc=0x%x",
+											pstCmdElemTmp->ulElmtId, pstCmdElemTmp->eElmtType, str, pstCmdElemTmp->szElmtName, pstCmdElemTmp->pfElmtHelpFunc);
+
 			/* BEGIN: Added by weizengke, 2013/11/19 */
-			/* match STRING , INTEGER 
+			/* match STRING , INTEGER
 			   bug: ip complete
 			*/
-			/* match param */
-			if (CMD_YES == cmd_elem_is_para_type(pstCmdElem->eElmtType))
+			if (NULL == pstCmdElemTmp->pfElmtHelpFunc)
 			{
-				if (0 == strnicmp(str, CMD_END, strlen(str))
-					|| 0 == strnicmp(pstCmdElem->pszElmtName, CMD_END, strlen(pstCmdElem->pszElmtName))
-					|| CMD_OK == cmd_match_command_param(str, pstCmdElem))
+				/* match param */
+				if (CMD_YES == cmd_elem_is_para_type(pstCmdElemTmp->eElmtType))
 				{
-					CMD_debug(CMD_DEBUG_FUNC, "cmd_complete_command, eElmtType=%u, pszElmtName=%s, str=%s",
-												pstCmdElem->eElmtType,
-												pstCmdElem->pszElmtName,
-												str);
-
-					if (cmd_match_unique_elmtid(ppstCmdElem, pstCmdElem->ulElmtId, ulMatchNum))
+					if (0 == strnicmp(str, CMD_END, strlen(str))
+						|| 0 == strnicmp(pstCmdElemTmp->szElmtName, CMD_END, strlen(pstCmdElemTmp->szElmtName))
+						|| CMD_OK == cmd_match_command_param(str, pstCmdElemTmp))
 					{
-						ppstCmdElem[ulMatchNum] = pstCmdElem;
-						ulMatchNum++;
+						CMD_debug(CMD_DEBUG_FUNC, "cmd_complete_command, eElmtType=%u, pszElmtName=%s, str=%s",
+													pstCmdElemTmp->eElmtType,
+													pstCmdElemTmp->szElmtName,
+													str);
+				
+						if (cmd_match_unique_elmtid(pstCmdElem, pstCmdElemTmp->ulElmtId, ulMatchNum))
+						{
+							memcpy(&pstCmdElem[ulMatchNum],pstCmdElemTmp, sizeof(CMD_ELMT_S));
+							ulMatchNum++;
+						}
+					}
+					else
+					{
+						CMD_debug(CMD_DEBUG_FUNC, "cmd_complete_command, other, eElmtType=%u, pszElmtName=%s",
+													pstCmdElemTmp->eElmtType,
+													pstCmdElemTmp->szElmtName);
 					}
 				}
+				/* END:   Added by weizengke, 2013/11/19 */
 				else
 				{
-					CMD_debug(CMD_DEBUG_FUNC, "cmd_complete_command, other, eElmtType=%u, pszElmtName=%s",
-												pstCmdElem->eElmtType,
-												pstCmdElem->pszElmtName);
-				}
-			}
-			/* END:   Added by weizengke, 2013/11/19 */
-			else
-			{
-				CMD_debug(CMD_DEBUG_FUNC, "cmd_complete_command, key, eElmtType=%u, pszElmtName=%s",
-											pstCmdElem->eElmtType,
-											pstCmdElem->pszElmtName);
-					
-				/* match key */
-				if (0 == strnicmp(str, CMD_END, strlen(str)) /* 无任何输入时输入?*/
-					|| strnicmp(str, pstCmdElem->pszElmtName, strlen(str)) == 0)
-				{				
-					/* get only one if more than one  */
-					if (cmd_match_unique_string(ppstCmdElem, pstCmdElem->pszElmtName, ulMatchNum))
+					CMD_debug(CMD_DEBUG_FUNC, "cmd_complete_command, key, eElmtType=%u, pszElmtName=%s",
+												pstCmdElemTmp->eElmtType,
+												pstCmdElemTmp->szElmtName);
+				
+					/* match key */
+					if (0 == strnicmp(str, CMD_END, strlen(str)) /* 无任何输入时输入?*/
+						|| strnicmp(str, pstCmdElemTmp->szElmtName, strlen(str)) == 0)
 					{
-						ppstCmdElem[ulMatchNum] = pstCmdElem;
-						ulMatchNum++;
+						/* get only one if more than one  */
+						if (cmd_match_unique_string(pstCmdElem, pstCmdElemTmp->szElmtName, ulMatchNum))
+						{
+							memcpy(&pstCmdElem[ulMatchNum], pstCmdElemTmp, sizeof(CMD_ELMT_S));
+							ulMatchNum++;
+						}
 					}
 				}
+
 			}
+			else 
+			{	
+				ULONG ulRet = OS_OK;
+				CMD_ELMTHELP_S *pstCmdElmtHelp = NULL;
+				ULONG ulNum = 0;
+
+				ulRet = pstCmdElemTmp->pfElmtHelpFunc(NULL, &pstCmdElmtHelp, &ulNum);
+				if (OS_OK == ulRet)
+				{
+					ULONG ulLoop = 0; 
+					for (ulLoop = 0; ulLoop < ulNum; ulLoop++)
+					{
+						strcpy(pstCmdElem[ulMatchNum].szElmtName, pstCmdElmtHelp[ulLoop].szElmtName);
+						strcpy(pstCmdElem[ulMatchNum].szElmtHelp, pstCmdElmtHelp[ulLoop].szElmtHelp);
+						ulMatchNum++;
+					}
+					
+					free(pstCmdElmtHelp);
+				}
+
+			}
+			
 		}
 	}
 
@@ -1608,15 +1663,16 @@ ULONG cmd_complete_command(CMD_VECTOR_S *icmd_vec, CMD_VTY_S *vty,
 		{
 			for (j = i; j < ulMatchNum; j++)
 			{
-				CMD_ELMT_S *pstCmdElem_ = NULL;
-				if (0 == strnicmp(ppstCmdElem[i]->pszElmtName, CMD_END, strlen(ppstCmdElem[i]->pszElmtName))
-					|| ( 1 == stricmp(ppstCmdElem[i]->pszElmtName, ppstCmdElem[j]->pszElmtName)
-					&& 0 != strnicmp(ppstCmdElem[j]->pszElmtName, CMD_END, strlen(ppstCmdElem[j]->pszElmtName)))
+				CMD_ELMT_S stCmdElem_;
+				
+				if (0 == strnicmp(pstCmdElem[i].szElmtName, CMD_END, strlen(pstCmdElem[i].szElmtName))
+					|| ( 1 == stricmp(pstCmdElem[i].szElmtName, pstCmdElem[j].szElmtName)
+					&& 0 != strnicmp(pstCmdElem[j].szElmtName, CMD_END, strlen(pstCmdElem[j].szElmtName)))
 					)
 				{
-					pstCmdElem_ = ppstCmdElem[i];
-					ppstCmdElem[i] =  ppstCmdElem[j];
-					ppstCmdElem[j] = pstCmdElem_;
+					memcpy(&stCmdElem_, &pstCmdElem[i], sizeof(CMD_ELMT_S));
+					memcpy(&pstCmdElem[i], &pstCmdElem[j], sizeof(CMD_ELMT_S));
+					memcpy(&pstCmdElem[j], &stCmdElem_, sizeof(CMD_ELMT_S));
 				}
 			}
 		}
@@ -1651,7 +1707,7 @@ ULONG cmd_execute_command(CMD_VECTOR_S *icmd_vec, CMD_VTY_S *vty,
 			CMD_debug(CMD_DEBUG_ERROR, "cmd_execute_command. not match at pos %u.", *pulNoMatchPos);
 
 			cmd_vector_deinit(cmd_vec_copy, 0);
-			
+
 			return CMD_NO_MATCH;
 		}
 	}
@@ -1684,7 +1740,7 @@ ULONG cmd_execute_command(CMD_VECTOR_S *icmd_vec, CMD_VTY_S *vty,
 				{
 					/* BEGIN: Added by weizengke, 2013/10/5   PN:for support STRING<a-b> & INTEGER<a-b> */
 					if (CMD_OK == cmd_match_command_param(str, pstCmdElem) ||
-						str != NULL && strnicmp(str, pstCmdElem->pszElmtName, strlen(str)) == 0)
+						str != NULL && strnicmp(str, pstCmdElem->szElmtName, strlen(str)) == 0)
 					{
 						/* BEGIN: Added by weizengke, 2013/10/6   PN:command exec ambigous, return the last elem (not the <CR>) */
 						ppstCmdElem[ulMatchNum] = (CMD_ELMT_S *)cmd_vector_get(pstCmdLine->pstElmtVec, cmd_vector_size(icmd_vec) - 2);
@@ -1748,7 +1804,7 @@ ULONG cmd_execute_command(CMD_VECTOR_S *icmd_vec, CMD_VTY_S *vty,
 		}
 		else
 		{
-			argv[argc++] = pstCmdElem->pszElmtName;
+			argv[argc++] = pstCmdElem->szElmtName;
 		}
 	}
 	/* END:   Added by weizengke, 2013/10/5   PN:None */
@@ -1759,14 +1815,14 @@ ULONG cmd_execute_command(CMD_VECTOR_S *icmd_vec, CMD_VTY_S *vty,
 	return CMD_FULL_MATCH;
 }
 
-
 VOID cmd_install_command(ULONG mid, ULONG cmd_view, CHAR *cmd_string, CMD_VECTOR_S * pVec)
 {
 	ULONG iIndex[128] = {0};
 	ULONG iLoop = 0;
 	ULONG n = 0;
 	CHAR *cur = cmd_string;
-
+	static ULONG ulStaticIndex = 1;
+	
 	if (NULL == pVec)
 	{
 		return;
@@ -1797,19 +1853,69 @@ VOID cmd_install_command(ULONG mid, ULONG cmd_view, CHAR *cmd_string, CMD_VECTOR
 	}
 	memset(pstCmdLine, 0, sizeof(CMD_LINE_S));
 
+	pstCmdLine->ulIndex = ulStaticIndex++;
 	pstCmdLine->ulMid = mid;
 	pstCmdLine->ulViewId = cmd_view;
 	pstCmdLine->pstElmtVec = cmd_cmd2vec(pVec, iIndex, iLoop);
     if (NULL == pstCmdLine->pstElmtVec)
     {
 		free(pstCmdLine);
+		CMD_debug(CMD_DEBUG_ERROR, "cmd_install_command, pstElmtVec is null");
         return;
     }
 	pstCmdLine->ulElmtNum = cmd_vector_size(pstCmdLine->pstElmtVec);
 
+	{	
+		char szBuf[CMD_BUFFER_SIZE] = {0};
+		(VOID)cmd_get_command_string(pstCmdLine, szBuf, CMD_BUFFER_SIZE);
+		CMD_debug(CMD_DEBUG_INFO, "cmd_install_command: index=%u, command=%s.", pstCmdLine->ulIndex, szBuf);
+	}
+	
+	
 	cmd_vector_insert(g_pstCmdVec, pstCmdLine);
 
 	return;
+}
+
+ULONG cmd_regelement(ULONG cmd_elem_id,
+								CMD_ELEM_TYPE_E cmd_elem_type,
+								CHAR *cmd_name,
+								CHAR *cmd_help,
+								PFELMTHELPFUNC pfElmtHelpFunc,
+								PFELMTCHECKFUNC pfElmtCheckFunc,
+								CMD_VECTOR_S * pVec)
+{
+	CMD_ELMT_S * pstCmdElem = NULL;
+
+	if (CMD_MAX_CMD_ELEM_SIZE <= strlen(cmd_name))
+	{
+		CMD_DBGASSERT(0,"cmd_regelement_new");
+		return CMD_ERR;
+	}
+
+	pstCmdElem = (CMD_ELMT_S *)malloc(sizeof(CMD_ELMT_S));
+	if (NULL == pstCmdElem)
+	{
+		return CMD_ERR;
+	}
+	memset(pstCmdElem, 0, sizeof(CMD_ELMT_S));
+
+	pstCmdElem->ulElmtId = cmd_elem_id;
+	pstCmdElem->eElmtType = cmd_elem_type;
+	strcpy(pstCmdElem->szElmtName, cmd_name);
+	strcpy(pstCmdElem->szElmtHelp, cmd_help);
+
+	pstCmdElem->pfElmtHelpFunc = pfElmtHelpFunc;
+	pstCmdElem->pfElmtCheckFunc = pfElmtCheckFunc;
+
+	CMD_debug(CMD_DEBUG_INFO, "cmd_regelement: ulElmtId=0x%x, eElmtType=%u, szElmtName=%s,(%s), pfElmtHelpFunc=0x%x, pfElmtCheckFunc=0x%x", 
+		pstCmdElem->ulElmtId, pstCmdElem->eElmtType,
+		pstCmdElem->szElmtName, pstCmdElem->szElmtHelp, 
+		pstCmdElem->pfElmtHelpFunc, pstCmdElem->pfElmtCheckFunc);
+		
+	cmd_vector_insert(pVec, pstCmdElem);
+
+	return CMD_OK;
 }
 
 ULONG cmd_regelement_new(ULONG cmd_elem_id,
@@ -1831,28 +1937,20 @@ ULONG cmd_regelement_new(ULONG cmd_elem_id,
 	{
 		return CMD_ERR;
 	}
-
+	memset(pstCmdElem, 0, sizeof(CMD_ELMT_S));
+	
 	pstCmdElem->ulElmtId = cmd_elem_id;
 	pstCmdElem->eElmtType = cmd_elem_type;
 
-	pstCmdElem->pszElmtName = (char *)malloc(strlen(cmd_name) + 1);
-	if (NULL == pstCmdElem->pszElmtName)
-	{
-		free(pstCmdElem);
-		return CMD_ERR;
-	}
-	memset(pstCmdElem->pszElmtName, 0, strlen(cmd_name) + 1);
-	strcpy(pstCmdElem->pszElmtName, cmd_name);
+	strcpy(pstCmdElem->szElmtName, cmd_name);
+	strcpy(pstCmdElem->szElmtHelp, cmd_help);
 
-	pstCmdElem->pszElmtHelp = (char *)malloc(strlen(cmd_help) + 1);
-	if (NULL == pstCmdElem->pszElmtHelp)
-	{
-		free(pstCmdElem->pszElmtName);
-		free(pstCmdElem);
-		return CMD_ERR;
-	}
-	memset(pstCmdElem->pszElmtHelp, 0, strlen(cmd_help) + 1);
-	strcpy(pstCmdElem->pszElmtHelp, cmd_help);
+#if 0
+	CMD_debug(CMD_DEBUG_INFO, "cmd_regelement_new: ulElmtId=0x%x, eElmtType=%u, szElmtName=%s,(%s), pfElmtHelpFunc=0x%x, pfElmtCheckFunc=0x%x", 
+		pstCmdElem->ulElmtId, pstCmdElem->eElmtType,
+		pstCmdElem->szElmtName, pstCmdElem->szElmtHelp, 
+		pstCmdElem->pfElmtHelpFunc, pstCmdElem->pfElmtCheckFunc);
+#endif	
 
 	cmd_vector_insert(pVec, pstCmdElem);
 
@@ -2019,7 +2117,7 @@ ULONG cmd_pub_run(CHAR *szCmdBuf)
 
 	if (strlen(szCmdBuf) > CMD_BUFFER_SIZE)
 	{
-		CMD_debug(CMD_DEBUG_ERROR, 
+		CMD_debug(CMD_DEBUG_ERROR,
 			"cmd_pub_run. input(%u) command length larger then %u",
 			strlen(szCmdBuf), CMD_BUFFER_SIZE);
 		return 1;
@@ -2045,7 +2143,7 @@ ULONG cmd_run(CMD_VTY_S *vty)
 	ULONG ulNoMatchPos = CMD_NULL_DWORD;
 	ULONG view_id_ = VIEW_NULL;
 	ULONG view_id_pre = VIEW_NULL;
-	
+
 	v = cmd_str2vec(vty->szBuffer);
 	if (v == NULL) {
 		return 1;
@@ -2056,7 +2154,7 @@ ULONG cmd_run(CMD_VTY_S *vty)
 	/* END:   Added by weizengke, 2013/10/5   PN:None */
 
 	view_id_pre = vty->view_id;
-	
+
 	// do command
 	ulMatchType = cmd_execute_command(v, vty, pstCmdElem, &ulMatchNum, &ulNoMatchPos);
 	// add executed command into history
@@ -2164,7 +2262,7 @@ VOID vty_offline(ULONG vtyId)
 	ULONG i = 0;
 	CMD_VTY_S *vty = NULL;
 
-	CMD_debug(CMD_DEBUG_FUNC, "vty_offline. (vtyId=%u)", vtyId);
+	//CMD_debug(CMD_DEBUG_FUNC, "vty_offline. (vtyId=%u)", vtyId);
 
 	vty = cmd_vty_getById(vtyId);
 	if (NULL == vty)
@@ -2176,7 +2274,7 @@ VOID vty_offline(ULONG vtyId)
 	{
 		closesocket(vty->user.socket);
 		vty->user.socket = INVALID_SOCKET;
-	}	
+	}
 
 	for (i = 0; i < HISTORY_MAX_SIZE; i++)
 	{
@@ -2198,7 +2296,7 @@ VOID vty_offline_by_username(CHAR *pszName)
 	{
 		return;
 	}
-	
+
 	for (int i = 0; i < CMD_VTY_MAXUSER_NUM; i++)
 	{
 		if (g_vty[i].used
@@ -2475,8 +2573,8 @@ ULONG cmd_view_regist(CHAR *view_name, CHAR *view_ais, ULONG view_id, ULONG pare
 		if (pParent->ulViewSonNum >= CMD_VIEW_SONS_NUM)
 		{
 			CMD_DBGASSERT(0, "cmd_view_regist sons num more than 100");
-			free(view);
 			free(view->ppSons);
+			free(view);
 			return CMD_ERR;
 		}
 
@@ -2592,7 +2690,7 @@ ULONG cmd_resolve(CMD_VTY_S *vty)
 	switch (c) {
 	case CMD_KEY_ARROW1:
 		c = cmd_getch();
-	
+
 		#ifdef _LINUX_
 		if (c == CMD_KEY_ARROW2)
 		{
@@ -2605,7 +2703,7 @@ ULONG cmd_resolve(CMD_VTY_S *vty)
 				c = cmd_getch();
 			}
 			#endif
-		
+
 			switch (c)
 			{
 				case CMD_KEY_UP:
@@ -2623,7 +2721,7 @@ ULONG cmd_resolve(CMD_VTY_S *vty)
 				case CMD_KEY_DELETE:
 					key_type = CMD_KEY_CODE_DELETE;
 					break;
-			
+
 				/* BEGIN: Added by weizengke, 2014/4/6 support page up & down*/
 				#if 0
 				case CMD_KEY_PGUP:
@@ -2681,10 +2779,10 @@ ULONG cmd_resolve(CMD_VTY_S *vty)
 	case CMD_KEY_SPACE:
 #if 0
 	case CMD_KEY_CTRL_H:
-#endif		
+#endif
 		/* Linux 下空格后回车无法tab补全与'?'联想 待修复*/
 		break;
-		
+
 	case CMD_KEY_CTRL_W:
 		/* del the last elem */
 		key_type = CMD_KEY_CODE_DEL_LASTWORD;
@@ -2736,7 +2834,7 @@ VOID cmd_resolve_tab(CMD_VTY_S *vty)
 {
 	ULONG i = 0;
 	CMD_VECTOR_S *v = NULL;
-	CMD_ELMT_S *pstCmdElem[CMD_MAX_MATCH_SIZE] = {0};
+	CMD_ELMT_S *pstCmdElem = NULL;
 	ULONG ulMatchNum = 0;
 	ULONG ulMatchType = CMD_NO_MATCH;
 	ULONG isNeedMatch = 1;   /* 非TAB场景(无空格)，不需要匹配 */
@@ -2758,7 +2856,7 @@ VOID cmd_resolve_tab(CMD_VTY_S *vty)
 	vty->ulUsedLen = strlen(vty->szBuffer);
 	/* END:   Added by weizengke, 2013/11/17 */
 
-	CMD_debug(CMD_DEBUG_FUNC,"tab in:ulUsedLen=%d, ulCurrentPos=%d\r\n",vty->ulUsedLen, vty->ulCurrentPos);
+	CMD_debug(CMD_DEBUG_FUNC,"cmd_resolve_tab in:szBuffer=%s, ulUsedLen=%d, ulCurrentPos=%d",vty->szBuffer, vty->ulUsedLen, vty->ulCurrentPos);
 
 	if (vty->ucKeyTypePre == CMD_KEY_CODE_TAB)
 	{
@@ -2785,6 +2883,13 @@ VOID cmd_resolve_tab(CMD_VTY_S *vty)
 		isNeedMatch = 0;
 	}
 
+	pstCmdElem = (CMD_ELMT_S *)malloc(CMD_MAX_MATCH_SIZE * sizeof(CMD_ELMT_S));
+	if (NULL == pstCmdElem)
+	{
+		return ;
+	}
+	memset(pstCmdElem, 0, CMD_MAX_MATCH_SIZE * sizeof(CMD_ELMT_S));
+
 	if (1 == isNeedMatch && NULL != v)
 	{
 		ulMatchType = cmd_match_command(v, vty, pstCmdElem, &ulMatchNum);
@@ -2808,9 +2913,9 @@ VOID cmd_resolve_tab(CMD_VTY_S *vty)
 			break;
 		case CMD_FULL_MATCH:
 			cmd_delete_word(vty);
-			if (NULL != pstCmdElem[0])
+			if (0 != ulMatchNum)
 			{
-				cmd_insert_word(vty, pstCmdElem[0]->pszElmtName);
+				cmd_insert_word(vty, pstCmdElem[0].szElmtName);
 			}
 			/* BEGIN: Added by weizengke, 2013/10/14 for full match then next input*/
 			cmd_insert_word(vty, " ");
@@ -2829,13 +2934,13 @@ VOID cmd_resolve_tab(CMD_VTY_S *vty)
 			if (vty->ucKeyTypePre != CMD_KEY_CODE_TAB)
 			{
 				memset(vty->tabString,0,sizeof(vty->tabString));
-				strcpy(vty->tabString, pstCmdElem[0]->pszElmtName);
+				strcpy(vty->tabString, pstCmdElem[0].szElmtName);
 			}
 			else
 			{
 				for (i = 0; i < ulMatchNum; i++)
 				{
-					if (0 == strcmp(vty->tabString, pstCmdElem[i]->pszElmtName))
+					if (0 == strcmp(vty->tabString, pstCmdElem[i].szElmtName))
 					{
 						break;
 					}
@@ -2849,7 +2954,7 @@ VOID cmd_resolve_tab(CMD_VTY_S *vty)
 				}
 
 				memset(vty->tabString,0,sizeof(vty->tabString));
-				strcpy(vty->tabString, pstCmdElem[i]->pszElmtName);
+				strcpy(vty->tabString, pstCmdElem[i].szElmtName);
 			}
 
 			cmd_delete_word(vty);
@@ -2862,7 +2967,9 @@ VOID cmd_resolve_tab(CMD_VTY_S *vty)
 			break;
 	}
 
-	CMD_debug(CMD_DEBUG_FUNC,"tab out:ulUsedLen=%d, ulCurrentPos=%d",vty->ulUsedLen, vty->ulCurrentPos);
+	free(pstCmdElem);
+	
+	CMD_debug(CMD_DEBUG_FUNC,"cmd_resolve_tab out:szBuffer=%s, ulUsedLen=%d, ulCurrentPos=%d",vty->szBuffer, vty->ulUsedLen, vty->ulCurrentPos);
 
 	return;
 }
@@ -2911,7 +3018,7 @@ VOID cmd_resolve_enter(CMD_VTY_S *vty)
 	ULONG ulNoMatchPos = CMD_NULL_DWORD;
 	ULONG view_id_ = VIEW_NULL;
 	ULONG view_id_pre = VIEW_NULL;
-	
+
 	v = cmd_str2vec(vty->szBuffer);
 	if (v == NULL)
 	{
@@ -2927,7 +3034,7 @@ VOID cmd_resolve_enter(CMD_VTY_S *vty)
 	cmd_vty_printf(vty, "%s", CMD_ENTER);
 
 	view_id_pre = vty->view_id;
-		
+
 	ulMatchType = cmd_execute_command(v, vty, pstCmdElem, &ulMatchNum, &ulNoMatchPos);
 
 	view_id_ = vty->view_id;
@@ -2981,10 +3088,10 @@ VOID cmd_resolve_enter(CMD_VTY_S *vty)
 				{
 					cmd_vty_printf(vty, "%s", CMD_ENTER);
 				}
-				
-				cmd_vty_printf(vty, " %-25s", pstCmdElem[i]->pszElmtName);
+
+				cmd_vty_printf(vty, " %-25s", pstCmdElem[i]->szElmtName);
 			}
-			
+
 			cmd_vty_printf(vty, "%s", CMD_ENTER);
 			/* del 10-29
 			cmd_outprompt(vty);
@@ -3028,12 +3135,12 @@ VOID cmd_resolve_enter(CMD_VTY_S *vty)
 VOID cmd_resolve_quest(CMD_VTY_S *vty)
 {
 	CMD_VECTOR_S *v = NULL;
-	CMD_ELMT_S *pstCmdElem[CMD_MAX_MATCH_SIZE] = {0};
+	CMD_ELMT_S *pstCmdElem = NULL;
 	ULONG ulMatchNum = 0;
 	ULONG i = 0;
 	ULONG ulNoMatchPos = CMD_NULL_DWORD;
 	BOOL bShowHelphead = FALSE;
-	
+
 	/* BEGIN: Added by weizengke, 2013/10/4   PN:need print '?' */
 	cmd_put_one(vty, '?');
 	/* END:   Added by weizengke, 2013/10/4   PN:need print '?' */
@@ -3059,13 +3166,13 @@ VOID cmd_resolve_quest(CMD_VTY_S *vty)
 	{
 		/* 没有输入时，提示当前视图 */
 		bShowHelphead = TRUE;
-		
+
 		v = cmd_vector_init();
 		if(NULL == v)
 		{
 			return ;
 		}
-			
+
 		cmd_vector_insert_cr(v);
 	}
 	else if (' ' == vty->szBuffer[vty->ulUsedLen - 1])
@@ -3073,26 +3180,33 @@ VOID cmd_resolve_quest(CMD_VTY_S *vty)
 		cmd_vector_insert_cr(v);
 	}
 
+	pstCmdElem = (CMD_ELMT_S *)malloc(CMD_MAX_MATCH_SIZE * sizeof(CMD_ELMT_S));
+	if (NULL == pstCmdElem)
+	{
+		return ;
+	}
+	memset(pstCmdElem, 0, CMD_MAX_MATCH_SIZE * sizeof(CMD_ELMT_S));
+	
 	cmd_complete_command(v, vty, pstCmdElem, &ulMatchNum, &ulNoMatchPos);
 
 	cmd_vty_printf(vty, "%s", CMD_ENTER);
-	if (ulMatchNum > 0) 
-	{	
+	if (ulMatchNum > 0)
+	{
 		/* 没有输入时，提示当前视图 */
 		if (TRUE == bShowHelphead)
 		{
 			cmd_vty_printf(vty,"%s commands:\r\n",cmd_view_getViewName(vty->view_id));
 		}
-	    
+
 		for (i = 0; i < ulMatchNum; i++)
 		{
-			cmd_vty_printf(vty, " %-25s%s\r\n", pstCmdElem[i]->pszElmtName,pstCmdElem[i]->pszElmtHelp);
+			cmd_vty_printf(vty, " %-25s%s\r\n", pstCmdElem[i].szElmtName, pstCmdElem[i].szElmtHelp);
 		}
-		
+
 		cmd_outprompt(vty);
 		cmd_vty_printf(vty, "%s", vty->szBuffer);
-	} 
-	else 
+	}
+	else
 	{
 		cmd_output_missmatch(vty, ulNoMatchPos);
 		cmd_outprompt(vty);
@@ -3101,7 +3215,8 @@ VOID cmd_resolve_quest(CMD_VTY_S *vty)
 
 	cmd_vector_deinit(v, 0);
 
-	
+	free(pstCmdElem);
+
 	CMD_debug(CMD_DEBUG_FUNC, "cmd_resolve_quest. (ulMatchNum=%u, ulNoMatchPos=%u)", ulMatchNum, ulNoMatchPos);
 
 	return;
@@ -3119,14 +3234,14 @@ VOID cmd_resolve_up(CMD_VTY_S *vty)
 	{
 		return;
 	}
-	
+
 	vty->ulhpos = idx;
 
 	cmd_clear_line(vty);
 	strcpy(vty->szBuffer, vty->pszHistory[vty->ulhpos]);
 	vty->ulCurrentPos = vty->ulUsedLen = strlen(vty->pszHistory[vty->ulhpos]);
 	cmd_vty_printf(vty, "%s", vty->szBuffer);
-	
+
 	return;
 }
 
@@ -3140,7 +3255,7 @@ VOID cmd_resolve_down(CMD_VTY_S *vty)
 	{
 		return;
 	}
-	
+
 	vty->ulhpos = idx;
 
 	cmd_clear_line(vty);
@@ -3208,7 +3323,7 @@ VOID cmd_resolve_delete(CMD_VTY_S *vty)
 
 	CMD_debug(CMD_DEBUG_FUNC, "cmd_resolve_delete. (ulUsedLen=%u, ulCurrentPos=%u)",
 		vty->ulUsedLen, vty->ulCurrentPos);
-		
+
 	CMD_DBGASSERT((vty->ulUsedLen >= vty->ulCurrentPos),
 		"cmd_resolve_delete. (ulUsedLen=%u, ulCurrentPos=%u)",
 		vty->ulUsedLen, vty->ulCurrentPos);
@@ -3221,7 +3336,7 @@ VOID cmd_resolve_delete(CMD_VTY_S *vty)
 	{
 		cmd_put_one(vty, vty->szBuffer[vty->ulCurrentPos + i]);
 	}
-	
+
 	vty->ulUsedLen--;
 
 	for (i = 0; i < size; i++)
@@ -3257,14 +3372,14 @@ VOID cmd_resolve_backspace(CMD_VTY_S *vty)
 
 	memcpy(&vty->szBuffer[vty->ulCurrentPos], &vty->szBuffer[vty->ulCurrentPos + 1], size);
 	vty->szBuffer[vty->ulUsedLen] = '\0';
-	
+
 	for (i = 0; i < size; i ++)
 	{
 		cmd_put_one(vty, vty->szBuffer[vty->ulCurrentPos + i]);
 	}
-	
+
 	cmd_put_one(vty, ' ');
-	
+
 	for (i = 0; i < size + 1; i++)
 	{
 		cmd_back_one(vty);
@@ -3308,12 +3423,12 @@ VOID cmd_resolve_insert(CMD_VTY_S *vty)
 	{
 		cmd_put_one(vty, vty->szBuffer[vty->ulCurrentPos + i]);
 	}
-	
+
 	for (i = 0; i < size; i++)
 	{
 		cmd_back_one(vty);
 	}
-	
+
 	vty->ulCurrentPos++;
 	vty->ulUsedLen++;
 
@@ -3346,7 +3461,7 @@ VOID cmd_resolve_del_lastword(CMD_VTY_S *vty)
 	{
 		return;
 	}
-	
+
 	cmd_delete_word_ctrl_W_ex(vty);
 
 	cmd_vty_printf(vty, "%s", CMD_ENTER);
@@ -3394,13 +3509,13 @@ VOID cmd_read(CMD_VTY_S *vty)
 
 #if 0
 		CMD_debug(CMD_DEBUG_INFO, "cmd_read. "
-			"(vtyId=%d, used=%u, ulCurrentPos=%u, ulUsedLen=%u, c=%d, szBuffer=%s)", 
+			"(vtyId=%d, used=%u, ulCurrentPos=%u, ulUsedLen=%u, c=%d, szBuffer=%s)",
 			vty->vtyId, vty->used, vty->ulCurrentPos, vty->ulUsedLen, vty->c, vty->szBuffer);
 #endif
 
 		vty->ucKeyTypeNow = ucKeyType;
 
-		if (ucKeyType <= CMD_KEY_CODE_NONE 
+		if (ucKeyType <= CMD_KEY_CODE_NONE
 			|| ucKeyType > CMD_KEY_CODE_NOTCARE)
 		{
 			CMD_debug(CMD_DEBUG_ERROR, "Unknow key type, c=%c, ucKeyType=%u\n", vty->c, ucKeyType);
@@ -3408,9 +3523,9 @@ VOID cmd_read(CMD_VTY_S *vty)
 		}
 
 		key_resolver[ucKeyType].pKeyCallbackfunc(vty);
-		
+
 		vty->ucKeyTypePre = vty->ucKeyTypeNow;
-		
+
 		/* not key type TAB, clear tabString */
 		if (vty->ucKeyTypeNow != CMD_KEY_CODE_TAB)
 		{
@@ -3427,6 +3542,13 @@ VOID cmd_read(CMD_VTY_S *vty)
 				vty->szBuffer, vty->ulUsedLen, vty->ulCurrentPos,  vty->ulBufMaxLen);
 		}
 
+		#if 0
+		printf("\r\ncmd_read, szBuffer=%s, ulUsedLen=%u, ulCurrentPos=%u, ulBufMaxLen=%u",
+			vty->szBuffer, vty->ulUsedLen, vty->ulCurrentPos,  vty->ulBufMaxLen);
+
+		CMD_DBGASSERT(0, "cmd_read, szBuffer=%s, ulUsedLen=%u, ulCurrentPos=%u, ulBufMaxLen=%u",
+			vty->szBuffer, vty->ulUsedLen, vty->ulCurrentPos,  vty->ulBufMaxLen);
+		#endif
 	}
 
 	return ;
@@ -3465,7 +3587,7 @@ int cmd_init()
 		return CMD_ERR;
 	}
 	memset(g_con_vty, 0, sizeof(CMD_VTY_S));
-	
+
 	cmd_vty_init(g_con_vty);
 	g_con_vty->used = 1;
 	g_con_vty->vtyId = CMD_VTY_CONSOLE_ID;
@@ -3473,14 +3595,14 @@ int cmd_init()
 	g_con_vty->user.state = 1;
 	g_con_vty->user.lastAccessTime = time(NULL);
 	strcpy(g_con_vty->user.user_name, "CON");
-	
+
 	g_cfm_vty = (CMD_VTY_S *)malloc(sizeof(CMD_VTY_S));
 	if(g_cfm_vty == NULL)
 	{
 		return CMD_ERR;
 	}
 	memset(g_cfm_vty, 0, sizeof(CMD_VTY_S));
-	
+
 	cmd_vty_init(g_cfm_vty);
 	g_cfm_vty->used = 1;
 	g_cfm_vty->vtyId = CMD_VTY_CFM_ID;
@@ -3488,7 +3610,7 @@ int cmd_init()
 	g_cfm_vty->user.state = 1;
 	g_cfm_vty->user.lastAccessTime = time(NULL);
 	strcpy(g_cfm_vty->user.user_name, "CFM");
-	
+
 	for (int i = 0; i < CMD_VTY_MAXUSER_NUM; i++)
 	{
 		cmd_vty_init(&g_vty[i]);
@@ -3502,7 +3624,7 @@ int cmd_init()
 int cmd_main_entry(void *pEntry)
 {
     extern ULONG SYSMNG_IsCfgRecoverOver();
-	
+
 	for (;;)
 	{
 		/* 配置恢复还没结束，不进入命令行界面 */
@@ -3511,7 +3633,7 @@ int cmd_main_entry(void *pEntry)
 			Sleep(10);
 			continue;
 		}
-		
+
 		cmd_read(g_con_vty);
 	}
 

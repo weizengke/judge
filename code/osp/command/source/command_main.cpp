@@ -8,9 +8,9 @@
 #include <stdlib.h>
 
 #ifdef _WIN32_
+#include <windows.h>
 #include <io.h>
 #include <conio.h>
-#include<winsock2.h>
 #endif
 
 #ifdef _LINUX_
@@ -22,6 +22,7 @@
 #include "kernel.h"
 
 #include "osp/common/include/osp_common_def.h"
+#include "osp/debug/include/debug_center_inc.h"
 #include "osp/util/util.h"
 #include "product/main/root.h"
 #include "osp/command/include/icli.h"
@@ -87,6 +88,7 @@ VOID CMD_ShowCliState(ULONG vtyId, ULONG vtyId2)
 	buff += sprintf(buff, "  user.user_name: %s\r\n", vty->user.user_name);
 	buff += sprintf(buff, "  user.state    : %u\r\n", vty->user.state);
 	buff += sprintf(buff, "  user.type     : %u\r\n", vty->user.type);
+	buff += sprintf(buff, "  user.td       : %u\r\n", vty->user.terminal_debugging);
 	buff += sprintf(buff, "  lastAccessTime: %s\r\n", strDateStr.c_str());
 	
 	vty_printf(vtyId, buffTmp);
@@ -362,6 +364,7 @@ ULONG CMD_ADP_RegShowCmd()
 	/* 命令行注册四部曲4: 释放命令行向量 */
 	CMD_VECTOR_FREE(vec);
 	
+	return 0;
 }
 
 
@@ -389,6 +392,7 @@ ULONG CMD_ADP_RegConfigCmd()
 	/* 命令行注册四部曲4: 释放命令行向量 */
 	CMD_VECTOR_FREE(vec);
 	
+	return 0;
 }
 
 ULONG CMD_ADP_RegCmd()
@@ -405,9 +409,13 @@ int CMD_ADP_Init()
 	(VOID)cmd_init();
 	
 	(VOID)CMD_ADP_RegCmd();
+
+	(VOID)DEBUG_PUB_RegModuleDebugs(MID_CMD, "cli", "Command line interface");
 	
 	/* 注册命令行处理回调 */
 	(VOID)cmd_regcallback(MID_CMD, CMD_RUN_Callback);	
+
+	return 0;
 }
 
 APP_INFO_S g_CMDAppInfo =

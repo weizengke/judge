@@ -12,7 +12,7 @@
 
 #include <conio.h>
 #include <io.h>
-#include <winsock2.h>
+//#include <winsock2.h>
 
 #include "kernel.h"
 
@@ -159,7 +159,7 @@ unsigned long thread_get_self()
 #endif
 
 #if M_DES("thread", 1)
-extern BOOL CreateDirectory(LPCTSTR lpPathName, LPSECURITY_ATTRIBUTES lpSecurityAttributes);
+//extern BOOL CreateDirectory(LPCTSTR lpPathName, LPSECURITY_ATTRIBUTES lpSecurityAttributes);
 
 bool win32_create_directory(char *path)
 {

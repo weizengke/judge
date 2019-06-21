@@ -8,13 +8,13 @@
 #include <time.h>
 #include <string.h>
 #include <stdio.h>
+#include<stdlib.h>
 #include <stdarg.h>
 
 #ifdef _WIN32_
 #include <windows.h>
 #include <conio.h>
 #include <io.h>
-#include <winsock2.h>
 #endif
 
 #include "kernel.h"
@@ -33,9 +33,12 @@ using namespace std;
 
 char logPath[MAX_PATH]="logfile";
 
+
 enum DEBUG_CMO_TBLID_EM {
 	DEBUG_TBL_SHOW = 0,
 	DEBUG_TBL_CFG,	
+	DEBUG_TBL_USERDEF, /* 用户自定义模块TBLID */
+	
 };
 
 enum DEBUG_CMO_SHOW_ID_EM {
@@ -48,27 +51,26 @@ enum DEBUG_CMO_CFG_ID_EM {
 	DEBUG_CMO_CFG_ENABLE,	
 	DEBUG_CMO_CFG_ENABLE_ALL,
 	DEBUG_CMO_CFG_TERMINAL,
-	DEBUG_CMO_CFG_COMMON,
-	DEBUG_CMO_CFG_JUDGE,
-	DEBUG_CMO_CFG_MYSQL,
-	DEBUG_CMO_CFG_DEBUG_CENTER,
-	DEBUG_CMO_CFG_CLI,
-	DEBUG_CMO_CFG_EVT,
-	DEBUG_CMO_CFG_NDP,
-	DEBUG_CMO_CFG_AAA,
-	DEBUG_CMO_CFG_TELNET,
-	DEBUG_CMO_CFG_FTP,
-	
+};
+
+enum DEBUG_CMO_UDF_ID_EM {
+	DEBUG_CMO_UDF_UNDO = CMD_ELEMID_DEF(MID_DEBUG, DEBUG_TBL_USERDEF, 0),
+	DEBUG_CMO_UDF_DBG_ALL,
+	DEBUG_CMO_UDF_DBG_ERROR,
+	DEBUG_CMO_UDF_DBG_FUNC,
+	DEBUG_CMO_UDF_DBG_INFO,
+	DEBUG_CMO_UDF_DBG_MESSAGE,
+	/* 往后为用户自定的模块id */
 };
 
 char *szModuleName[32] = {
 	"none",
 	"common",
-	"judge",
 	"sysmng",
+	"judge",	
 	"mysql",
 	"debug-center",
-	"command",
+	"cli",
 	"event",
 	"ndp",
 	"aaa",
@@ -92,17 +94,38 @@ unsigned long g_aulDebugMask[MID_ID_END][DEBUG_TYPE_MAX/32 + 1] = {0};
 int g_debug_switch = DEBUG_DISABLE;
 queue <MSGQUEUE_S> g_stMsgQueue;
 
-#define DEBUG_Debug(x, args...) debugcenter_print(MID_DEBUG, x, args)
+typedef struct tagDEBUG_MODULE_INFO_S {
+	ULONG ulCMOId;
+	ULONG ulMid;
+	ULONG ulDebugMask;
+	CHAR szModuleName[CMD_MAX_CMD_ELEM_SIZE];
+	CHAR szModuleHelp[CMD_MAX_CMD_ELEM_HELP_SIZE];
+} DEBUG_MODULE_INFO_S;
+
+DEBUG_MODULE_INFO_S g_stDebugModuleInfo[128] = {0};
+ULONG g_ulDebugModuleNum = 0;
+ULONG g_DebugModuleElemid = DEBUG_CMO_UDF_DBG_MESSAGE  + 1;
+
+#define DEBUG_Debug(x, format, ...) debugcenter_print(MID_DEBUG, x, format, ##__VA_ARGS__)
+
+ULONG DEBUG_GetModuleIndex(ULONG mid)
+{
+	ULONG ulLoop = 0;
+	for (ulLoop= 0; ulLoop < g_ulDebugModuleNum; ulLoop++)
+	{
+		if (g_stDebugModuleInfo[ulLoop].ulMid == mid)
+		{
+			return ulLoop;
+		}
+	}
+
+	return 0xFFFFFFFF;
+}
 
 void debugcenter_print(MID_ID_EM mid, DEBUG_TYPE_EM type, const char *format, ...)
 {
-#if 1
-	if (g_debug_switch == DEBUG_DISABLE)
-	{
-		return;
-	}
-
-	if (!DEBUG_MID_ISVALID(mid))
+	ULONG ulIndex = DEBUG_GetModuleIndex(mid);
+	if (0xFFFFFFFF == ulIndex)
 	{
 		return;
 	}
@@ -112,11 +135,10 @@ void debugcenter_print(MID_ID_EM mid, DEBUG_TYPE_EM type, const char *format, ..
 		return;
 	}
 
-	if (!DEBUG_MASK_GET(mid, type))
+	if (!DEBUG_MASK_GET(ulIndex, type))
 	{
 		return;
 	}
-#endif
 
 	time_t  timep = time(NULL);
 	struct tm *p;
@@ -131,9 +153,8 @@ void debugcenter_print(MID_ID_EM mid, DEBUG_TYPE_EM type, const char *format, ..
 	va_list args;
 	va_start(args, format);
 	vsnprintf(buf_t, BUFSIZE, format, args);
-	sprintf(buf,"%s%s", buf,buf_t);
+	sprintf(buf,"%s%s", buf, buf_t);
 	va_end(args);
-	sprintf(buf,"%s", buf);
 
     strcpy(stMsgQ.szMsgBuf, buf);
 
@@ -146,36 +167,6 @@ void debugcenter_print(MID_ID_EM mid, DEBUG_TYPE_EM type, const char *format, ..
 
 }
 
-
-void pdt_debug_print(const char *format, ...)
-{
-	time_t  timep = time(NULL);
-	struct tm *p;
-    MSGQUEUE_S stMsgQ;
-    char buf[BUFSIZE + 1] = {0};
-    char buf_t[BUFSIZE + 1] = {0};
-
-    p = localtime(&timep);
-    p->tm_year = p->tm_year + 1900;
-    p->tm_mon = p->tm_mon + 1;
-
-	va_list args;
-	va_start(args, format);
-	vsnprintf(buf_t, BUFSIZE, format, args);
-	snprintf(buf, BUFSIZE, "%s%s", buf,buf_t);
-	va_end(args);
-	snprintf(buf, BUFSIZE, "%s", buf);
-
-    strcpy(stMsgQ.szMsgBuf, buf);
-
-	stMsgQ.mid = MID_NULL;
-	stMsgQ.type = DEBUG_TYPE_NONE;
-    stMsgQ.thread_id = thread_get_self();
-	stMsgQ.stTime = *p;
-
-	g_stMsgQueue.push(stMsgQ);
-
-}
 
 void RunDelay(int t)
 {
@@ -213,7 +204,7 @@ void MSG_StopDot()
 
 void write_log(int level, const char *fmt, ...) {
 	va_list ap;
-	char buffer[BUFSIZE];
+	char buffer[BUFSIZE] = {0};
 	time_t  timep = time(NULL);
 	int l;
 	struct tm *p;
@@ -241,7 +232,6 @@ void write_log(int level, const char *fmt, ...) {
 	fprintf(fp, "%s\r\n", buffer);
 
 	/* BEGIN: Added by weizengke, 2013/11/15 for vrp */
-	//pdt_debug_print("%s", buffer);
 	DEBUG_Debug(DEBUG_TYPE_INFO, "%s", buffer);
 	/* END:   Added by weizengke, 2013/11/15 */
 
@@ -253,7 +243,8 @@ VOID DEBUG_Show(ULONG vtyId)
 {
 	ULONG m = 0;
 	ULONG i = 0;
-	
+
+#if 0	
 	if (g_debug_switch == DEBUG_ENABLE)
 	{
 		vty_printf(vtyId, "Global debugging is enable.\r\n");
@@ -263,7 +254,6 @@ VOID DEBUG_Show(ULONG vtyId)
 		vty_printf(vtyId, "Global debugging is disable.\r\n");
 	}
 
-#if 0
 	vty_printf(vtyId, " DebugMask(0x%x", g_aulDebugMask[0]);
 	for (i = 1; i < DEBUG_TYPE_MAX/DEBUG_MASKLENTG + 1 ; i++)
 	{
@@ -275,11 +265,19 @@ VOID DEBUG_Show(ULONG vtyId)
 
 	for (m = MID_NULL+1; m < MID_ID_END; m++)
 	{
+		ULONG ulIndex = DEBUG_GetModuleIndex(m);
+		if (0xFFFFFFFF == ulIndex)
+		{
+			continue;
+		}
+		
 		for (i = DEBUG_TYPE_NONE + 1; i < DEBUG_TYPE_MAX; i++ )
 		{
-			if (DEBUG_MASK_GET(m, i))
+			if (DEBUG_MASK_GET(ulIndex, i))
 			{
-				vty_printf(vtyId, " Debugging %s %s switch is on.\r\n", szModuleName[m], szDebugName[i]);
+				vty_printf(vtyId, " Debugging %s %s switch is on.\r\n",
+							g_stDebugModuleInfo[ulIndex].szModuleName,
+							szDebugName[i]);
 			}
 		}
 	}
@@ -306,7 +304,7 @@ ULONG DEBUG_EnableAll(ULONG ulUndo)
 {
 	ULONG i;
 	ULONG m= 0;
-	for (m = MID_NULL+1; m < MID_ID_END; m++)
+	for (m = 0; m < g_ulDebugModuleNum; m++)
 	{
 		for (i = DEBUG_TYPE_NONE + 1; i < DEBUG_TYPE_MAX; i++ )
 		{
@@ -363,9 +361,10 @@ ULONG DEBUG_CFG_Enalbe(VOID *pRcvMsg)
 	VOID *pElem = NULL;
 	ULONG vtyId = 0;
 	ULONG ulUndo = OS_NO;
-	ULONG ulEnable = OS_NO;
 	ULONG ulEnableAll = OS_NO;
+	ULONG ulEnableByModule = OS_NO;
 	ULONG ulTerm = OS_NO;
+	CHAR szModule[128] = {0};
 	
 	vtyId = cmd_get_vty_id(pRcvMsg);
 	iElemNum = cmd_get_elem_num(pRcvMsg);
@@ -383,10 +382,6 @@ ULONG DEBUG_CFG_Enalbe(VOID *pRcvMsg)
 				ulUndo = OS_YES;
 				break;
 				
-			case DEBUG_CMO_CFG_ENABLE:	
-				ulEnable = OS_YES;
-				break;
-				
 			case DEBUG_CMO_CFG_ENABLE_ALL:	
 				ulEnableAll = OS_YES;
 				break;
@@ -394,7 +389,7 @@ ULONG DEBUG_CFG_Enalbe(VOID *pRcvMsg)
 			case DEBUG_CMO_CFG_TERMINAL:
 				ulTerm = OS_YES;
 				break;
-				
+
 			default:
 				break;
 		}
@@ -426,9 +421,94 @@ ULONG DEBUG_CFG_Enalbe(VOID *pRcvMsg)
 		DEBUG_EnableAll(ulUndo);
 		return 0;
 	}
+
+	return 0;
+
+}
+
+ULONG DEBUG_CFG_UserDebug(VOID *pRcvMsg)
+{
+	ULONG iLoop = 0;
+	ULONG iElemNum = 0;
+	ULONG iElemID = 0;
+	VOID *pElem = NULL;
+	ULONG vtyId = 0;
+	ULONG ulUndo = OS_NO;
+	ULONG ulEnableAll = OS_NO;
+	ULONG ulDebugType = 0;
+	ULONG ulMid = 0;
+	ULONG iLoop1 = 0;
+	vtyId = cmd_get_vty_id(pRcvMsg);
+	iElemNum = cmd_get_elem_num(pRcvMsg);
+
+	OS_DBGASSERT(iElemNum, "DEBUG_CFG_UserDebug, cmd element num is 0");
+
+	for (iLoop = 0; iLoop < iElemNum; iLoop++)
+	{	
+		pElem = cmd_get_elem_by_index(pRcvMsg, iLoop);
+		iElemID = cmd_get_elemid(pElem);
+
+		switch(iElemID)
+		{
+			case DEBUG_CMO_UDF_UNDO:
+				ulUndo = OS_YES;
+				break;
+				
+			case DEBUG_CMO_UDF_DBG_ALL:	
+				ulEnableAll = OS_YES;
+				break;
+				
+			case DEBUG_CMO_UDF_DBG_ERROR: 
+				ulDebugType = DEBUG_TYPE_ERROR;
+				break;
+			case DEBUG_CMO_UDF_DBG_INFO:	
+				ulDebugType = DEBUG_TYPE_INFO;
+				break;
+			case DEBUG_CMO_UDF_DBG_FUNC:	
+				ulDebugType = DEBUG_TYPE_FUNC;
+				break;
+			case DEBUG_CMO_UDF_DBG_MESSAGE:	
+				ulDebugType = DEBUG_TYPE_MSG;
+				break;
+			
+			default:
+
+				for (iLoop1 = 0; iLoop1 < g_ulDebugModuleNum; iLoop1++)
+				{
+					if (iElemID == g_stDebugModuleInfo[iLoop1].ulCMOId)
+					{
+						ulMid = g_stDebugModuleInfo[iLoop1].ulMid;
+						break;
+					}
+				}
+				break;
+		}
+	}
+
+	ULONG ulIndex = DEBUG_GetModuleIndex(ulMid);
+	if (ulIndex == 0xFFFFFFFF)
+	{
+		return 0;
+	}
+	
+	if (OS_YES == ulEnableAll)
+	{
+		for (iLoop1 = DEBUG_TYPE_NONE + 1; iLoop1 < DEBUG_TYPE_MAX; iLoop1++)
+		{
+			if (OS_YES == ulUndo)
+			{
+				DEBUG_MASK_CLEAR(ulIndex, iLoop1);
+			}
+			else
+			{
+				DEBUG_MASK_SET(ulIndex, iLoop1);
+			}			
+		}
+		return 0;
+	}
 	else
 	{
-		DEBUG_Enable(ulUndo);
+		DEBUG_MASK_SET(ulIndex, ulDebugType);
 		return 0;
 	}
 
@@ -452,6 +532,11 @@ ULONG DEBUG_CfgCallback(VOID *pRcvMsg)
 		case DEBUG_TBL_CFG:
 			iRet = DEBUG_CFG_Enalbe(pRcvMsg);
 			break;
+
+		case DEBUG_TBL_USERDEF:
+			iRet = DEBUG_CFG_UserDebug(pRcvMsg);
+			break;
+		
 
 		default:
 			break;
@@ -480,6 +565,54 @@ ULONG DEBUG_RegCmdShow()
 	return OS_OK;
 }
 
+ULONG DEBUG_ModuleHelpCallback(VOID *pRcvMsg, CMD_ELMTHELP_S **ppstCmdElmtHelp, ULONG *pulNum)
+{
+	ULONG ulRet = OS_OK;
+	CMD_ELMTHELP_S *pstCmdElmtHelp = NULL;
+	
+	pstCmdElmtHelp = (CMD_ELMTHELP_S*)malloc(2 * sizeof(CMD_ELMTHELP_S));
+	if (NULL == pstCmdElmtHelp)
+	{
+		return OS_ERR;
+	}
+	memset(pstCmdElmtHelp, 0, sizeof(2 * sizeof(CMD_ELMTHELP_S)));
+
+	*ppstCmdElmtHelp = pstCmdElmtHelp;
+	
+	strcpy(pstCmdElmtHelp[0].szElmtName, "telnet");
+	strcpy(pstCmdElmtHelp[0].szElmtHelp, "Telnet proocol.");
+	
+	strcpy(pstCmdElmtHelp[1].szElmtName, "judge");
+	strcpy(pstCmdElmtHelp[1].szElmtHelp, "Judger.");
+	
+	*pulNum = 2;
+	
+	return OS_OK;
+
+}
+
+ULONG DEBUG_ModuleCheckCallback(VOID *pRcvMsg)
+{	
+	CHAR *pszInput = (CHAR*)pRcvMsg;
+
+	if (NULL == pszInput)
+	{
+		OS_ERR;
+	}
+	
+	if (0 == strnicmp("telnet", pszInput, strlen(pszInput)))
+	{
+		return OS_OK;
+	}
+	
+	if (0 == strnicmp("judge", pszInput, strlen(pszInput)))
+	{
+		return OS_OK;
+	}
+
+	return OS_ERR;
+}
+
 ULONG DEBUG_RegCmdConfig()
 {
 	CMD_VECTOR_S * vec = NULL;
@@ -488,34 +621,77 @@ ULONG DEBUG_RegCmdConfig()
 	CMD_VECTOR_NEW(vec);
 
 	/* 命令行注册四部曲2: 定义命令字 */
-	cmd_regelement_new(DEBUG_CMO_CFG_UNDO,       CMD_ELEM_TYPE_KEY,   "undo", 	    "Undo operation", vec);	
-	cmd_regelement_new(CMD_ELEMID_NULL,          CMD_ELEM_TYPE_KEY,   "debugging", 	"Debugging switch", vec);	
+	cmd_regelement_new(DEBUG_CMO_CFG_UNDO,       CMD_ELEM_TYPE_KEY,   "undo", 	    	"Undo operation", vec);	
+	cmd_regelement_new(CMD_ELEMID_NULL,          CMD_ELEM_TYPE_KEY,   "debugging", 		"Debugging switch", vec);	
 	cmd_regelement_new(DEBUG_CMO_CFG_ENABLE,     CMD_ELEM_TYPE_KEY,   "enable", 		"Enable the debugging", vec);
 	cmd_regelement_new(DEBUG_CMO_CFG_ENABLE_ALL, CMD_ELEM_TYPE_KEY,   "all", 			"Enable all the debugging", vec);
-	cmd_regelement_new(DEBUG_CMO_CFG_TERMINAL,   CMD_ELEM_TYPE_KEY,   "terminal", 	"Terminal", vec);
-	cmd_regelement_new(DEBUG_CMO_CFG_COMMON,     CMD_ELEM_TYPE_KEY,   "common", 		"Common Module", vec);
-	cmd_regelement_new(DEBUG_CMO_CFG_JUDGE,      CMD_ELEM_TYPE_KEY,   "judge", 		"Judge Module", vec);
-	cmd_regelement_new(DEBUG_CMO_CFG_MYSQL,      CMD_ELEM_TYPE_KEY,   "mysql", 		"Mysql Module", vec);
-	cmd_regelement_new(DEBUG_CMO_CFG_DEBUG_CENTER, CMD_ELEM_TYPE_KEY, "debug-center", "Debug Module", vec);
-	cmd_regelement_new(DEBUG_CMO_CFG_CLI,        CMD_ELEM_TYPE_KEY,   "command", 		"Command Module", vec);
-	cmd_regelement_new(DEBUG_CMO_CFG_EVT,        CMD_ELEM_TYPE_KEY,   "event", 		"Event Module", vec);
-	cmd_regelement_new(DEBUG_CMO_CFG_NDP,        CMD_ELEM_TYPE_KEY,   "ndp", 			"NDP Module", vec);
-	cmd_regelement_new(DEBUG_CMO_CFG_AAA,        CMD_ELEM_TYPE_KEY,   "aaa", 			"AAA Module", vec);
-	cmd_regelement_new(DEBUG_CMO_CFG_TELNET,     CMD_ELEM_TYPE_KEY,   "telnet", 		"Telnet Module", vec);
-	cmd_regelement_new(DEBUG_CMO_CFG_FTP,        CMD_ELEM_TYPE_KEY,   "ftp", 		    "FTP Module", vec);
-	
+	cmd_regelement_new(DEBUG_CMO_CFG_TERMINAL,   CMD_ELEM_TYPE_KEY,   "terminal", 		"Terminal", vec);
+
 	/* 命令行注册四部曲3: 注册命令行 */
-	cmd_install_command(MID_DEBUG, VIEW_USER, " 1 2 3 ", vec); /* undo debugging enable */
-	cmd_install_command(MID_DEBUG, VIEW_USER, " 2 3 ", vec);   /* debugging enable */
+	//cmd_install_command(MID_DEBUG, VIEW_USER, " 1 2 3 ", vec); /* undo debugging enable */
+	//cmd_install_command(MID_DEBUG, VIEW_USER, " 2 3 ", vec);   /* debugging enable */
 	cmd_install_command(MID_DEBUG, VIEW_USER, " 1 2 4 ", vec); /* undo debugging all */
 	cmd_install_command(MID_DEBUG, VIEW_USER, " 2 4 ", vec); /* debugging all */
 	cmd_install_command(MID_DEBUG, VIEW_USER, " 5 2 ", vec); /* terminal debugging */
 	cmd_install_command(MID_DEBUG, VIEW_USER, " 1 5 2 ", vec); /* undo terminal debugging */
-	
+
 	/* 命令行注册四部曲4: 释放命令行向量 */
 	CMD_VECTOR_FREE(vec);
 
 	return OS_OK;
+}
+
+CMD_VECTOR_S * g_DebugModulevVec = NULL;
+
+
+ULONG DEBUG_PUB_RegModuleDebugs(ULONG ulMid, CHAR *szModuleName, CHAR *szModuleHelp)
+{
+	CHAR szCmdBuf[1024] = {0};
+	ULONG ulLoop = 0;
+	
+	if (NULL == g_DebugModulevVec)
+	{
+		/* 命令行注册四部曲1: 申请命令行向量 */
+		CMD_VECTOR_NEW(g_DebugModulevVec);
+		
+		/* 命令行注册四部曲2: 定义命令字 */
+		cmd_regelement_new(DEBUG_CMO_UDF_UNDO,		 CMD_ELEM_TYPE_KEY,   "undo",			"Undo operation", g_DebugModulevVec); 
+		cmd_regelement_new(CMD_ELEMID_NULL, 		 CMD_ELEM_TYPE_KEY,   "debugging",		"Debugging switch", g_DebugModulevVec);	
+		cmd_regelement_new(DEBUG_CMO_UDF_DBG_ALL,	 CMD_ELEM_TYPE_KEY,   "all",			"Enable all the debugging", g_DebugModulevVec);
+		cmd_regelement_new(DEBUG_CMO_UDF_DBG_ERROR,   CMD_ELEM_TYPE_KEY,  "error", 			"Debugging error level", g_DebugModulevVec);
+		cmd_regelement_new(DEBUG_CMO_UDF_DBG_FUNC,	 CMD_ELEM_TYPE_KEY,   "function",		"Debugging function level", g_DebugModulevVec);
+		cmd_regelement_new(DEBUG_CMO_UDF_DBG_INFO,	 CMD_ELEM_TYPE_KEY,   "info",			"Debugging info level", g_DebugModulevVec);
+		cmd_regelement_new(DEBUG_CMO_UDF_DBG_MESSAGE,CMD_ELEM_TYPE_KEY,   "message",		"Debugging message level", g_DebugModulevVec);		
+	}
+
+	cmd_regelement_new(g_DebugModuleElemid,	 CMD_ELEM_TYPE_KEY,   szModuleName, 	szModuleHelp, g_DebugModulevVec);
+
+	g_stDebugModuleInfo[g_ulDebugModuleNum].ulCMOId = g_DebugModuleElemid;
+	g_stDebugModuleInfo[g_ulDebugModuleNum].ulMid = ulMid;
+	g_stDebugModuleInfo[g_ulDebugModuleNum].ulDebugMask = 0;
+	strcpy(g_stDebugModuleInfo[g_ulDebugModuleNum].szModuleName, szModuleName);
+	strcpy(g_stDebugModuleInfo[g_ulDebugModuleNum].szModuleHelp, szModuleHelp);
+	g_ulDebugModuleNum++;
+	
+	/* 命令行注册四部曲3: 注册命令行 */
+	for (ulLoop = DEBUG_CMO_UDF_DBG_ALL - DEBUG_CMO_UDF_UNDO + 2; ulLoop <= DEBUG_CMO_UDF_DBG_MESSAGE - DEBUG_CMO_UDF_UNDO + 2; ulLoop++)
+	{
+		memset(szCmdBuf, 0, sizeof(szCmdBuf));
+		sprintf(szCmdBuf, " 1 2 %u %u ", g_DebugModuleElemid - DEBUG_CMO_UDF_UNDO + 2, ulLoop);  /* undo debugging xxx all */
+		cmd_install_command(MID_DEBUG, VIEW_USER, szCmdBuf, g_DebugModulevVec);
+		
+		memset(szCmdBuf, 0, sizeof(szCmdBuf));
+		sprintf(szCmdBuf, " 2 %u %u ", g_DebugModuleElemid - DEBUG_CMO_UDF_UNDO + 2, ulLoop);  /* debugging xxx all */
+		cmd_install_command(MID_DEBUG, VIEW_USER, szCmdBuf, g_DebugModulevVec);
+	}
+
+	g_DebugModuleElemid++;
+	
+	//CMD_VECTOR_FREE(g_DebugModulevVec);
+
+	return OS_OK;
+
+
 }
 
 ULONG DEBUG_RegCmd()
@@ -523,6 +699,8 @@ ULONG DEBUG_RegCmd()
 	(VOID)DEBUG_RegCmdShow();
 
 	(VOID)DEBUG_RegCmdConfig();
+
+	return 0;
 }
 
 int DEBUG_MainEntry(void *pEntry)
@@ -535,6 +713,8 @@ int DEBUG_MainEntry(void *pEntry)
 	(VOID)DEBUG_RegCmd();
 	
 	(VOID)cmd_regcallback(MID_DEBUG, DEBUG_CfgCallback);
+
+	DEBUG_PUB_RegModuleDebugs(MID_DEBUG, "debug-center", "Debug Center");
 	
     for (;;)
     {

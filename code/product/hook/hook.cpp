@@ -26,7 +26,13 @@ typedef struct
 
 int APIHOOK_TRACE(char *szFuncName)
 {
-	//printf("API Hook:%s.\r\n",szFuncName);
+	#if 0
+	char buff[1024] = {0};
+	snprintf(buff, sizeof(buff), "API Hook:%s.", szFuncName);
+	
+	perror(buff);
+	#endif
+	
 	return 0;
 }
 
@@ -299,7 +305,7 @@ BOOL HookAPI(LPCSTR szImportModule, LPCSTR szFunc, PROC paHookFuncs, PROC* paOri
 API_FUNC_ID MANDATORY_API_FUNCS[] =
 {
 	{"Kernel32.dll", (LPCSTR)"OpenProcess", (PROC)MyOpenProcess, NULL},
-	{"Kernel32.dll", (LPCSTR)"GetCurrentProcess", (PROC)MyGetCurrentProcess, NULL},	
+	//{"Kernel32.dll", (LPCSTR)"GetCurrentProcess", (PROC)MyGetCurrentProcess, NULL},	
 	{"Kernel32.dll", (LPCSTR)"CreateProcess", (PROC)MyCreateProcess, NULL},			
     //{"Kernel32.dll", (LPCSTR)"CreateThread", (PROC)MyCreateThread, NULL},    Ruby
 	//{"Kernel32.dll", (LPCSTR)"GetCurrentProcessId", (PROC)MyGetCurrentProcessId, NULL}, java

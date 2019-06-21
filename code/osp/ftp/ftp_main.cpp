@@ -127,6 +127,7 @@ ULONG FTPS_RegCmdEnable()
 	/* 命令行注册四部曲4: 释放命令行向量 */
 	CMD_VECTOR_FREE(vec);
 
+	return 0;
 }
 
 ULONG FTPS_RegCmd()
@@ -134,6 +135,8 @@ ULONG FTPS_RegCmd()
 	(VOID)cmd_regcallback(MID_FTP, FTPS_CMD_Callback);	
 
 	(VOID)FTPS_RegCmdEnable();
+
+	(VOID)DEBUG_PUB_RegModuleDebugs(MID_FTP, "ftp", "FTP protocol");
 	
 	return OS_OK;
 }

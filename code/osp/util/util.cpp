@@ -327,6 +327,7 @@ int util_get_directory_info(const string &string_dir, string &string_result)
 		{
 			continue;
 		}
+		
 		else */if(ptr->d_type == 8)	 /* file */
 		{
 			int ret = stat(ptr->d_name,&st);

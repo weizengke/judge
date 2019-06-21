@@ -5,7 +5,7 @@ set Path=%CUR_DIR%\..\..\..\build\3part\mingw32\bin;%CUR_DIR%\..\..\..\build\3pa
 
 rem Ω‚—ππ§æﬂ¡¥
 cd %CUR_DIR%\..\..\..\build\3part
-if not exist mingw32 7z x mingw32.zip -aoa
+if not exist mingw32 7z x mingw32.rar -aoa
 
 @ECHO off
 SET BIN_NAME=hook
@@ -14,7 +14,7 @@ cd %CUR_DIR%
 
 setlocal enabledelayedexpansion
 
-SET BIN_DIR=%CUR_DIR%\..\..\..\build\bin32
+SET BIN_DIR=%CUR_DIR%
 
 @ECHO on
 del /s /q /f %BIN_DIR%\hook.dll

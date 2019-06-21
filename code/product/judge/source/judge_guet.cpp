@@ -423,6 +423,7 @@ int GUET_Login(char *uname, char *psw)
 	sprintf(cmd_string,"python -O guet-vjudge.py login %s %s",uname, psw);
 	system(cmd_string) ;
 
+	return 0;
 }
 
 int GUET_Judge_python(JUDGE_SUBMISSION_ST *pstJudgeSubmission)

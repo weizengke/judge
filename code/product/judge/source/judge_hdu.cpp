@@ -49,6 +49,7 @@ char hdu_judgerIP[20]="127.0.0.1";
 int hdu_sockport = 0;
 int hdu_remote_enable=OS_NO;
 int hdu_vjudge_enable=OS_NO;
+char g_hdu_vjudge_ookie[MAX_PATH]="hdu.cookie";
 
 
 #if (OS_YES == OSP_MODULE_JUDGE_VJUDGE)
@@ -334,7 +335,7 @@ int HDU_loginEx(char *uname, char *pdw)
 	{
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
 		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &process_data);
-        curl_easy_setopt(curl, CURLOPT_COOKIEJAR, "hdu.cookie");
+        curl_easy_setopt(curl, CURLOPT_COOKIEJAR, g_hdu_vjudge_ookie);
         char url[255] = {0};
 		sprintf(url, "%s/userloginex.php?action=login",hdu_domain);
         curl_easy_setopt(curl, CURLOPT_URL, url);
@@ -381,7 +382,7 @@ ULONG HDU_login()
 	{
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
 		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &process_data);
-        curl_easy_setopt(curl, CURLOPT_COOKIEJAR, "hdu.cookie");
+        curl_easy_setopt(curl, CURLOPT_COOKIEJAR, g_hdu_vjudge_ookie);
         char url[255] = {0};
 		sprintf(url, "%s/userloginex.php?action=login",hdu_domain);
         curl_easy_setopt(curl, CURLOPT_URL, url);
@@ -769,7 +770,7 @@ ULONG isNeed2HTML(ENUM_PROVLEM em)
 	return OS_TRUE;
 }
 
-
+#if 0
 void SQL_updateProblemInfo(string v_ojname, string v_pid)
 {
 	string val_str="";
@@ -842,7 +843,7 @@ void SQL_updateProblemInfo(string v_ojname, string v_pid)
 
 	MSG_OUPUT_DBG("End SQL_updateProblemInfo OK, (%s)", v_pid.c_str());
 }
-
+#endif
 ULONG checkStringExsit(char *filename, char *pattern)
 {
     pcre  *re;
@@ -890,9 +891,7 @@ ULONG getInfoByTag(char *src, char *pattern, ENUM_PROVLEM enProblem, char *res)
     int  erroffset;
     int  ovector[VJUDGE_OVECCOUNT];
     int  rc, i;
-
-	MSG_OUPUT_DBG("In getInfoByTag...");
-
+	
 	//title
 	re = pcre_compile(pattern, 0, &error, &erroffset, NULL);
     if (re == NULL) {                 //如果编译失败，返回错误信息
@@ -912,37 +911,22 @@ ULONG getInfoByTag(char *src, char *pattern, ENUM_PROVLEM enProblem, char *res)
 		return OS_FALSE;
 	}
 
-	MSG_OUPUT_DBG("In getInfoByTag...");
-
 	i = (rc==0)?(0):(rc-1);
-
-//	printf("iiiiiiii=%d , rc=%d\n",i,rc);
 
 //	for (i = 0; i < rc; i++) //分别取出捕获分组 $0整个正则公式 $1第一个()
 	{
         char *substring_start =  src + ovector[2*i];
         int substring_length = ovector[2*i+1] - ovector[2*i];
-        	MSG_OUPUT_DBG("In getInfoByTag 1 substring_length=%d...",substring_length);
+		
 		char *str_tmp = (char*)malloc(sizeof(char)*substring_length+100);
-		//	char str_tmp[VJUDGE_MAX_SIZE_BUF] ={0};
-			MSG_OUPUT_DBG("In getInfoByTag 2...");
+
 		sprintf(str_tmp, "%.*s\n", substring_length, substring_start);
 
-			MSG_OUPUT_DBG("In getInfoByTag 3...");
+		MSG_OUPUT_DBG("str_tmp=%s, length = %d", str_tmp, strlen(str_tmp));
 
-		//	printf("%s",str_tmp);
+		g_HDU_problem_string[enProblem].assign(str_tmp,strlen(str_tmp));
 
-		//string string_ = str_tmp;
-			MSG_OUPUT_DBG("In getInfoByTag 4...(length = %d)", strlen(str_tmp));
-
-			g_HDU_problem_string[enProblem].assign(str_tmp,strlen(str_tmp));
-
-			MSG_OUPUT_DBG("End getInfoByTag success...");
-
-		//MSG_OUPUT_DBG(pattern);
-		//MSG_OUPUT_DBG(string_.c_str());
-		//	free(substring_start);
-			free(str_tmp);
+		free(str_tmp);
     }
 
 
@@ -1040,7 +1024,7 @@ int getProblemInfo_Brief(string pid)
 
 
 
-	SQL_updateProblemInfo("HDU",pid);
+	//SQL_updateProblemInfo("HDU",pid);
 
 	MSG_OUPUT_DBG("Get Problem %s OK.", pid.c_str());
 
@@ -1512,12 +1496,15 @@ int Judge_Via_python()
 
 int HDU_VJudge(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 {
-
+	int ret = 0;
+	
 	Judge_Debug(DEBUG_TYPE_FUNC, "virtua-judge Local HDU.");
 
-	return Judge_Via_CurlLib(pstJudgeSubmission);
+	ret = Judge_Via_CurlLib(pstJudgeSubmission);
 
-	//return Judge_Via_python();
+	util_remove(g_hdu_vjudge_ookie);
+
+	return ret;
 }
 
 

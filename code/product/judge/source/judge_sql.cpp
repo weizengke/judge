@@ -67,8 +67,7 @@ int SQL_InitMySQL()
 	
 	SQL_CreateSem();
 
-	mysql = mysql_init((MYSQL*)0);
-
+	mysql = mysql_init((MYSQL*)0);	
 	if (mysql != 0 &&
 		!mysql_real_connect(mysql,Mysql_url,
 							Mysql_username,
@@ -85,7 +84,7 @@ int SQL_InitMySQL()
 	/* 设置自动重连 */
 	my_bool my_true= TRUE;
 	(void)mysql_options(mysql, MYSQL_OPT_RECONNECT, &my_true);
-		
+
 	strcpy(query,"SET CHARACTER SET gbk"); //设置编码 gbk
 	int ret = mysql_real_query(mysql,query, (unsigned int)strlen(query));
 	if (ret)
@@ -103,6 +102,8 @@ int SQL_InitMySQL()
 int SQL_Destroy()
 {
 	mysql_close(mysql);
+
+	return 0;
 }
 
 #if M_DES("内部函数，请勿P信号量",1)
@@ -375,7 +376,7 @@ int SQL_getSolutionSource(JUDGE_SUBMISSION_ST *pstJudgeSubmission)
 
 	SQL_SemV();
 
-    write_log(JUDGE_INFO, "SQL_getSolutionSource %d ok.", pstJudgeSubmission->stSolution.solutionId);
+    write_log(JUDGE_INFO, "SQL get solution source ok. (solutionId=%u)", pstJudgeSubmission->stSolution.solutionId);
     
 	return OS_OK;
 }
@@ -445,7 +446,7 @@ void SQL_getUnJudgeSolutions(JUDGE_DATA_S *pJudgeData, int *n, int iMax)
 }
 
 
-int SQL_getSolutionByID(int solutionID, JUDGE_SOLUTION_ST *pstJudgeSolution, int *pIsExist)
+int SQL_getSolutionByID(int solutionID, JUDGE_SOLUTION_S *pstJudgeSolution, int *pIsExist)
 {
 	int ret = OS_OK;
 	MYSQL_RES *recordSet = NULL;
@@ -526,7 +527,7 @@ int SQL_getSolutionByID(int solutionID, JUDGE_SOLUTION_ST *pstJudgeSolution, int
 		(void)util_string_to_time(row[4],pstJudgeSolution->submitDate);
 		*pIsExist = OS_YES;
 
-		write_log(JUDGE_INFO,"Found record. (solutionID=%d)", solutionID);
+		//write_log(JUDGE_INFO,"Found record. (solutionID=%d)", solutionID);
 	}
 	else
 	{
@@ -541,7 +542,7 @@ int SQL_getSolutionByID(int solutionID, JUDGE_SOLUTION_ST *pstJudgeSolution, int
 	return OS_OK;
 }
 
-int SQL_getProblemInfo(JUDGE_PROBLEM_INFO_ST *pstProblem)
+int SQL_getProblemInfo(JUDGE_PROBLEM_INFO_S *pstProblem)
 {
 	if (NULL == pstProblem)
 	{
@@ -585,7 +586,7 @@ int SQL_getProblemInfo(JUDGE_PROBLEM_INFO_ST *pstProblem)
 
 	SQL_SemV();
 
-    write_log(JUDGE_INFO, "SQL_getProblemInfo %d ok.", pstProblem->problemId);
+    write_log(JUDGE_INFO, "SQL get problem info ok. (problemId=%u)", pstProblem->problemId);
     
 	return OS_OK;
 }
@@ -733,7 +734,7 @@ void SQL_updateProblem_contest(int contestId,int problemId)
 {
 	SQL_SemP();
 
-	sprintf(query,"update contest_problem set accepted=(SELECT count(*) FROM solution WHERE contest_id=%d and problem_id=%d and verdict=%d) where contest_id=%d and problem_id=%d;",contestId,V_AC,contestId,problemId);
+	sprintf(query,"update contest_problem set accepted=(SELECT count(*) FROM solution WHERE contest_id=%d and problem_id=%d and verdict=%d) where contest_id=%d and problem_id=%d;",contestId,V_AC,problemId,contestId,problemId);
 	if(mysql_real_query(mysql,query,(unsigned int)strlen(query)))
 	{
 		write_log(JUDGE_ERROR,mysql_error(mysql));

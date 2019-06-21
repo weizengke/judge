@@ -48,9 +48,11 @@ them both to 0; an emulation function will be used. */
 #define HAVE_BZLIB_H 1
 #endif
 
+#if 0
 /* Define to 1 if you have the <dirent.h> header file. */
 #ifndef HAVE_DIRENT_H
 #define HAVE_DIRENT_H 1
+#endif
 #endif
 
 /* Define to 1 if you have the <dlfcn.h> header file. */
@@ -130,7 +132,7 @@ them both to 0; an emulation function will be used. */
 #ifndef HAVE_STRTOQ
 #define HAVE_STRTOQ 1
 #endif
-
+#if 0
 /* Define to 1 if you have the <sys/stat.h> header file. */
 #ifndef HAVE_SYS_STAT_H
 #define HAVE_SYS_STAT_H 1
@@ -145,8 +147,10 @@ them both to 0; an emulation function will be used. */
 /* #undef HAVE_TYPE_TRAITS_H */
 
 /* Define to 1 if you have the <unistd.h> header file. */
+
 #ifndef HAVE_UNISTD_H
 #define HAVE_UNISTD_H 1
+#endif
 #endif
 
 /* Define to 1 if the system has the type `unsigned long long'. */

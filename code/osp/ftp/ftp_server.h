@@ -27,8 +27,8 @@ typedef enum emFTP_CMD_LIST_E
     FTP_CMD_STOR,
     FTP_CMD_TYPE,
     FTP_CMD_USER,
-    FTP_CMD_NOOP
-	
+    FTP_CMD_NOOP,
+    FTP_CMD_SYST	
 } FTP_CMD_LIST_E;
 
 typedef struct ftp_cmd_st
@@ -66,6 +66,7 @@ extern ULONG FTPS_Handler_STOR(FTP_USER_S *pUser);
 extern ULONG FTPS_Handler_TYPE(FTP_USER_S *pUser);
 extern ULONG FTPS_Handler_USER(FTP_USER_S *pUser);
 extern ULONG FTPS_Handler_NOOP(FTP_USER_S *pUser);
+extern ULONG FTPS_Handler_SYST(FTP_USER_S *pUser);
 
 extern ULONG FTPS_GetSocketPort();
 extern LONG FTPS_GetSocket();

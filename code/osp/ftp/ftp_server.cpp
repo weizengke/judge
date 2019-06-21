@@ -41,11 +41,12 @@ FTP_CMD_HANDLE_S ftp_cmd_resolver[] = {
 	{ FTP_CMD_TYPE, 	"TYPE", FTPS_Handler_TYPE },
 	{ FTP_CMD_USER, 	"USER", FTPS_Handler_USER },
 	{ FTP_CMD_NOOP, 	"NOOP", FTPS_Handler_NOOP },
+	{ FTP_CMD_SIZE, 	"SYST", FTPS_Handler_SYST },
 };
 
 LONG FTPS_Connect_DataSocket(FTP_USER_S *pUser)
 {
-	char buf[1024] = {0};	
+	char buf[1024] = {0};
 	LONG lSockData = INVALID_SOCKET;
 	struct sockaddr_in client_addr;
 	socklen_t len = sizeof(client_addr);
@@ -59,8 +60,8 @@ LONG FTPS_Connect_DataSocket(FTP_USER_S *pUser)
 	{
 		return INVALID_SOCKET;
 	}
-	
-	return lSockData;		
+
+	return lSockData;
 }
 
 
@@ -68,16 +69,16 @@ ULONG FTPS_Handler_LIST(FTP_USER_S *pUser)
 {
 	ULONG ulRet = 0;
 	CHAR szCMD[FTP_CMD_MAXSIZE] = {0};
-	int iSize = 0;	
+	int iSize = 0;
 	char *pData = NULL;
-									
+
 	FILE* fd;
 
 	if (NULL == pUser)
 	{
 		return FTP_ERR;
 	}
-	
+
 	FTP_debug("FTPS_Handler_List. (lSockCtrl=%u, lSockData=%u, ulDataPort=%u)",
 		pUser->lSockCtrl,
 		pUser->lSockData,
@@ -88,8 +89,8 @@ ULONG FTPS_Handler_LIST(FTP_USER_S *pUser)
 	sprintf(szCMD, "150 opening ASCII mode data connection for *.\n");
 	(VOID)FTP_Send(pUser->lSockCtrl, szCMD, strlen(szCMD));
 
-		
-	string strinfo;		
+
+	string strinfo;
 	(VOID)util_get_directory_info(pUser->szCurrentDir, strinfo);
 
 	iSize = strinfo.length();
@@ -108,8 +109,8 @@ ULONG FTPS_Handler_LIST(FTP_USER_S *pUser)
 	}
 
 	strcpy(pData, strinfo.c_str());
-		
-	if (FTP_OK != FTP_Send(pUser->lSockData, pData, iSize)) 
+
+	if (FTP_OK != FTP_Send(pUser->lSockData, pData, iSize))
 	{
 		FTP_debug("FTPS_Handler_List, send file error.");
 	}
@@ -131,7 +132,7 @@ ULONG FTPS_Handler_PORT(FTP_USER_S *pUser)
 	CHAR szCMD[FTP_CMD_MAXSIZE] = {0};
 	int ip1 = 0, ip2 = 0, ip3 = 0, ip4 = 0;
 	int port1  = 0, port2 = 0;
-	
+
 	if (NULL == pUser)
 	{
 		return FTP_ERR;
@@ -141,7 +142,7 @@ ULONG FTPS_Handler_PORT(FTP_USER_S *pUser)
 	{
 		return FTP_ERR;
 	}
-	
+
 	FTP_debug("FTPS_Handler_Port. (argv=%s)", pUser->stCMD.arg);
 
 	sscanf(pUser->stCMD.arg, "%d,%d,%d,%d,%d,%d", &ip1, &ip2, &ip3, &ip4, &port1, &port2);
@@ -162,7 +163,7 @@ ULONG FTPS_Handler_PASS(FTP_USER_S *pUser)
 	ULONG i = 0;
 	CHAR szPASS[FTP_PASSWORD_SIZE] = {0};
 	CHAR szCMD[FTP_CMD_MAXSIZE] = {0};
-	
+
 	if (NULL == pUser)
 	{
 		return FTP_ERR;
@@ -171,7 +172,7 @@ ULONG FTPS_Handler_PASS(FTP_USER_S *pUser)
 	FTP_debug("FTPS_Handler_PASS. (argv=%s)",
 		pUser->stCMD.arg);
 
-	while (pUser->stCMD.arg[i] != '\0' 
+	while (pUser->stCMD.arg[i] != '\0'
 		&& pUser->stCMD.arg[i] != '\r'
 		&& pUser->stCMD.arg[i] != '\n')
 	{
@@ -188,18 +189,18 @@ ULONG FTPS_Handler_PASS(FTP_USER_S *pUser)
 	if (FTP_OK != ulRet)
 	{
 		pUser->ulAccess = FALSE;
-		
+
 		/* FTP client authen failed. */
-		(VOID)FTP_Response(pUser->lSockCtrl, 430);	
+		(VOID)FTP_Response(pUser->lSockCtrl, 430);
 		return ulRet;
 	}
 	else
-	{		
+	{
 		pUser->ulAccess = TRUE;
-		
+
 		/* FTP client authen ok, send login code 230. */
 		sprintf(szCMD, "230 User logged in.\n");
-		(VOID)FTP_Send(pUser->lSockCtrl, szCMD, strlen(szCMD));	
+		(VOID)FTP_Send(pUser->lSockCtrl, szCMD, strlen(szCMD));
 	}
 
 	return ulRet;
@@ -209,22 +210,22 @@ ULONG FTPS_Handler_QUIT(FTP_USER_S *pUser)
 {
 	ULONG ulRet = 0;
 	CHAR szCMD[FTP_CMD_MAXSIZE] = {0};
-	
+
 	if (NULL == pUser)
 	{
 		return FTP_ERR;
 	}
 
-	FTP_debug("FTPS_Handler_QUIT. (argv=%s)", 
+	FTP_debug("FTPS_Handler_QUIT. (argv=%s)",
 		pUser->stCMD.arg);
 
 	/* send server closing code 221. */
 	sprintf(szCMD, "221 Server closing.\n");
-	(VOID)FTP_Send(pUser->lSockCtrl, szCMD, strlen(szCMD));	
+	(VOID)FTP_Send(pUser->lSockCtrl, szCMD, strlen(szCMD));
 
 	/* close socket */
 	closesocket(pUser->lSockCtrl);
-	
+
 	return ulRet;
 }
 
@@ -232,32 +233,32 @@ ULONG FTPS_Handler_RETR(FTP_USER_S *pUser)
 {
 	ULONG ulRet = 0;
 	CHAR szFilename[FTP_FILEPATH_SIZE] = {0};
-	CHAR szCMD[FTP_CMD_MAXSIZE] = {0};	
+	CHAR szCMD[FTP_CMD_MAXSIZE] = {0};
 	CHAR szData[FTP_DATABUF_SIZE] = {0};
 	FILE* fd = NULL;
-	size_t num_read;	
-	
+	size_t num_read;
+
 	if (NULL == pUser)
 	{
 		return FTP_ERR;
 	}
 
-	FTP_debug("FTPS_Handler_RETR. (argv=%s)", 
+	FTP_debug("FTPS_Handler_RETR. (argv=%s)",
 		pUser->stCMD.arg);
 
 	strcpy(szFilename, pUser->stCMD.arg);
-	
+
 	/* open file */
-	fd = fopen(szFilename, "rb");	
-	if (!fd) 
-	{	
+	fd = fopen(szFilename, "rb");
+	if (!fd)
+	{
 		sprintf(szCMD, "550 Requested action not taken.\n");
-		(VOID)FTP_Send(pUser->lSockCtrl, szCMD, strlen(szCMD));	
+		(VOID)FTP_Send(pUser->lSockCtrl, szCMD, strlen(szCMD));
 
 		return FTP_ERR;
-	} 
+	}
 	else
-	{	
+	{
 		/* open data connection */
 		pUser->lSockData = FTPS_Connect_DataSocket(pUser);
 
@@ -281,7 +282,7 @@ ULONG FTPS_Handler_RETR(FTP_USER_S *pUser)
 				FTP_debug("FTPS_Handler_RETR, error in send. (num_read=%u)", num_read);
 				break;
 			}
-		} while (num_read > 0);													
+		} while (num_read > 0);
 
 		/* 226 Transfer complete */
 		sprintf(szCMD, "226 Transfer complete.\n");
@@ -293,7 +294,7 @@ ULONG FTPS_Handler_RETR(FTP_USER_S *pUser)
 		/* close data socket */
 		closesocket(pUser->lSockData);
 		pUser->lSockData = INVALID_SOCKET;
-		
+
 	}
 
 	return ulRet;
@@ -303,32 +304,32 @@ ULONG FTPS_Handler_STOR(FTP_USER_S *pUser)
 {
 	ULONG ulRet = 0;
 	CHAR szFilename[FTP_FILEPATH_SIZE] = {0};
-	CHAR szCMD[FTP_CMD_MAXSIZE] = {0};	
+	CHAR szCMD[FTP_CMD_MAXSIZE] = {0};
 	CHAR szData[FTP_DATABUF_SIZE] = {0};
 	FILE* fd = NULL;
-	size_t num_read;	
-	
+	size_t num_read;
+
 	if (NULL == pUser)
 	{
 		return FTP_ERR;
 	}
 
-	FTP_debug("FTPS_Handler_STOR. (argv=%s)", 
+	FTP_debug("FTPS_Handler_STOR. (argv=%s)",
 		pUser->stCMD.arg);
 
 	strcpy(szFilename, pUser->stCMD.arg);
-	
+
 	/* open file */
-	fd = fopen(szFilename, "wb+");	
-	if (!fd) 
-	{	
+	fd = fopen(szFilename, "wb+");
+	if (!fd)
+	{
 		sprintf(szCMD, "550 Requested action not taken.\n");
-		(VOID)FTP_Send(pUser->lSockCtrl, szCMD, strlen(szCMD));	
+		(VOID)FTP_Send(pUser->lSockCtrl, szCMD, strlen(szCMD));
 
 		return FTP_ERR;
 	}
 	else
-	{	
+	{
 		/* open data connection */
 		pUser->lSockData = FTPS_Connect_DataSocket(pUser);
 
@@ -343,13 +344,13 @@ ULONG FTPS_Handler_STOR(FTP_USER_S *pUser)
 				FTP_debug("FTPS_Handler_STOR, error in recv. (num_read=%u)", num_read);
 				break;
 			}
-			
+
 			num_read = fwrite(szData, 1, num_read, fd);
 			if (num_read < 0)
 			{
 				FTP_debug("FTPS_Handler_STOR, error in fwrite. (num_read=%u)", num_read);
 			}
-		} while (num_read > 0);													
+		} while (num_read > 0);
 
 		/* 226 Transfer complete */
 		sprintf(szCMD, "226 Transfer complete.\n");
@@ -361,7 +362,7 @@ ULONG FTPS_Handler_STOR(FTP_USER_S *pUser)
 		/* close data socket */
 		closesocket(pUser->lSockData);
 		pUser->lSockData = INVALID_SOCKET;
-		
+
 	}
 
 	return ulRet;
@@ -373,7 +374,7 @@ ULONG FTPS_Handler_TYPE(FTP_USER_S *pUser)
 	ULONG i = 0;
 	CHAR szUname[FTP_USERNAME_SIZE] = {0};
 	CHAR szCMD[FTP_CMD_MAXSIZE] = {0};
-	
+
 	if (NULL == pUser)
 	{
 		return FTP_ERR;
@@ -385,8 +386,8 @@ ULONG FTPS_Handler_TYPE(FTP_USER_S *pUser)
 		(VOID)FTP_Response(pUser->lSockCtrl, 501);
 		return FTP_ERR;
 	}
-	
-	FTP_debug("FTPS_Handler_TYPE. (argv=%s)", 
+
+	FTP_debug("FTPS_Handler_TYPE. (argv=%s)",
 		pUser->stCMD.arg);
 
 	switch (pUser->stCMD.arg[0])
@@ -403,7 +404,7 @@ ULONG FTPS_Handler_TYPE(FTP_USER_S *pUser)
 
 	(VOID)FTP_Response(pUser->lSockCtrl, 501);
 
-	
+
 	return ulRet;
 }
 
@@ -413,17 +414,17 @@ ULONG FTPS_Handler_USER(FTP_USER_S *pUser)
 	ULONG i = 0;
 	CHAR szUname[FTP_USERNAME_SIZE] = {0};
 	CHAR szCMD[FTP_CMD_MAXSIZE] = {0};
-	
+
 	if (NULL == pUser)
 	{
 		return FTP_ERR;
 	}
 
-	FTP_debug("FTPS_Handler_USER. (argv=%s)", 
+	FTP_debug("FTPS_Handler_USER. (argv=%s)",
 		pUser->stCMD.arg);
 
-	
-	while (pUser->stCMD.arg[i] != '\0' 
+
+	while (pUser->stCMD.arg[i] != '\0'
 		&& pUser->stCMD.arg[i] != '\r'
 		&& pUser->stCMD.arg[i] != '\n')
 	{
@@ -435,7 +436,7 @@ ULONG FTPS_Handler_USER(FTP_USER_S *pUser)
 	memset(pUser->szUsername, 0, FTP_USERNAME_SIZE);
 	strcpy(pUser->szUsername, szUname);
 	pUser->ulAccess = FALSE;
-	
+
 	/* Send 331 password required */
 	if (strlen(szUname) > 0)
 	{
@@ -445,7 +446,7 @@ ULONG FTPS_Handler_USER(FTP_USER_S *pUser)
 	{
 		sprintf(szCMD, "331 Password required.\n");
 	}
-	(VOID)FTP_Send(pUser->lSockCtrl, szCMD, strlen(szCMD));	
+	(VOID)FTP_Send(pUser->lSockCtrl, szCMD, strlen(szCMD));
 
 	return ulRet;
 }
@@ -455,7 +456,7 @@ ULONG FTPS_Handler_NOOP(FTP_USER_S *pUser)
 	ULONG ulRet = 0;
 	ULONG i = 0;
 	CHAR szCMD[FTP_CMD_MAXSIZE] = {0};
-	
+
 	if (NULL == pUser)
 	{
 		return FTP_ERR;
@@ -465,9 +466,29 @@ ULONG FTPS_Handler_NOOP(FTP_USER_S *pUser)
 		pUser->stCMD.arg);
 
 	(VOID)FTP_Response(pUser->lSockCtrl, 200);
-	
+
 	return ulRet;
 }
+
+ULONG FTPS_Handler_SYST(FTP_USER_S *pUser)
+{
+	ULONG ulRet = 0;
+	ULONG i = 0;
+	CHAR szCMD[FTP_CMD_MAXSIZE] = {0};
+
+	if (NULL == pUser)
+	{
+		return FTP_ERR;
+	}
+
+	FTP_debug("FTPS_Handler_SYST. (argv=%s)",
+		pUser->stCMD.arg);
+
+	(VOID)FTP_Response(pUser->lSockCtrl, 200);
+
+	return ulRet;
+}
+
 
 ULONG FTPS_GetSocketPort()
 {
@@ -496,7 +517,7 @@ FTP_CMD_HANDLE_S * FTPS_GetHandler(CHAR *szCMD)
 {
 	ULONG ulLoop = 0;
 	ULONG ulSize = sizeof(ftp_cmd_resolver)/sizeof(FTP_CMD_HANDLE_S);
-	
+
 	for (ulLoop = 0; ulLoop < ulSize; ulLoop++)
 	{
 		if (0 == strcmp(ftp_cmd_resolver[ulLoop].szCmdStr, szCMD))
@@ -504,7 +525,7 @@ FTP_CMD_HANDLE_S * FTPS_GetHandler(CHAR *szCMD)
 			FTP_debug("FTPS_GetHandler. (ulCmdCode=%u, szCmdStr=%s)",
 				ftp_cmd_resolver[ulLoop].ulCmdCode,
 				ftp_cmd_resolver[ulLoop].szCmdStr);
-			
+
 			return &ftp_cmd_resolver[ulLoop];
 		}
 	}
@@ -517,7 +538,7 @@ VOID FTPS_Run(LONG lSockCtrl)
 	ULONG ulRet = 0;
 	CHAR cmd[FTP_CMD_CODE_SIZE];
 	CHAR arg[FTP_CMD_ARGV_SIZE];
-	CHAR szCMD[FTP_CMD_MAXSIZE] = {0}; 
+	CHAR szCMD[FTP_CMD_MAXSIZE] = {0};
 	FTP_CMD_HANDLE_S *pstFtphandle = NULL;
 	FTP_USER_S *pstUser = NULL;
 
@@ -527,12 +548,13 @@ VOID FTPS_Run(LONG lSockCtrl)
 		return ;
 	}
 	memset(pstUser, 0, sizeof(FTP_USER_S));
-	
+
+    pstUser->ulAccess = FALSE;
 	pstUser->lSockCtrl = lSockCtrl;
 	pstUser->lSockData = INVALID_SOCKET;
 	strcpy(pstUser->szCurrentDir, ".\/");
 	strcpy(pstUser->szRootDir, ".\/");
-	
+
 	/* FTP server is ready, send welcome code 220 */
 	sprintf(szCMD, "220 FTP service ready.\n");
 	ulRet = FTP_Send(lSockCtrl, szCMD, strlen(szCMD));
@@ -555,28 +577,39 @@ VOID FTPS_Run(LONG lSockCtrl)
 		/* copy new command */
 		strcpy(pstUser->stCMD.cmd, cmd);
 		strcpy(pstUser->stCMD.arg, arg);
-		
+
 		/* get command handler */
 		pstFtphandle = FTPS_GetHandler(cmd);
 		if (NULL == pstFtphandle)
 		{
 			FTP_debug("FTP getHandler failed. (cmd=%s)", cmd);
+			
+			sprintf(szCMD, "202 Command not support.\n");
+			(VOID)FTP_Send(lSockCtrl, szCMD, strlen(szCMD));
+			
 			continue;
 		}
 
-		/* reauthen for local-user password changed */
-		if (TRUE == pstUser->ulAccess
-			&& FTP_OK != FTPS_UserAuthen(pstUser->szUsername, pstUser->szPassword))
-		{
-			FTP_debug("FTP UserAuthen failed.");
-			
-			sprintf(szCMD, "421 Authentication failed.\n");
-			(VOID)FTP_Send(lSockCtrl, szCMD, strlen(szCMD));	
-			
-			break;
-		}
+         if (FTP_CMD_PASS == pstFtphandle->ulCmdCode
+            || FTP_CMD_USER == pstFtphandle->ulCmdCode)
+         {
 
+         }
+         else
+         {
+        		/* reauthen for local-user password changed */
+        		if (FTP_OK != FTPS_UserAuthen(pstUser->szUsername, pstUser->szPassword))
+        		{
+        			FTP_debug("FTP UserAuthen failed.");
+
+        			sprintf(szCMD, "421 Authentication failed.\n");
+        			(VOID)FTP_Send(lSockCtrl, szCMD, strlen(szCMD));
+
+        			break;
+        		}
+		}
 		/* handle command callback */
+
 		if (NULL != pstFtphandle->pKeyCallbackfunc)
 		{
 			ulRet = pstFtphandle->pKeyCallbackfunc(pstUser);
@@ -584,24 +617,24 @@ VOID FTPS_Run(LONG lSockCtrl)
 			{
 				FTP_debug("FTP Handler failed. (ulRet=%u, ulCmdCode=%u)",
 							ulRet, pstFtphandle->ulCmdCode);
-			}			
+			}
 		}
 		else
 		{
 			FTP_debug("FTP Handler pKeyCallbackfunc is NULL. (ulCmdCode=%u, szCmdStr=%s)",
 						pstFtphandle->ulCmdCode, pstFtphandle->szCmdStr);
 
-			
+
 			sprintf(szCMD, "202 Command not support.\n");
-			(VOID)FTP_Send(lSockCtrl, szCMD, strlen(szCMD));		
+			(VOID)FTP_Send(lSockCtrl, szCMD, strlen(szCMD));
 		}
 
-		
+
 	}
 
 	closesocket(pstUser->lSockCtrl);
 	free(pstUser);
-	
+
 	return;
 }
 
@@ -610,7 +643,7 @@ int FTPS_UserThread(void *pEntry)
 	LONG lSockCtrl = *(LONG*)pEntry;
 
 	/* run a FTP Instance */
-	FTPS_Run(lSockCtrl);	
+	FTPS_Run(lSockCtrl);
 
 	return FTP_OK;
 }
@@ -618,9 +651,9 @@ int FTPS_UserThread(void *pEntry)
 int FTPS_ListenThread(void *pEntry)
 {
 	LONG lSockCtrl = 0;
-	
+
 	while(TRUE == g_ulFtpEnable)
-	{	
+	{
 		/* access a new user socket */
 		if ((lSockCtrl = FTP_SOCK_Accept(FTPS_GetSocket())) < 0 )
 		{
@@ -630,7 +663,7 @@ int FTPS_ListenThread(void *pEntry)
 
 		/* create a user thread */
 		(VOID)thread_create(FTPS_UserThread, (VOID*)&lSockCtrl);
-		
+
 		Sleep(1);
 	}
 
@@ -648,7 +681,7 @@ ULONG FTPS_Enable()
 
 	/* create ftp socket */
 	ulSocket = FTP_SOCK_Create(FTPS_GetSocketPort());
-	if (INVALID_SOCKET == ulSocket) 
+	if (INVALID_SOCKET == ulSocket)
 	{
 		FTP_debug("FTPS_Main, socket_create failed.");
 		return FTP_ERR;
@@ -658,7 +691,7 @@ ULONG FTPS_Enable()
 	FTPS_SetSocket(ulSocket);
 
 	g_ulFtpEnable = TRUE;
-	
+
 	/* create FTP Listen Thread */
 	hFtpsLisent = thread_create(FTPS_ListenThread, NULL);
 
@@ -677,16 +710,16 @@ ULONG FTPS_Disable()
 
 	g_ulFtpEnable = FALSE;
 
-	closesocket(FTPS_GetSocket());	
+	closesocket(FTPS_GetSocket());
 	FTPS_SetSocket(INVALID_SOCKET);
-	
+
 	return FTP_OK;
 }
 
 ULONG FTPS_Main()
-{	
+{
 	//(VOID)FTPS_Enable();
-	
+
 	return FTP_OK;
 }
 

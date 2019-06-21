@@ -5,7 +5,8 @@ JUDGE_OBJ=$(OBJ_DIR)/judge.o \
 	$(OBJ_DIR)/judge_var.o \
 	$(OBJ_DIR)/judge_sql.o\
 	$(OBJ_DIR)/judge_guet.o\
-	$(OBJ_DIR)/judge_cmd.o
+	$(OBJ_DIR)/judge_cmd.o\
+	$(OBJ_DIR)/judge_recent.o
 
 all:$(JUDGE_OBJ)
 

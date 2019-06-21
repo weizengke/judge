@@ -18,7 +18,7 @@
 /* os version */
 #define OS_VERSION_MAJOR 1
 #define OS_VERSION_MINOR 1
-#define OS_VERSION_PATCH 131
+#define OS_VERSION_PATCH 180
 
 #define STARTUP_CFG "conf\/config.ini"
 
@@ -37,6 +37,7 @@ enum MID_ID_EM
 	MID_AAA,
 	MID_TELNET,
 	MID_FTP,
+
 	/* 同步修改模块名数组: char *szModuleName[32] */
 	MID_ID_END
 };
@@ -58,34 +59,33 @@ enum CFG_SECTION_ID_EM
 #ifdef _WIN32_
 #define OSP_MODULE_JUDGE 			OS_YES
 #define OSP_MODULE_JUDGE_LOCAL   OS_YES
-#define OSP_MODULE_JUDGE_VJUDGE  OS_YES 
-#define OSP_MODULE_JUDGE_OI 		OS_YES 
-#define OSP_MODULE_NDP				OS_YES 
-#define OSP_MODULE_FTPS 		 	OS_YES 
-#define OSP_MODULE_TELNETS 		OS_YES 
-#define OSP_MODULE_TELNETC 		OS_YES 
-#define OSP_MODULE_DEBUG 			OS_YES 
-#define OSP_MODULE_AAA				OS_YES 
-#define OSP_MODULE_CLI 			OS_YES 
+#define OSP_MODULE_JUDGE_VJUDGE  OS_YES
+#define OSP_MODULE_JUDGE_OI 		OS_YES
+#define OSP_MODULE_NDP				OS_YES
+#define OSP_MODULE_FTPS 		 	OS_YES
+#define OSP_MODULE_TELNETS 		OS_YES
+#define OSP_MODULE_TELNETC 		OS_YES
+#define OSP_MODULE_DEBUG 			OS_YES
+#define OSP_MODULE_AAA				OS_YES
+#define OSP_MODULE_CLI 			OS_YES
 #endif
 
 #ifdef _LINUX_
 #define OSP_MODULE_JUDGE 			OS_YES
 #define OSP_MODULE_JUDGE_LOCAL   OS_NO
-#define OSP_MODULE_JUDGE_VJUDGE  OS_YES 
-#define OSP_MODULE_JUDGE_OI 		OS_YES 
+#define OSP_MODULE_JUDGE_VJUDGE  OS_YES
+#define OSP_MODULE_JUDGE_OI 		OS_YES
 #define OSP_MODULE_FTPS 		 	OS_YES
-#define OSP_MODULE_TELNETS 		OS_YES 
-#define OSP_MODULE_DEBUG 			OS_YES 
-#define OSP_MODULE_AAA				OS_YES 
-#define OSP_MODULE_CLI 			OS_YES 
+#define OSP_MODULE_TELNETS 		OS_YES
+#define OSP_MODULE_DEBUG 			OS_YES
+#define OSP_MODULE_AAA				OS_YES
+#define OSP_MODULE_CLI 			OS_YES
 #endif
 
 
 
 extern void RunDelay(int t);
 extern void MSGQueueMain();
-extern void pdt_debug_print(const char *format, ...);
 
 extern void MSG_StartDot();
 extern void MSG_StopDot();
@@ -93,7 +93,7 @@ extern void MSG_StopDot();
 
 extern char INI_filename[];
 
-#define PDT_Debug(x, args...) debugcenter_print(MID_OS, x, args)
+#define PDT_Debug(x, format, ...) debugcenter_print(MID_OS, x, format, ##__VA_ARGS__)
 
 
 #endif _PDT_COMMON_INC_

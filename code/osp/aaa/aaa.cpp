@@ -42,7 +42,7 @@ using namespace std;
 AAA_USER_S g_stAAAUser[AAA_USER_MAX_NUM] = {0};
 EVENT_NTF_NODE *pstAAAEvtTbl = NULL;
 
-#define AAA_Debug(x, args...) debugcenter_print(MID_AAA, x, args)
+#define AAA_Debug(x, format, ...) debugcenter_print(MID_AAA, x, format, ##__VA_ARGS__)
 
 ULONG AAA_EvtInit()
 {

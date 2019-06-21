@@ -60,13 +60,17 @@
 
 #define BUFSIZE 65535
 
-#define CMD_DBGASSERT(x,args...) \
-		if (0 == x) {\
-			printf("\r\nAssert at %s:%d. ", __FILE__, __LINE__);\
-			printf(args);\
-			write_log(0, "Assert at %s:%d.", __FILE__, __LINE__);\
-			write_log(0, args);\
-		}\
+#define CMD_DBGASSERT(x,...) if (0 == x) printf("\r\nAssert at %s:%d. ", __FILE__, __LINE__);
+
+/* 
+#define CMD_DBGASSERT(x,...) \
+if (0 == x) {\
+	printf("\r\nAssert at %s:%d. ", __FILE__, __LINE__);\
+	//printf(x, ##__VA_ARGS__);\
+	write_log(0, "Assert at %s:%d.", __FILE__, __LINE__);\
+	write_log(0, ##__VA_ARGS__);\
+}\
+*/
 
 #define cmd_vector_get(v, i)	    ((v)->ppData[(i)])
 #define cmd_vector_size(v)		    ((v)->ulSize)

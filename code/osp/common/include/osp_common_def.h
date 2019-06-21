@@ -53,15 +53,18 @@ typedef ULONG DWORD;
 #define BDN_BUILDRUN_INDENT_2	"\r\n  "
 #define BDN_BUILDRUN_INDENT_3	"\r\n   "
 
+#if _MSC_VER
+#define snprintf _snprintf
+#endif
+
 /* assert(0) */
-#define OS_DBGASSERT(x,args...) \
+#define OS_DBGASSERT(x,args,...) \
 if (0 == x) {\
 	printf("\r\nAssert at %s:%d. ", __FILE__, __LINE__);\
 	printf(args);\
 }\
 
 extern void RunDelay(int t);
-extern void pdt_debug_print(const char *format, ...);
 
 extern void MSG_StartDot();
 extern void MSG_StopDot();

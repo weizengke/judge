@@ -6,7 +6,8 @@
 typedef struct tagJudge_Data_S
 {
 	int solutionId;
-
+	int vtyId;
+	
 }JUDGE_DATA_S;
 
 typedef struct tag_Judge_ProblemInfo_ST
@@ -20,7 +21,7 @@ typedef struct tag_Judge_ProblemInfo_ST
 	int virtualPID;
 	char szVirJudgerName[JUDGE_OJNAME_SIZE_MAX]; /* oj name */
 
-}JUDGE_PROBLEM_INFO_ST;
+}JUDGE_PROBLEM_INFO_S;
 
 
 typedef struct tag_Judge_Solution_ST
@@ -39,18 +40,18 @@ typedef struct tag_Judge_Solution_ST
 	int failcase; 
 	
 	int reJudge;
-	char languageName[100]={0};
-	char languageExt[10]={0};
-	char languageExe[10]={0};
+	char languageName[100];
+	char languageExt[10];
+	char languageExe[10];
 	
-}JUDGE_SOLUTION_ST;
+}JUDGE_SOLUTION_S;
 
 #define JUDGE_CMD_BUFFER 1024
 
 typedef struct tag_Judge_Submission_ST
 {
-	JUDGE_SOLUTION_ST     stSolution;
-	JUDGE_PROBLEM_INFO_ST stProblem;
+	JUDGE_SOLUTION_S     stSolution;
+	JUDGE_PROBLEM_INFO_S stProblem;
 
 	int time_used_case;     /* 单个case耗时 */
 	int memory_used_case;
@@ -85,8 +86,8 @@ typedef struct tag_Judge_Submission_ST
 
 #if (OS_YES == OSP_MODULE_JUDGE_LOCAL)
 	#ifdef _WIN32_
-	PROCESS_INFORMATION pProRunInfo; /* 运行进程信息 */
-	PROCESS_INFORMATION pProComInfo; /* 编译进程信息 */
+	PROCESS_INFORMATION stProRunInfo; /* 运行进程信息 */
+	PROCESS_INFORMATION stProComInfo; /* 编译进程信息 */
 
 	HANDLE hJob;         /* 作业句柄 */
     HANDLE hInputFile ;  /* 父进程输入文件句柄 */
