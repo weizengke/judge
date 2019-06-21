@@ -1,0 +1,121 @@
+
+TARGET=judger
+TARGET_EXT=exe
+
+DIR_CODE = ../../code
+DIR_BIN = bin
+DIR_OBJ = obj
+
+SRCS=$(DIR_CODE)/osp/aaa/aaa.cpp \
+	$(DIR_CODE)/osp/aaa/aaa_cmd.cpp \
+	$(DIR_CODE)/osp/command/source/command_core.cpp \
+	$(DIR_CODE)/osp/command/source/command_bdn.cpp \
+	$(DIR_CODE)/osp/command/source/command_main.cpp \
+	$(DIR_CODE)/osp/debug/source/debug_center.cpp \
+	$(DIR_CODE)/osp/event/source/event_pub.cpp \
+	$(DIR_CODE)/osp/ndp/source/ndp.cpp \
+	$(DIR_CODE)/osp/ftp/ftp_common.cpp \
+	$(DIR_CODE)/osp/ftp/ftp_server.cpp \
+	$(DIR_CODE)/osp/ftp/ftp_main.cpp \
+	$(DIR_CODE)/osp/telnet/telnet_server.cpp \
+	$(DIR_CODE)/osp/telnet/telnet_cmd.cpp \
+	$(DIR_CODE)/osp/util/util.cpp \
+	$(DIR_CODE)/osp/util/win32.cpp \
+	$(DIR_CODE)/product/main/main.cpp \
+	$(DIR_CODE)/product/main/sysmng.cpp \
+	$(DIR_CODE)/product/judge/source/judge.cpp \
+	$(DIR_CODE)/product/judge/source/judge_cmd.cpp \
+	$(DIR_CODE)/product/judge/source/judge_guet.cpp \
+	$(DIR_CODE)/product/judge/source/judge_hdu.cpp \
+	$(DIR_CODE)/product/judge/source/judge_io.cpp \
+	$(DIR_CODE)/product/judge/source/judge_recent.cpp \
+	$(DIR_CODE)/product/judge/source/judge_sql.cpp \
+	$(DIR_CODE)/product/judge/source/judge_util.cpp \
+	$(DIR_CODE)/product/judge/source/judge_var.cpp \
+	$(DIR_CODE)/product/thirdpart32/cjson/cJSON.cpp \
+	$(DIR_CODE)/product/thirdpart32/crypt/aes256.cpp \
+	$(DIR_CODE)/product/thirdpart32/crypt/base64.cpp \
+	$(DIR_CODE)/product/thirdpart32/crypt/crypt.cpp \
+	$(DIR_CODE)/product/thirdpart32/crypt/md5.cpp \
+	$(DIR_CODE)/product/thirdpart32/crypt/sha256.cpp \
+	$(DIR_CODE)/product/thirdpart32/stack_walker/stackwalker.cpp \
+	$(DIR_CODE)/product/test/test.cpp \
+	
+OBJSS=$(DIR_OBJ)/aaa.obj \
+	$(DIR_OBJ)/aaa_cmd.obj \
+	$(DIR_OBJ)/command_core.obj \
+	$(DIR_OBJ)/command_bdn.obj \
+	$(DIR_OBJ)/command_main.obj \
+	$(DIR_OBJ)/debug_center.obj \
+	$(DIR_OBJ)/event_pub.obj \
+	$(DIR_OBJ)/ndp.obj \
+	$(DIR_OBJ)/ftp_common.obj \
+	$(DIR_OBJ)/ftp_server.obj \
+	$(DIR_OBJ)/ftp_main.obj \
+	$(DIR_OBJ)/telnet_server.obj \
+	$(DIR_OBJ)/telnet_cmd.obj \
+	$(DIR_OBJ)/util.obj \
+	$(DIR_OBJ)/win32.obj \
+	$(DIR_OBJ)/main.obj \
+	$(DIR_OBJ)/sysmng.obj \
+	$(DIR_OBJ)/judge.obj \
+	$(DIR_OBJ)/judge_cmd.obj \
+	$(DIR_OBJ)/judge_guet.obj \
+	$(DIR_OBJ)/judge_hdu.obj \
+	$(DIR_OBJ)/judge_io.obj \
+	$(DIR_OBJ)/judge_recent.obj \
+	$(DIR_OBJ)/judge_sql.obj \
+	$(DIR_OBJ)/judge_util.obj \
+	$(DIR_OBJ)/judge_var.obj \
+	$(DIR_OBJ)/cJSON.obj \
+	$(DIR_OBJ)/aes256.obj \
+	$(DIR_OBJ)/base64.obj \
+	$(DIR_OBJ)/crypt.obj \
+	$(DIR_OBJ)/md5.obj \
+	$(DIR_OBJ)/sha256.obj \
+	$(DIR_OBJ)/stackwalker.obj \
+	$(DIR_OBJ)/test.obj
+	
+DIR_INCLUDE=\
+        /I "$(DIR_CODE)/osp/util"\
+		/I "$(DIR_CODE)/product/thirdpart32"\
+		/I "$(DIR_CODE)"
+
+LIBS = User32.lib ws2_32.lib winmm.lib wldap32.lib psapi.lib crypt32.lib advapi32.lib shell32.lib dbghelp.Lib gdi32.lib
+CFLAGS = /nologo /W0 /wd4127 /DWIN32 /FD /c /EHsc /MD /GF /Zi
+CCFLAGS= /Zi /D_WIN32_ /DHAVE_CONFIG_H /DPCRE_STATIC
+LFLAGS = $(LFLAGS) /NODEFAULTLIB:LIBCMT.lib -map
+
+!ifdef DBG
+LIBS = $(LIBS) lib/libeay32.lib lib/ssleay32.lib lib/zlib.lib lib/mysqlclientd.lib lib/libcurl.lib lib/pcre.lib
+CCFLAGS  = $(CCFLAGS) /DDEBUG
+!else
+LIBS = $(LIBS) lib/libeay32.lib lib/ssleay32.lib lib/zlib.lib lib/mysqlclient.lib lib/libcurl.lib lib/pcre.lib
+CCFLAGS = $(CCFLAGS) /DNDEBUG
+!endif
+
+OBJS=$(SRCS:.cpp=.obj)
+
+all : $(DIR_BIN)/$(TARGET).$(TARGET_EXT) $(OBJS)
+
+.cpp.obj:
+    cl /c /Fo$(DIR_OBJ)\ $(DIR_INCLUDE) $(CCFLAGS) $(CFLAGS) $<
+
+$(DIR_BIN)/$(TARGET).$(TARGET_EXT):$(DIR_BIN) $(OBJS)
+    link -out:$(DIR_BIN)/$(TARGET).$(TARGET_EXT) $(LFLAGS) /MACHINE:X86 $(OBJSS) $(LIBS)
+
+# create output directories
+create_dirs:
+ @if not exist $(DIR_BIN) mkdir $(DIR_BIN)
+ @if not exist $(DIR_OBJ) mkdir $(DIR_OBJ)
+ 
+$(DIR_BIN):
+	mkdir $(DIR_BIN)
+
+$(DIR_OBJ):
+	mkdir $(DIR_OBJ)
+	
+clean :
+    rmdir /S /Q $(OBJSS) $(DIR_BIN)/$(TARGET).$(TARGET_EXT) $(DIR_BIN)/$(TARGET)_$(TARGET_EXT).pdb
+
+rebuild : clean all

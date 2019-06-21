@@ -1,0 +1,1 @@
+judger支持linux、mingw、vs2010编译，请在不同目下编译
