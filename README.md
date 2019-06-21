@@ -36,11 +36,6 @@ Online Judge平台系统（简称OJ）是一个B/S架构的源程序判题系统
 8. Online Judge Web Platform支持ACM和CodeJam两种竞赛模式。
 9. Online Judge Kernel支持采集知名OJ的最近比赛信息（[Codeforces](http://codeforces.com/contests)、[ZOJ](http://acm.zju.edu.cn/onlinejudge/showContests.do)、[HDU](http://acm.hdu.edu.cn/contests/contest_list.php)、[AtCoder](http://atcoder.jp)、[HihoCoder](https://hihocoder.com/contests)，持续添加）。
 
-## 目录说明：
-1. judger-kernel：OJ的判题核心代码，C语言
-2. judger-web-platform：OJ的Web端代码，java语言
-3. judger_sql：OJ的数据库文件
-
 ## 部署指导
 ### 运行环境
 1. 操作系统：Windows XP/7/8/8.1/10， Windows Server 2003/2008/2012
