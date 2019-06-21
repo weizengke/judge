@@ -1,0 +1,40 @@
+Test: #1, time: 10 ms, memory: 3540 kb, exit code: 0,verdict: Accepted
+Input
+1 2
+Output
+3
+Answer
+3
+------------------------------------------------------------------
+Test: #2, time: 0 ms, memory: 3540 kb, exit code: 0,verdict: Accepted
+Input
+4 2
+Output
+6
+Answer
+6
+------------------------------------------------------------------
+Test: #3, time: 0 ms, memory: 3540 kb, exit code: 0,verdict: Accepted
+Input
+4 5
+Output
+9
+Answer
+9
+------------------------------------------------------------------
+Test: #4, time: 0 ms, memory: 3540 kb, exit code: 0,verdict: Accepted
+Input
+111 111
+Output
+222
+Answer
+222
+------------------------------------------------------------------
+Test: #5, time: 0 ms, memory: 3540 kb, exit code: 0,verdict: Accepted
+Input
+1111 1111
+Output
+2222
+Answer
+2222
+------------------------------------------------------------------
