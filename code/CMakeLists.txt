@@ -1,0 +1,15 @@
+
+#add_subdirectory(main)  
+add_subdirectory(aaa)  
+add_subdirectory(cli)
+add_subdirectory(event)
+add_subdirectory(ic)  
+add_subdirectory(ftp)
+add_subdirectory(telnet)
+add_subdirectory(util)
+add_subdirectory(judge)  
+add_subdirectory(sysmng)
+add_subdirectory(ndp)
+add_subdirectory(thirdpart32)
+add_subdirectory(test)
+
