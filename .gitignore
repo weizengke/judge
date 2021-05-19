@@ -1,16 +1,8 @@
-#jungle
-#*.log
-
-# Compiled Object files
-#*.slo
-#*.lo
-#*.o
-
-# Compiled Dynamic libraries
-#*.so
-#*.dylib
-
-# Compiled Static libraries
-#*.lai
-#*.la
-
+/build
+/build/3part/mingw32
+/builds
+/vsbuild
+/settings
+/release
+/judger.si4project
+/judger_new.si4project
