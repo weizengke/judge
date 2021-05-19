@@ -1,0 +1,20 @@
+language: cpp
+
+jobs:
+  include:
+    - os: windows
+      arch: amd64
+      env: OS=windows
+    - os: linux
+      arch: arm64
+      env: OS=arm64_linux
+
+branches:
+  only:
+    - master
+
+script:
+    - mkdir builds
+    - cd builds
+    - cmake ..
+    - cmake --build . --config release
