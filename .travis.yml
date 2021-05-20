@@ -6,8 +6,8 @@ jobs:
       arch: amd64
       env: OS=windows
     - os: linux
-      arch: amd64
-      env: OS=amd64_linux
+      arch: x64
+      env: OS=x64_linux
 branches:
   only:
     - master
