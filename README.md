@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.com/weizengke/judge.svg?branch=master)](https://travis-ci.com/weizengke/judge)
+
 # 最好的跨平台Online Judge
 
 ## Table of contents
