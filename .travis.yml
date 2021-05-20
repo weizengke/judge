@@ -16,5 +16,5 @@ branches:
 script:
     - mkdir builds
     - cd builds
-    - cmake ..
+    - cmake -D ubuntu=1 ..
     - cmake --build . --config release
