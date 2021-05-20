@@ -5,9 +5,6 @@ jobs:
     - os: windows
       arch: amd64
       env: OS=windows
-    - os: linux
-      arch: x64
-      env: OS=x64_linux
 branches:
   only:
     - master
@@ -15,5 +12,5 @@ branches:
 script:
     - mkdir builds
     - cd builds
-    - cmake -D ubuntu=1 ..
+    - cmake ..
     - cmake --build . --config release
