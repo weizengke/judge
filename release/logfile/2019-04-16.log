@@ -1,57 +1,0 @@
-INFO:2019-04-16 23:15:33 DataPath:data, Workpath:temp/
-INFO:2019-04-16 23:15:33 MySQL:localhost root rootpwd gdoj 3306
-INFO:2019-04-16 23:15:33 Start initialization of Socket...
-INFO:2019-04-16 23:15:33 Socket bind port 5000 ok...
-INFO:2019-04-16 23:15:33 Socket listen ok...
-INFO:2019-04-16 23:15:34 Connect MySQL(localhost, root, rootpwd, gdoj, 3306) ok...
-INFO:2019-04-16 23:15:34 Sysmng APP running ok...
-INFO:2019-04-16 23:15:34 Command APP running ok...
-INFO:2019-04-16 23:15:34 Debug APP running ok...
-INFO:2019-04-16 23:15:34 AAA APP running ok...
-INFO:2019-04-16 23:15:35 Telnet APP running ok...
-INFO:2019-04-16 23:15:35 Judge APP running ok...
-INFO:2019-04-16 23:15:35 Running Judge Core...
-INFO:2019-04-16 23:15:35 Judge Task init ok...
-INFO:2019-04-16 23:15:35 NDP APP running ok...
-INFO:2019-04-16 23:15:35 FTPS APP running ok...
-INFO:2019-04-16 23:15:36 Recover configuration begin.
-INFO:2019-04-16 23:15:36 Execute command 'system-view' on view 'user-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-16 23:15:36 Execute command 'sysname judger' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-16 23:15:36 Execute command 'aaa' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-16 23:15:36 Execute command 'virtual-judge enable' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-16 23:15:36 Execute command 'contests-collect enable' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-16 23:15:36 Collect recent contests start. (json_path=otheroj.json)
-INFO:2019-04-16 23:15:36 Execute command 'contests-collect interval 5' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-16 23:15:36 Execute command 'contests-collect save-file D:\tomcat6\webapps\gdoj\otheroj.json' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-16 23:15:36 Execute command 'judge-mgr' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-16 23:15:36 Execute command 'virtual-judge-mgr' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-16 23:15:36 Execute command 'return' on view 'virtual-judge-mgr-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-16 23:15:36 Execute command 'return' on view 'user-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-16 23:15:36 Eecover configuration end.
-INFO:2019-04-16 23:15:36 Collect zoj-contests ok. (size=1)
-INFO:2019-04-16 23:15:36 Collect hdu-contests ok. (size=1)
-INFO:2019-04-16 23:15:37 Collect recent contests start. (json_path=D:\tomcat6\webapps\gdoj\otheroj.json)
-INFO:2019-04-16 23:15:37 Collect zoj-contests ok. (size=1)
-INFO:2019-04-16 23:15:37 Collect hdu-contests ok. (size=1)
-INFO:2019-04-16 23:15:37 Collect codeforces-contests failed.
-INFO:2019-04-16 23:15:38 Collect codeforces-contests failed.
-INFO:2019-04-16 23:15:38 Execute command 'sys' on view 'user-view'. (result:1, username=CON, vtyId=32)
-INFO:2019-04-16 23:15:38 Collect atcoder-contests ok. (size=2)
-INFO:2019-04-16 23:15:38 Collect atcoder-contests ok. (size=2)
-INFO:2019-04-16 23:15:38 Collect hihocoder-contests ok. (size=0)
-INFO:2019-04-16 23:15:38 Collect recent contests ok. (json_path=D:\tomcat6\webapps\gdoj\otheroj.json)
-INFO:2019-04-16 23:15:38 Collect hihocoder-contests ok. (size=0)
-INFO:2019-04-16 23:15:38 Collect recent contests ok. (json_path=D:\tomcat6\webapps\gdoj\otheroj.json)
-INFO:2019-04-16 23:15:54 Execute command 'display  current-configuration ' on view 'system-view'. (result:1, username=CON, vtyId=32)
-INFO:2019-04-16 23:16:11 Execute command 'contests-collect  save-file  otherio.json' on view 'system-view'. (result:1, username=CON, vtyId=32)
-INFO:2019-04-16 23:16:15 Execute command 'contests-collect  save-file  otheroj.json' on view 'system-view'. (result:1, username=CON, vtyId=32)
-INFO:2019-04-16 23:16:16 Execute command 'save ' on view 'system-view'. (result:1, username=CON, vtyId=32)
-INFO:2019-04-16 23:16:18 Execute command 'display  current-configuration ' on view 'system-view'. (result:1, username=CON, vtyId=32)
-INFO:2019-04-16 23:16:21 Execute command 'undo contests-collect  enable ' on view 'system-view'. (result:1, username=CON, vtyId=32)
-INFO:2019-04-16 23:16:22 Execute command 'dis th' on view 'system-view'. (result:1, username=CON, vtyId=32)
-INFO:2019-04-16 23:16:24 Execute command 'unco c i ' on view 'system-view'. (result:0, username=CON, vtyId=32)
-INFO:2019-04-16 23:16:26 Execute command 'unco c' on view 'system-view'. (result:0, username=CON, vtyId=32)
-INFO:2019-04-16 23:16:29 Execute command 'undo contests-collect  i ' on view 'system-view'. (result:0, username=CON, vtyId=32)
-INFO:2019-04-16 23:16:37 Execute command 'contests-collect  interval  30' on view 'system-view'. (result:1, username=CON, vtyId=32)
-INFO:2019-04-16 23:16:39 Execute command 'save ' on view 'system-view'. (result:1, username=CON, vtyId=32)
-INFO:2019-04-16 23:16:40 Execute command 'display  current-configuration ' on view 'system-view'. (result:1, username=CON, vtyId=32)

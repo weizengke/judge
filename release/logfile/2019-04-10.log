@@ -1,393 +1,0 @@
-INFO:2019-04-10 23:25:01 DataPath:data, Workpath:temp/
-INFO:2019-04-10 23:25:01 MySQL:localhost root rootpwd gdoj 3306
-INFO:2019-04-10 23:25:01 Start initialization of Socket...
-INFO:2019-04-10 23:25:01 Socket bind port 5000 ok...
-INFO:2019-04-10 23:25:01 Socket listen ok...
-INFO:2019-04-10 23:25:02 Connect MySQL(localhost, root, rootpwd, gdoj, 3306) ok...
-INFO:2019-04-10 23:25:02 Sysmng APP running ok...
-INFO:2019-04-10 23:25:02 Command APP running ok...
-INFO:2019-04-10 23:25:02 Debug APP running ok...
-INFO:2019-04-10 23:25:02 AAA APP running ok...
-INFO:2019-04-10 23:25:02 Telnet APP running ok...
-INFO:2019-04-10 23:25:02 Running Judge Core...
-
-INFO:2019-04-10 23:25:02 Judge Task init ok...
-INFO:2019-04-10 23:25:02 NDP APP running ok...
-INFO:2019-04-10 23:25:02 FTPS APP running ok...
-INFO:2019-04-10 23:25:03 Recover configuration begin.
-INFO:2019-04-10 23:25:03 Execute command 'system-view' on view 'user-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:03 Execute command 'sysname judger' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:03 Execute command 'aaa' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:03 Execute command 'virtual-judge enable' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:03 Execute command 'contests-collect enable' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:04 Execute command 'contests-collect interval 5' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:04 Collect recent contests start. (json_path=D:\tomcat6\webapps\gdoj\otheroj.json)
-INFO:2019-04-10 23:25:04 Execute command 'contests-collect save-file D:\tomcat6\webapps\gdoj\otheroj.json' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:04 Execute command 'judge-mgr' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:04 Execute command 'virtual-judge-mgr' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:04 Execute command 'return' on view 'virtual-judge-mgr-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:04 Execute command 'return' on view 'user-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:04 Eecover configuration end.
-INFO:2019-04-10 23:25:04 Collect zoj-contests ok. (size=2)
-INFO:2019-04-10 23:25:04 Collect hdu-contests ok. (size=2)
-INFO:2019-04-10 23:25:04 Collect recent contests start. (json_path=D:\tomcat6\webapps\gdoj\otheroj.json)
-INFO:2019-04-10 23:25:05 Collect zoj-contests ok. (size=2)
-INFO:2019-04-10 23:25:05 Collect hdu-contests ok. (size=1)
-INFO:2019-04-10 23:25:07 Collect codeforces-collect ok. (size=5)
-INFO:2019-04-10 23:25:08 DataPath:data, Workpath:temp/
-INFO:2019-04-10 23:25:08 MySQL:localhost root rootpwd gdoj 3306
-INFO:2019-04-10 23:25:08 Start initialization of Socket...
-INFO:2019-04-10 23:25:08 Socket bind port 5000 ok...
-INFO:2019-04-10 23:25:08 Socket listen ok...
-INFO:2019-04-10 23:25:09 Connect MySQL(localhost, root, rootpwd, gdoj, 3306) ok...
-INFO:2019-04-10 23:25:09 Sysmng APP running ok...
-INFO:2019-04-10 23:25:09 Command APP running ok...
-INFO:2019-04-10 23:25:10 Debug APP running ok...
-INFO:2019-04-10 23:25:10 AAA APP running ok...
-INFO:2019-04-10 23:25:10 Telnet APP running ok...
-INFO:2019-04-10 23:25:10 Judge APP running ok...
-INFO:2019-04-10 23:25:10 Running Judge Core...
-INFO:2019-04-10 23:25:10 Judge Task init ok...
-INFO:2019-04-10 23:25:10 NDP APP running ok...
-INFO:2019-04-10 23:25:10 FTPS APP running ok...
-INFO:2019-04-10 23:25:11 Recover configuration begin.
-INFO:2019-04-10 23:25:11 Execute command 'system-view' on view 'user-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:11 Execute command 'sysname judger' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:11 Execute command 'aaa' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:11 Execute command 'virtual-judge enable' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:11 Execute command 'contests-collect enable' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:11 Collect recent contests start. (json_path=otheroj.json)
-INFO:2019-04-10 23:25:11 Execute command 'contests-collect interval 5' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:11 Execute command 'contests-collect save-file D:\tomcat6\webapps\gdoj\otheroj.json' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:11 Execute command 'judge-mgr' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:11 Execute command 'virtual-judge-mgr' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:11 Execute command 'return' on view 'virtual-judge-mgr-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:11 Execute command 'return' on view 'user-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:11 Eecover configuration end.
-INFO:2019-04-10 23:25:11 Collect zoj-contests ok. (size=2)
-INFO:2019-04-10 23:25:11 Collect hdu-contests ok. (size=2)
-INFO:2019-04-10 23:25:12 Collect recent contests start. (json_path=D:\tomcat6\webapps\gdoj\otheroj.json)
-INFO:2019-04-10 23:25:12 Collect zoj-contests ok. (size=0)
-INFO:2019-04-10 23:25:12 Collect hdu-contests ok. (size=2)
-INFO:2019-04-10 23:25:14 DataPath:data, Workpath:temp/
-INFO:2019-04-10 23:25:14 MySQL:localhost root rootpwd gdoj 3306
-INFO:2019-04-10 23:25:14 Start initialization of Socket...
-INFO:2019-04-10 23:25:14 Socket bind port 5000 ok...
-INFO:2019-04-10 23:25:14 Socket listen ok...
-INFO:2019-04-10 23:25:15 Connect MySQL(localhost, root, rootpwd, gdoj, 3306) ok...
-INFO:2019-04-10 23:25:15 Sysmng APP running ok...
-INFO:2019-04-10 23:25:15 Command APP running ok...
-INFO:2019-04-10 23:25:15 Debug APP running ok...
-INFO:2019-04-10 23:25:15 AAA APP running ok...
-INFO:2019-04-10 23:25:15 Telnet APP running ok...
-INFO:2019-04-10 23:25:15 Judge APP running ok...
-INFO:2019-04-10 23:25:15 Running Judge Core...
-INFO:2019-04-10 23:25:15 Judge Task init ok...
-INFO:2019-04-10 23:25:16 NDP APP running ok...
-INFO:2019-04-10 23:25:16 FTPS APP running ok...
-INFO:2019-04-10 23:25:17 Recover configuration begin.
-INFO:2019-04-10 23:25:17 Execute command 'system-view' on view 'user-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:17 Execute command 'sysname judger' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:17 Execute command 'aaa' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:17 Execute command 'virtual-judge enable' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:17 Execute command 'contests-collect enable' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:17 Collect recent contests start. (json_path=otheroj.json)
-INFO:2019-04-10 23:25:17 Execute command 'contests-collect interval 5' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:17 Execute command 'contests-collect save-file D:\tomcat6\webapps\gdoj\otheroj.json' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:17 Execute command 'judge-mgr' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:17 Execute command 'virtual-judge-mgr' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:17 Execute command 'return' on view 'virtual-judge-mgr-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:17 Execute command 'return' on view 'user-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:17 Eecover configuration end.
-INFO:2019-04-10 23:25:17 Collect recent contests start. (json_path=D:\tomcat6\webapps\gdoj\otheroj.json)
-INFO:2019-04-10 23:25:18 Collect zoj-contests ok. (size=2)
-INFO:2019-04-10 23:25:18 Collect hdu-contests ok. (size=2)
-INFO:2019-04-10 23:25:19 DataPath:data, Workpath:temp/
-INFO:2019-04-10 23:25:19 MySQL:localhost root rootpwd gdoj 3306
-INFO:2019-04-10 23:25:19 Start initialization of Socket...
-INFO:2019-04-10 23:25:19 Socket bind port 5000 ok...
-INFO:2019-04-10 23:25:19 Socket listen ok...
-INFO:2019-04-10 23:25:20 Connect MySQL(localhost, root, rootpwd, gdoj, 3306) ok...
-INFO:2019-04-10 23:25:20 Sysmng APP running ok...
-INFO:2019-04-10 23:25:21 Command APP running ok...
-INFO:2019-04-10 23:25:21 Debug APP running ok...
-INFO:2019-04-10 23:25:21 AAA APP running ok...
-INFO:2019-04-10 23:25:21 Telnet APP running ok...
-INFO:2019-04-10 23:25:21 Judge APP running ok...
-INFO:2019-04-10 23:25:21 Running Judge Core...
-INFO:2019-04-10 23:25:21 Judge Task init ok...
-INFO:2019-04-10 23:25:21 NDP APP running ok...
-INFO:2019-04-10 23:25:21 FTPS APP running ok...
-INFO:2019-04-10 23:25:22 Recover configuration begin.
-INFO:2019-04-10 23:25:22 Execute command 'system-view' on view 'user-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:22 Execute command 'sysname judger' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:22 Execute command 'aaa' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:22 Execute command 'virtual-judge enable' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:22 Execute command 'contests-collect enable' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:22 Collect recent contests start. (json_path=otheroj.json)
-INFO:2019-04-10 23:25:22 Execute command 'contests-collect interval 5' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:22 Execute command 'contests-collect save-file D:\tomcat6\webapps\gdoj\otheroj.json' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:22 Execute command 'judge-mgr' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:22 Execute command 'virtual-judge-mgr' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:22 Execute command 'return' on view 'virtual-judge-mgr-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:22 Execute command 'return' on view 'user-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:22 Eecover configuration end.
-INFO:2019-04-10 23:25:23 Collect zoj-contests ok. (size=2)
-INFO:2019-04-10 23:25:23 Collect hdu-contests ok. (size=2)
-INFO:2019-04-10 23:25:23 Collect recent contests start. (json_path=D:\tomcat6\webapps\gdoj\otheroj.json)
-INFO:2019-04-10 23:25:23 Collect zoj-contests ok. (size=2)
-INFO:2019-04-10 23:25:23 Collect hdu-contests ok. (size=2)
-INFO:2019-04-10 23:25:25 DataPath:data, Workpath:temp/
-INFO:2019-04-10 23:25:25 MySQL:localhost root rootpwd gdoj 3306
-INFO:2019-04-10 23:25:25 Start initialization of Socket...
-INFO:2019-04-10 23:25:25 Socket bind port 5000 ok...
-INFO:2019-04-10 23:25:25 Socket listen ok...
-INFO:2019-04-10 23:25:26 Connect MySQL(localhost, root, rootpwd, gdoj, 3306) ok...
-INFO:2019-04-10 23:25:26 Sysmng APP running ok...
-INFO:2019-04-10 23:25:26 Command APP running ok...
-INFO:2019-04-10 23:25:26 Debug APP running ok...
-INFO:2019-04-10 23:25:26 AAA APP running ok...
-INFO:2019-04-10 23:25:26 Telnet APP running ok...
-INFO:2019-04-10 23:25:27 Judge APP running ok...
-INFO:2019-04-10 23:25:27 Running Judge Core...
-INFO:2019-04-10 23:25:27 Judge Task init ok...
-INFO:2019-04-10 23:25:27 NDP APP running ok...
-INFO:2019-04-10 23:25:27 FTPS APP running ok...
-INFO:2019-04-10 23:25:28 Recover configuration begin.
-INFO:2019-04-10 23:25:28 Execute command 'system-view' on view 'user-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:28 Execute command 'sysname judger' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:28 Execute command 'aaa' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:28 Execute command 'virtual-judge enable' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:28 Execute command 'contests-collect enable' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:28 Execute command 'contests-collect interval 5' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:28 Execute command 'contests-collect save-file D:\tomcat6\webapps\gdoj\otheroj.json' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:28 Execute command 'judge-mgr' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:28 Execute command 'virtual-judge-mgr' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:28 Execute command 'return' on view 'virtual-judge-mgr-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:28 Execute command 'return' on view 'user-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:28 Eecover configuration end.
-INFO:2019-04-10 23:25:28 Collect zoj-contests ok. (size=2)
-INFO:2019-04-10 23:25:28 Collect hdu-contests ok. (size=2)
-INFO:2019-04-10 23:25:29 Collect recent contests start. (json_path=D:\tomcat6\webapps\gdoj\otheroj.json)
-INFO:2019-04-10 23:25:29 Collect zoj-contests ok. (size=2)
-INFO:2019-04-10 23:25:29 Collect hdu-contests ok. (size=2)
-INFO:2019-04-10 23:25:31 DataPath:data, Workpath:temp/
-INFO:2019-04-10 23:25:31 MySQL:localhost root rootpwd gdoj 3306
-INFO:2019-04-10 23:25:31 Start initialization of Socket...
-INFO:2019-04-10 23:25:31 Socket bind port 5000 ok...
-INFO:2019-04-10 23:25:31 Socket listen ok...
-INFO:2019-04-10 23:25:32 Connect MySQL(localhost, root, rootpwd, gdoj, 3306) ok...
-INFO:2019-04-10 23:25:32 Sysmng APP running ok...
-INFO:2019-04-10 23:25:32 Command APP running ok...
-INFO:2019-04-10 23:25:33 Debug APP running ok...
-INFO:2019-04-10 23:25:33 AAA APP running ok...
-INFO:2019-04-10 23:25:33 Telnet APP running ok...
-INFO:2019-04-10 23:25:33 Judge APP running ok...
-INFO:2019-04-10 23:25:33 Running Judge Core...
-INFO:2019-04-10 23:25:33 Judge Task init ok...
-INFO:2019-04-10 23:25:33 NDP APP running ok...
-INFO:2019-04-10 23:25:33 FTPS APP running ok...
-INFO:2019-04-10 23:25:34 Recover configuration begin.
-INFO:2019-04-10 23:25:34 Execute command 'system-view' on view 'user-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:34 Execute command 'sysname judger' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:34 Execute command 'aaa' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:34 Execute command 'virtual-judge enable' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:34 Execute command 'contests-collect enable' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:34 Collect recent contests start. (json_path=otheroj.json)
-INFO:2019-04-10 23:25:34 Execute command 'contests-collect interval 5' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:34 Execute command 'contests-collect save-file D:\tomcat6\webapps\gdoj\otheroj.json' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:34 Execute command 'judge-mgr' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:34 Execute command 'virtual-judge-mgr' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:34 Execute command 'return' on view 'virtual-judge-mgr-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:34 Execute command 'return' on view 'user-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:34 Eecover configuration end.
-INFO:2019-04-10 23:25:34 Collect zoj-contests ok. (size=2)
-INFO:2019-04-10 23:25:34 Collect hdu-contests ok. (size=2)
-INFO:2019-04-10 23:25:36 DataPath:data, Workpath:temp/
-INFO:2019-04-10 23:25:36 MySQL:localhost root rootpwd gdoj 3306
-INFO:2019-04-10 23:25:36 Start initialization of Socket...
-INFO:2019-04-10 23:25:36 Socket bind port 5000 ok...
-INFO:2019-04-10 23:25:36 Socket listen ok...
-INFO:2019-04-10 23:25:37 Connect MySQL(localhost, root, rootpwd, gdoj, 3306) ok...
-INFO:2019-04-10 23:25:37 Sysmng APP running ok...
-INFO:2019-04-10 23:25:37 Command APP running ok...
-INFO:2019-04-10 23:25:37 Debug APP running ok...
-INFO:2019-04-10 23:25:37 AAA APP running ok...
-INFO:2019-04-10 23:25:37 Telnet APP running ok...
-INFO:2019-04-10 23:25:37 Judge APP running ok...
-INFO:2019-04-10 23:25:37 Running Judge Core...
-INFO:2019-04-10 23:25:37 Judge Task init ok...
-INFO:2019-04-10 23:25:37 NDP APP running ok...
-INFO:2019-04-10 23:25:38 FTPS APP running ok...
-INFO:2019-04-10 23:25:39 Recover configuration begin.
-INFO:2019-04-10 23:25:39 Execute command 'system-view' on view 'user-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:39 Execute command 'sysname judger' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:39 Execute command 'aaa' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:39 Execute command 'virtual-judge enable' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:39 Execute command 'contests-collect enable' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:39 Execute command 'contests-collect interval 5' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:39 Collect recent contests start. (json_path=D:\tomcat6\webapps\gdoj\otheroj.json)
-INFO:2019-04-10 23:25:39 Execute command 'contests-collect save-file D:\tomcat6\webapps\gdoj\otheroj.json' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:39 Execute command 'judge-mgr' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:39 Execute command 'virtual-judge-mgr' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:39 Execute command 'return' on view 'virtual-judge-mgr-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:39 Execute command 'return' on view 'user-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:39 Eecover configuration end.
-INFO:2019-04-10 23:25:39 Collect zoj-contests ok. (size=2)
-INFO:2019-04-10 23:25:39 Collect hdu-contests ok. (size=2)
-INFO:2019-04-10 23:25:39 Collect recent contests start. (json_path=D:\tomcat6\webapps\gdoj\otheroj.json)
-INFO:2019-04-10 23:25:39 Collect zoj-contests ok. (size=2)
-INFO:2019-04-10 23:25:40 Collect hdu-contests ok. (size=0)
-INFO:2019-04-10 23:25:41 DataPath:data, Workpath:temp/
-INFO:2019-04-10 23:25:41 MySQL:localhost root rootpwd gdoj 3306
-INFO:2019-04-10 23:25:41 Start initialization of Socket...
-INFO:2019-04-10 23:25:41 Socket bind port 5000 ok...
-INFO:2019-04-10 23:25:41 Socket listen ok...
-INFO:2019-04-10 23:25:42 Connect MySQL(localhost, root, rootpwd, gdoj, 3306) ok...
-INFO:2019-04-10 23:25:42 Sysmng APP running ok...
-INFO:2019-04-10 23:25:43 Command APP running ok...
-INFO:2019-04-10 23:25:43 Debug APP running ok...
-INFO:2019-04-10 23:25:43 AAA APP running ok...
-INFO:2019-04-10 23:25:43 Telnet APP running ok...
-INFO:2019-04-10 23:25:43 Judge APP running ok...
-INFO:2019-04-10 23:25:43 Running Judge Core...
-INFO:2019-04-10 23:25:43 Judge Task init ok...
-INFO:2019-04-10 23:25:43 NDP APP running ok...
-INFO:2019-04-10 23:25:43 FTPS APP running ok...
-INFO:2019-04-10 23:25:44 Recover configuration begin.
-INFO:2019-04-10 23:25:44 Execute command 'system-view' on view 'user-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:44 Execute command 'sysname judger' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:44 Execute command 'aaa' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:44 Execute command 'virtual-judge enable' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:44 Execute command 'contests-collect enable' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:44 Collect recent contests start. (json_path=otheroj.json)
-INFO:2019-04-10 23:25:44 Execute command 'contests-collect interval 5' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:44 Execute command 'contests-collect save-file D:\tomcat6\webapps\gdoj\otheroj.json' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:44 Execute command 'judge-mgr' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:44 Execute command 'virtual-judge-mgr' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:44 Execute command 'return' on view 'virtual-judge-mgr-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:44 Execute command 'return' on view 'user-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:25:44 Eecover configuration end.
-INFO:2019-04-10 23:25:44 Collect zoj-contests ok. (size=2)
-INFO:2019-04-10 23:25:45 Collect hdu-contests ok. (size=2)
-INFO:2019-04-10 23:25:45 Collect recent contests start. (json_path=D:\tomcat6\webapps\gdoj\otheroj.json)
-INFO:2019-04-10 23:25:45 Collect zoj-contests ok. (size=2)
-INFO:2019-04-10 23:25:45 Collect hdu-contests ok. (size=2)
-INFO:2019-04-10 23:25:50 Collect codeforces-collect ok. (size=5)
-INFO:2019-04-10 23:25:52 Collect atcoder-contests ok. (size=1)
-INFO:2019-04-10 23:25:52 Collect hihocoder-contests ok. (size=0)
-INFO:2019-04-10 23:25:52 Collect recent contests ok. (json_path=D:\tomcat6\webapps\gdoj\otheroj.json)
-INFO:2019-04-10 23:25:53 Collect codeforces-contests failed.
-INFO:2019-04-10 23:25:54 Collect atcoder-contests ok. (size=1)
-INFO:2019-04-10 23:25:55 Collect hihocoder-contests ok. (size=0)
-INFO:2019-04-10 23:25:55 Collect recent contests ok. (json_path=D:\tomcat6\webapps\gdoj\otheroj.json)
-INFO:2019-04-10 23:25:55 Execute command 'dis  judge  brief ' on view 'user-view'. (result:1, username=CON, vtyId=32)
-INFO:2019-04-10 23:25:58 Execute command 'display  judge  collect-contests ' on view 'user-view'. (result:1, username=CON, vtyId=32)
-INFO:2019-04-10 23:26:17 Execute command 'display  judge  brief ' on view 'user-view'. (result:1, username=CON, vtyId=32)
-INFO:2019-04-10 23:26:36 Execute command 'system-view ' on view 'user-view'. (result:1, username=CON, vtyId=32)
-INFO:2019-04-10 23:26:38 Execute command 'judge-mgr' on view 'system-view'. (result:1, username=CON, vtyId=32)
-INFO:2019-04-10 23:26:40 Execute command 'dis th' on view 'judge-mgr-view'. (result:1, username=CON, vtyId=32)
-INFO:2019-04-10 23:26:42 Execute command 'dis th include-default ' on view 'judge-mgr-view'. (result:1, username=CON, vtyId=32)
-INFO:2019-04-10 23:26:48 Execute command 'auto-detect  enable  ' on view 'judge-mgr-view'. (result:1, username=CON, vtyId=32)
-INFO:2019-04-10 23:26:49 Timer to process auto judge.
-INFO:2019-04-10 23:26:49 Recieve judge request. (solution=6601).
-INFO:2019-04-10 23:26:49 Timer to process auto judge ok. (n=1)
-INFO:2019-04-10 23:27:16 DataPath:data, Workpath:temp/
-INFO:2019-04-10 23:27:16 MySQL:localhost root rootpwd gdoj 3306
-INFO:2019-04-10 23:27:16 Start initialization of Socket...
-INFO:2019-04-10 23:27:16 Socket bind port 5000 ok...
-INFO:2019-04-10 23:27:16 Socket listen ok...
-INFO:2019-04-10 23:27:17 Connect MySQL(localhost, root, rootpwd, gdoj, 3306) ok...
-INFO:2019-04-10 23:27:17 Sysmng APP running ok...
-INFO:2019-04-10 23:27:17 Command APP running ok...
-INFO:2019-04-10 23:27:17 Debug APP running ok...
-INFO:2019-04-10 23:27:17 AAA APP running ok...
-INFO:2019-04-10 23:27:17 Telnet APP running ok...
-INFO:2019-04-10 23:27:17 Judge APP running ok...
-INFO:2019-04-10 23:27:17 Running Judge Core...
-INFO:2019-04-10 23:27:17 Judge Task init ok...
-INFO:2019-04-10 23:27:17 NDP APP running ok...
-INFO:2019-04-10 23:27:17 FTPS APP running ok...
-INFO:2019-04-10 23:27:19 Recover configuration begin.
-INFO:2019-04-10 23:27:19 Execute command 'system-view' on view 'user-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:27:19 Execute command 'sysname judger' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:27:19 Execute command 'aaa' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:27:19 Execute command 'virtual-judge enable' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:27:19 Execute command 'contests-collect enable' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:27:19 Collect recent contests start. (json_path=otheroj.json)
-INFO:2019-04-10 23:27:19 Execute command 'contests-collect interval 5' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:27:19 Execute command 'contests-collect save-file D:\tomcat6\webapps\gdoj\otheroj.json' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:27:19 Execute command 'judge-mgr' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:27:19 Execute command 'virtual-judge-mgr' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:27:19 Execute command 'return' on view 'virtual-judge-mgr-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:27:19 Execute command 'return' on view 'user-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:27:19 Eecover configuration end.
-INFO:2019-04-10 23:27:19 Collect zoj-contests ok. (size=2)
-INFO:2019-04-10 23:27:19 Collect hdu-contests ok. (size=2)
-INFO:2019-04-10 23:27:19 Collect recent contests start. (json_path=D:\tomcat6\webapps\gdoj\otheroj.json)
-INFO:2019-04-10 23:27:19 Collect zoj-contests ok. (size=2)
-INFO:2019-04-10 23:27:19 Collect hdu-contests ok. (size=2)
-INFO:2019-04-10 23:27:20 Execute command 'sys' on view 'user-view'. (result:1, username=CON, vtyId=32)
-INFO:2019-04-10 23:27:21 Execute command 'judge' on view 'system-view'. (result:1, username=CON, vtyId=32)
-INFO:2019-04-10 23:27:22 Execute command 'auto-detect  enable  ' on view 'judge-mgr-view'. (result:1, username=CON, vtyId=32)
-INFO:2019-04-10 23:27:22 Timer to process auto judge.
-INFO:2019-04-10 23:27:22 Recieve judge request. (solution=6601).
-INFO:2019-04-10 23:27:22 Timer to process auto judge ok. (n=1)
-INFO:2019-04-10 23:28:12 DataPath:data, Workpath:temp/
-INFO:2019-04-10 23:28:12 MySQL:localhost root rootpwd gdoj 3306
-INFO:2019-04-10 23:28:12 Start initialization of Socket...
-INFO:2019-04-10 23:28:12 Socket bind port 5000 ok...
-INFO:2019-04-10 23:28:12 Socket listen ok...
-INFO:2019-04-10 23:28:13 Connect MySQL(localhost, root, rootpwd, gdoj, 3306) ok...
-INFO:2019-04-10 23:28:13 Sysmng APP running ok...
-INFO:2019-04-10 23:28:13 Command APP running ok...
-INFO:2019-04-10 23:28:13 Debug APP running ok...
-INFO:2019-04-10 23:28:13 AAA APP running ok...
-INFO:2019-04-10 23:28:14 Telnet APP running ok...
-INFO:2019-04-10 23:28:14 Judge APP running ok...
-INFO:2019-04-10 23:28:14 Running Judge Core...
-INFO:2019-04-10 23:28:14 Judge Task init ok...
-INFO:2019-04-10 23:28:15 NDP APP running ok...
-INFO:2019-04-10 23:28:15 FTPS APP running ok...
-INFO:2019-04-10 23:28:16 Recover configuration begin.
-INFO:2019-04-10 23:28:16 Execute command 'system-view' on view 'user-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:28:16 Execute command 'sysname judger' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:28:16 Execute command 'aaa' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:28:16 Execute command 'virtual-judge enable' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:28:16 Execute command 'contests-collect enable' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:28:16 Collect recent contests start. (json_path=otheroj.json)
-INFO:2019-04-10 23:28:16 Execute command 'contests-collect interval 5' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:28:16 Execute command 'contests-collect save-file D:\tomcat6\webapps\gdoj\otheroj.json' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:28:16 Execute command 'judge-mgr' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:28:16 Execute command 'virtual-judge-mgr' on view 'system-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:28:16 Execute command 'return' on view 'virtual-judge-mgr-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:28:16 Execute command 'return' on view 'user-view'. (result:1, username=CFM, vtyId=33)
-INFO:2019-04-10 23:28:16 Eecover configuration end.
-INFO:2019-04-10 23:28:16 Execute command 'sy' on view 'user-view'. (result:1, username=CON, vtyId=32)
-INFO:2019-04-10 23:28:16 Collect zoj-contests ok. (size=2)
-INFO:2019-04-10 23:28:16 Collect hdu-contests ok. (size=2)
-INFO:2019-04-10 23:28:16 Collect recent contests start. (json_path=D:\tomcat6\webapps\gdoj\otheroj.json)
-INFO:2019-04-10 23:28:17 Collect zoj-contests ok. (size=2)
-INFO:2019-04-10 23:28:17 Collect hdu-contests ok. (size=2)
-INFO:2019-04-10 23:28:20 Recieve judge request. (solution=6601).
-INFO:2019-04-10 23:28:20 Execute command 'j s 6601' on view 'system-view'. (result:1, username=CON, vtyId=32)
-INFO:2019-04-10 23:28:20 Collect codeforces-collect ok. (size=5)
-INFO:2019-04-10 23:28:20 =============Start judge solution 6601===============
-INFO:2019-04-10 23:28:20 Judge init path ok. (solutionId=6601)
-INFO:2019-04-10 23:28:20 SQL get solution source ok. (solutionId=6601)
-INFO:2019-04-10 23:28:20 SQL get problem info ok. (problemId=1122)
-INFO:2019-04-10 23:28:20 Judge prepare ok. (solutionId=6601, problemId=1122, isVirtualJudge=1)
-INFO:2019-04-10 23:28:20 Start vjudge remote. (solutionId=6601, szVirJudgerName=HDU)
-INFO:2019-04-10 23:28:20 =============End judge solution 6601=============
-INFO:2019-04-10 23:28:22 Collect atcoder-contests ok. (size=1)
-INFO:2019-04-10 23:28:22 Collect hihocoder-contests ok. (size=0)
-INFO:2019-04-10 23:28:22 Collect recent contests ok. (json_path=D:\tomcat6\webapps\gdoj\otheroj.json)
-INFO:2019-04-10 23:28:22 Collect codeforces-contests failed.
-INFO:2019-04-10 23:28:28 Execute command 'judge' on view 'system-view'. (result:1, username=CON, vtyId=32)
-INFO:2019-04-10 23:28:29 Collect atcoder-contests ok. (size=1)
-INFO:2019-04-10 23:28:29 Collect hihocoder-contests ok. (size=0)
-INFO:2019-04-10 23:28:29 Collect recent contests ok. (json_path=D:\tomcat6\webapps\gdoj\otheroj.json)
-INFO:2019-04-10 23:28:29 Execute command 'auto-detect enable ' on view 'judge-mgr-view'. (result:1, username=CON, vtyId=32)
-INFO:2019-04-10 23:28:29 Timer to process auto judge.
-INFO:2019-04-10 23:28:29 Recieve judge request. (solution=6601).
-INFO:2019-04-10 23:28:29 Timer to process auto judge ok. (n=1)
