@@ -20,7 +20,7 @@
 * [Linux下部署](#Linux下部署)  
   
 ## 演示地址： 
-http://139.9.251.218
+http://happyoj.com
 
 ## 平台简介
 没错，我们支持Windows平台，也支持Linux平台（Linux下当前仅支持Virtual Judge）。<br>
