@@ -563,6 +563,7 @@ void judge_solution_testcase_teardown(JUDGE_SUBMISSION_S *submission)
 	/* save testcase result */
 	if (JUDGE_MODE_OI == g_judge_mode) {
 		judge_solution_testcase_result_save(submission);
+		judge_solution_testcase_result_to_json(submission);
 	}
 
 	/* save testcase result to judge-log */
@@ -607,6 +608,10 @@ void judge_solution_check(JUDGE_SUBMISSION_S *submission)
 	(void)util_fread(submission->ErrorFile, buf, sizeof(buf) - 1);
 	if (strlen(buf) > 0) {
 		submission->solution.verdictId = V_RE;
+		return;
+	}
+
+	if (submission->solution.verdictId != V_AC) {
 		return;
 	}
 
