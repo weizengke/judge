@@ -15,6 +15,7 @@ VOID Judge_ShowBrief(ULONG vtyId)
 	extern int g_sock_port;
 	extern char g_sysname[];	
 	extern int SYSMNG_IsSocketActive();
+	extern int judgeThreadPing;
 
 	(VOID)util_time_to_string(strDateStr, g_judge_last_judgetime);
 
@@ -30,6 +31,7 @@ VOID Judge_ShowBrief(ULONG vtyId)
 	buff += sprintf(buff, "  Queue Length  : %u\r\n", g_judge_queue.size());
 	buff += sprintf(buff, "  AD Interval   : %u\r\n", g_judge_auto_detect_interval);
 	buff += sprintf(buff, "  AD number     : %u\r\n", g_judge_auto_detect_num);
+	buff += sprintf(buff, "  Heart ping    : %u\r\n", judgeThreadPing);
 	buff += sprintf(buff, " =================================================="
 		   "========================\r\n");
 
@@ -57,6 +59,12 @@ VOID Judge_ShowBrief(ULONG vtyId)
 		   (leetcode_vjudge_enable==OS_YES)?"Enable":"Disable",
 		   (leetcode_remote_enable==OS_YES)?"Enable":"Disable",
 		   leetcode_judgerIP, leetcode_sockport);
+
+	buff += sprintf(buff, " %-8s %-10s %-10s %-8s %-8s %-15s %-8d\r\n",
+		  " Codeforces", codeforces_username, codeforces_password,
+		   (codeforces_vjudge_enable==OS_YES)?"Enable":"Disable",
+		   (codeforces_remote_enable==OS_YES)?"Enable":"Disable",
+		   codeforces_judgerIP, codeforces_sockport);
 
 	buff += sprintf(buff, " =================================================="
 		   "========================\r\n");
@@ -144,6 +152,10 @@ ULONG Judge_CFG_Config(VOID *pRcvMsg)
 	ULONG isLeetcodeRemoteJudge= 0;
 	ULONG isLeetcodeJudgeUser= 0;
 	ULONG isLeetcodeJudgeIp= 0;	
+	ULONG isCodeforcesJudge= 0;
+	ULONG isCodeforcesRemoteJudge= 0;
+	ULONG isCodeforcesJudgeUser= 0;
+	ULONG isCodeforcesJudgeIp= 0;		
 	CHAR Username[32] = {0};
 	CHAR Password[32] = {0};
 	char ip[25] = {0};
@@ -267,7 +279,6 @@ ULONG Judge_CFG_Config(VOID *pRcvMsg)
 				port = cmd_get_ulong_param(pElem);
 				break;
 
-
 			case JUDGE_CMO_CFG_LEETCODE_JUDGE:
 				isLeetcodeJudge = OS_YES;
 				break;
@@ -297,6 +308,38 @@ ULONG Judge_CFG_Config(VOID *pRcvMsg)
 				break;
 
 			case JUDGE_CMO_CFG_LEETCODE_REMOTE_PORT:	
+				port = cmd_get_ulong_param(pElem);
+				break;
+
+			case JUDGE_CMO_CFG_CODEFORCES_JUDGE:
+				isCodeforcesJudge = OS_YES;
+				break;
+
+			case JUDGE_CMO_CFG_CODEFORCES_REMOTE_JUDGE:
+				isCodeforcesRemoteJudge = OS_YES;
+				break;
+
+			case JUDGE_CMO_CFG_CODEFORCES_USER_NAME:
+				isCodeforcesJudgeUser = OS_YES;
+				cmd_copy_string_param(pElem, Username);					
+				break;
+				
+			case JUDGE_CMO_CFG_CODEFORCES_USER_PSW:
+				cmd_copy_string_param(pElem, Password);
+				break;
+
+			case JUDGE_CMO_CFG_CODEFORCES_REMOTE_IP:
+				{
+					ULONG ulIp = 0;
+					extern VOID cmd_ip_ulong_to_string(ULONG ip, CHAR *buf);
+					isCodeforcesJudgeIp= OS_YES;
+					ulIp = cmd_get_ip_ulong_param(pElem);
+					cmd_ip_ulong_to_string(ulIp, ip);
+
+				}
+				break;
+
+			case JUDGE_CMO_CFG_CODEFORCES_REMOTE_PORT:	
 				port = cmd_get_ulong_param(pElem);
 				break;
 
@@ -456,6 +499,35 @@ ULONG Judge_CFG_Config(VOID *pRcvMsg)
 	{		
 		strcpy(leetcode_judgerIP, ip);
 		leetcode_sockport = port;		
+		return 0;
+	}
+
+
+	if (OS_YES == isCodeforcesRemoteJudge
+		&& OS_YES == isEnable)
+	{
+		codeforces_remote_enable = (OS_YES == isundo)?OS_NO:OS_YES;
+		return 0;	
+	}
+	
+	if (OS_YES == isCodeforcesJudge
+		&& OS_YES == isEnable)
+	{
+		codeforces_vjudge_enable = (OS_YES == isundo)?OS_NO:OS_YES;
+		return 0;	
+	}
+
+	if (OS_YES == isCodeforcesJudgeUser)
+	{
+		strcpy(codeforces_username, Username);
+		strcpy(codeforces_password, Password);
+		return 0;
+	}
+
+	if (OS_YES == isCodeforcesJudgeIp)
+	{		
+		strcpy(codeforces_judgerIP, ip);
+		codeforces_sockport = port;		
 		return 0;
 	}
 
@@ -720,6 +792,27 @@ ULONG Judge_RegCmdConfig()
 	// 54
 	cmd_regelement_new(JUDGE_CMO_CFG_CALC_RATING_CONTESTID_END, CMD_ELEM_TYPE_INTEGER, "INTEGER<1-65535>", "Contest ID End",vec);
 	
+	// 55
+	cmd_regelement_new(JUDGE_CMO_CFG_CODEFORCES_JUDGE, CMD_ELEM_TYPE_KEY, "codeforces-judge", "The codeforces virtual judge",vec);
+	// 56
+	cmd_regelement_new(JUDGE_CMO_CFG_CODEFORCES_REMOTE_JUDGE, CMD_ELEM_TYPE_KEY, "remote-judge", "Remote judge",vec);
+	// 57
+	cmd_regelement_new(CMD_ELEMID_NULL,					CMD_ELEM_TYPE_KEY,	  "username",		"codeforces username", vec);
+	// 58
+	cmd_regelement_new(JUDGE_CMO_CFG_CODEFORCES_USER_NAME,	CMD_ELEM_TYPE_STRING, "STRING<1-32>",	"codeforces username", vec);
+	// 59
+	cmd_regelement_new(CMD_ELEMID_NULL,					CMD_ELEM_TYPE_KEY,	  "password",		"codeforces password", vec);
+	// 60
+	cmd_regelement_new(JUDGE_CMO_CFG_CODEFORCES_USER_PSW,	CMD_ELEM_TYPE_STRING, "STRING<1-32>",	"codeforces password", vec);
+	// 61
+	cmd_regelement_new(CMD_ELEMID_NULL,				CMD_ELEM_TYPE_KEY, 	  "ip",	"IP address", vec);
+	// 62
+	cmd_regelement_new(JUDGE_CMO_CFG_CODEFORCES_REMOTE_IP,	CMD_ELEM_TYPE_IP, 	 CMD_ELMT_IP,	"IP address", vec);
+	// 63
+	cmd_regelement_new(CMD_ELEMID_NULL, 				CMD_ELEM_TYPE_KEY,	  "port", "Socket port of codeforces remote judger", vec);
+	// 64
+	cmd_regelement_new(JUDGE_CMO_CFG_CODEFORCES_REMOTE_PORT, CMD_ELEM_TYPE_INTEGER, "INTEGER<1-65535>", "Socket port of codeforces remote judger",vec);
+		
 	cmd_install_command(MID_JUDGE, VIEW_SYSTEM, " 2 3 4 ", vec);
 	cmd_install_command(MID_JUDGE, VIEW_SYSTEM, " 2 8 ", vec);
 	cmd_install_command(MID_JUDGE, VIEW_SYSTEM, " 1 2 8 ", vec); 
@@ -764,6 +857,13 @@ ULONG Judge_RegCmdConfig()
 
 	cmd_install_command(MID_JUDGE, VIEW_DIAGNOSE, " 2 50 51 52 ", vec);
 	cmd_install_command(MID_JUDGE, VIEW_DIAGNOSE, " 2 50 51 52 53 54 ", vec);
+
+	cmd_install_command(MID_JUDGE, VIEW_VJUDGE_MGR, " 55 8 ", vec);
+	cmd_install_command(MID_JUDGE, VIEW_VJUDGE_MGR, " 1 55 8 ", vec);
+	cmd_install_command(MID_JUDGE, VIEW_VJUDGE_MGR, " 55 56 8 ", vec);
+	cmd_install_command(MID_JUDGE, VIEW_VJUDGE_MGR, " 1 55 56 8 ", vec);
+	cmd_install_command(MID_JUDGE, VIEW_VJUDGE_MGR, " 55 57 58 59 60 ", vec);
+	cmd_install_command(MID_JUDGE, VIEW_VJUDGE_MGR, " 55 61 62 63 64 ", vec);
 
 	CMD_VECTOR_FREE(vec);
 
@@ -1137,6 +1237,42 @@ ULONG judge_buildrun_vjudge(CHAR **ppBuildrun, ULONG ulIncludeDefault)
 		}
 	}
 
+	if (OS_YES == codeforces_vjudge_enable)
+	{
+		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"codeforces-judge enable");
+	}
+	else
+	{
+		if (VOS_YES == ulIncludeDefault)
+		{
+			pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"undo codeforces-judge enable");
+		}
+	}
+
+	if (0 != strlen(codeforces_username) &&
+		0 != strlen(codeforces_password))
+	{
+		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"codeforces-judge username %s password %s", codeforces_username, codeforces_password);
+	}
+
+
+	if (OS_YES == codeforces_remote_enable)
+	{
+		pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"codeforces-judge remote-judge enable");
+
+		if (0 != strlen(codeforces_judgerIP) &&
+			0 != codeforces_sockport)
+		{
+			pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"codeforces-judge ip %s port %u", codeforces_judgerIP, codeforces_sockport);
+		}
+	}
+	else
+	{
+		if (VOS_YES == ulIncludeDefault)
+		{
+			pBuildrun += sprintf(pBuildrun, BDN_BUILDRUN_INDENT_1"undo codeforces-judge remote-judge enable");
+		}
+	}
 	return OS_OK;
 }
 #endif

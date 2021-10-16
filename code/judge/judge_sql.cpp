@@ -16,6 +16,7 @@ char Mysql_password[255];
 char Mysql_table[255];
 int Mysql_port;
 char Mysql_Character[255];
+int no_database = 0;
 
 /* BEGIN: Added by weizengke, 2014/7/10  for 多线程判题信号量保护数据库访问 */
 
@@ -61,6 +62,10 @@ ULONG SQL_BuildRun(CHAR **ppBuildrun, ULONG ulIncludeDefault)
 /* 初始化mysql，并设置字符集 */
 int SQL_InitMySQL()
 {
+	if (no_database == 1) {
+		return 1;
+	}
+
 	(VOID)DEBUG_PUB_RegModuleDebugs(MID_SQL, "sql", "Mysql");
 
 #if 0
@@ -555,7 +560,7 @@ int SQL_getProblemInfo(JUDGE_PROBLEM_S *pstProblem)
 		pstProblem->memory_limit = atoi(row[1]);
 		pstProblem->isSpecialJudge = atoi(row[2]);
 		pstProblem->isVirtualJudge = atoi(row[3]);
-		pstProblem->virtualPID = atoi(row[4]);
+		strcpy(pstProblem->virtualPID, row[4]);
 		strcpy(pstProblem->szVirJudgerName, row[5]);
 	}
 

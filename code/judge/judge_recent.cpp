@@ -551,7 +551,9 @@ int judge_parse_contest_info_hdu(char *html, contest_t * contest)
 				return 1;
 			}
 
-			contest->title = judge_to_utf8((char*)s.substr(pos, pos2 - pos).c_str());
+			char *tmp = judge_to_utf8((char*)s.substr(pos, pos2 - pos).c_str());
+			contest->title = tmp;
+			free(tmp);
 
 			Judge_Debug(DEBUG_TYPE_FUNC, "\r\n title=%s.",contest->title.c_str());
 		}

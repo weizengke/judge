@@ -65,7 +65,7 @@ if (0 == x) {\
 #define CMD_KEY_PHDN	0x51
 
 #define CMD_KEY_DELETE     0x7e   /* 1b 5b 33 7e */
-#define CMD_KEY_BACKSPACE  0x7f
+#define CMD_KEY_BACKSPACE  0x08   /* 0x7f */
 #define CMD_KEY_CTRL_H	(0x1f | 0x7f)
 #else
 #define CMD_KEY_ARROW1	0xe0

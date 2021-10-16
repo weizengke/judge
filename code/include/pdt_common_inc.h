@@ -14,7 +14,7 @@
 /* os version */
 #define OS_VERSION_MAJOR 1
 #define OS_VERSION_MINOR 1
-#define OS_VERSION_PATCH 280
+#define OS_VERSION_PATCH 290
 
 #define STARTUP_CFG "conf\/config.ini"
 

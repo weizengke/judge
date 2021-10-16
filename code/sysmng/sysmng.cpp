@@ -376,12 +376,32 @@ int SYSMNG_AcceptThread(void *pEntry)
 
 	socket_t sClient = *(socket_t*)pEntry;
 
-	int recvTimeout = 10 * 1000;  //30s
-	setsockopt(sClient, SOL_SOCKET, SO_RCVTIMEO, (char *)&recvTimeout, sizeof(int));
-	//setsockopt(connSocket, SOL_SOCKET, SO_SNDTIMEO, (char *)&sendTimeout, sizeof(int));
-
-	int ret = recv(sClient, (char*)buff, len, 0);
-	if (ret > 0) {
+	int ret = 0;
+	int total = 0;
+	do {
+		char recvBuff[1024] = {0};
+	    ret = recv(sClient, (char*)recvBuff, sizeof(recvBuff) - 1, 0);
+		if (ret > 0) {
+			total += ret;
+			if (total + ret > len) {				
+				len = 2 * len;
+				char *buff_ = (char*)malloc(len + 1);
+				if (buff_ == NULL) {
+					write_log(JUDGE_ERROR, "SYSMNG_AcceptThread malloc2 error");
+					free(buff);
+					return 0;
+				}
+				memset(buff_, 0, len + 1);
+				strcat_s(buff_, len, buff);
+				free(buff);
+				buff = buff_;
+			}
+			strcat_s(buff, len, recvBuff);
+			
+		}
+	} while(ret > 0);
+	
+	if (total > 0) {
 		/* 需要检查发送源的合法性 */
 		(VOID)SYSMNG_PacketParse(buff, strlen(buff));
 	} else {
@@ -405,8 +425,7 @@ int SYSMNG_ListenThread(void *pEntry)
 			write_log(JUDGE_ERROR, "SYSMNG_ListenThread accept error. ");
 			break;
 		}
-
-		SYSMNG_Debug(DEBUG_TYPE_MSG, "Accept connect from (ip:%s, port:%u)", 
+		SYSMNG_Debug(DEBUG_TYPE_FUNC, "Accept connect from (ip:%s, port:%u)", 
 					 inet_ntoa(remoteAddr.sin_addr), htons(remoteAddr.sin_port));
 		
 		thread_create(SYSMNG_AcceptThread, (void*)&sClient);
@@ -443,14 +462,32 @@ int SYSMNG_IsSocketActive()
 	return OS_OK;
 }
 
+int judgeThreadPing = 1;
+void SYSMNG_TimerHeartPing()
+{
+	static int tick = 0;
+
+	if (0 != tick % 300) {
+		tick++;
+		return;
+	}
+	tick++;
+
+	if (judgeThreadPing == 0) {
+		write_log(JUDGE_ERROR,"Judge thread heart is over.");
+		extern int g_system_runing;
+		g_system_runing = 0;
+		return;
+	}
+	judgeThreadPing = 0;
+	return;
+}
+
 int SYSMNG_TimerThread(void *pEntry)
 {
 	while (TRUE) {
-		if (SYSMNG_IsSocketActive() != OS_OK) {
-			SYSMNG_PacketRecvRun();
-		}
-
-		Sleep(10000);
+		//SYSMNG_TimerHeartPing();
+		Sleep(1000);
 	}
 
 	return 0;
@@ -589,6 +626,7 @@ void SYSMNG_InitConfigData()
 	extern char Mysql_password[255];
 	extern char Mysql_table[255];
 	extern int  Mysql_port;
+	extern int no_database;
 	extern char hdu_domain[256];
 	extern char hdu_username[1000];
 	extern char hdu_password[1000];
@@ -623,13 +661,14 @@ void SYSMNG_InitConfigData()
     }
     
 	util_ini_get_string("Judge","JudgeLogPath","",g_judge_log_path,sizeof(g_judge_log_path),g_judge_ini_cfg_path);
-
+	
 	util_ini_get_string("MySQL","url","",Mysql_url,sizeof(Mysql_url),g_judge_ini_cfg_path);
 	util_ini_get_string("MySQL","username","NULL",Mysql_username,sizeof(Mysql_username),g_judge_ini_cfg_path);
 	util_ini_get_string("MySQL","password","NULL",Mysql_password,sizeof(Mysql_password),g_judge_ini_cfg_path);
 	util_ini_get_string("MySQL","table","",Mysql_table,sizeof(Mysql_table),g_judge_ini_cfg_path);
 	Mysql_port=util_ini_get_int("MySQL","port",0,g_judge_ini_cfg_path);
-
+	no_database = util_ini_get_int("MySQL","no_database", 0,g_judge_ini_cfg_path);
+	
 	/* BEGIN: Added by weizengke,for hdu-vjudge*/
     util_ini_get_string("HDU","domain","http://acm.hdu.edu.cn",hdu_domain,sizeof(hdu_domain),g_judge_ini_cfg_path);
 	util_ini_get_string("HDU","username","",hdu_username,sizeof(hdu_username),g_judge_ini_cfg_path);
@@ -680,21 +719,25 @@ int SYSMNG_TLVMsgProcess(USHORT usType, USHORT usLen, CHAR *pszBuf)
 	return OS_OK;
 }
 
+#define SYSMNG_PKT_MAGIC_LEN   8
+#define SYSMNG_PKT_MSGTYPE_LEN 4
+#define SYSMNG_PKT_MSGLEN_LEN  8
+#define SYSMNG_PKT_MSGHEAD_LEN (SYSMNG_PKT_MAGIC_LEN + SYSMNG_PKT_MSGTYPE_LEN + SYSMNG_PKT_MSGLEN_LEN)
+
 int SYSMNG_PacketParse(char *pszCmd, int len)
 {
-	CHAR szMagic[9] = {0};
-	CHAR szType[5] = {0};
-	CHAR szLen[5] = {0};
+	CHAR szMagic[SYSMNG_PKT_MAGIC_LEN + 1] = {0};
+	CHAR szType[SYSMNG_PKT_MSGTYPE_LEN + 1] = {0};
+	CHAR szLen[SYSMNG_PKT_MSGLEN_LEN + 1] = {0};
 	ULONG ulMagic = 0;
 	USHORT usType = 0;
-	USHORT usLen = 0;
+	ULONG ulLen = 0;
 	CHAR *pszBuf = NULL;
 
 	SYSMNG_Debug(DEBUG_TYPE_MSG, "SYSMNG_PacketParse: len=%u, pszCmd=%s", len, pszCmd);
 	
 	/* 检查长度合法性 */
-	if (len < 8 + 4 + 4)
-	{
+	if (len < SYSMNG_PKT_MSGHEAD_LEN) {
 		return OS_ERR;
 	}
 	
@@ -705,7 +748,7 @@ int SYSMNG_PacketParse(char *pszCmd, int len)
 	*/
 
 	/* 检查魔术字 0xabcddcba */	
-	(void)strncpy(szMagic, pszCmd, 8);
+	(void)strncpy(szMagic, pszCmd, SYSMNG_PKT_MAGIC_LEN);
 	ulMagic = util_strtol(szMagic, 16);
 	if (SYSMNG_MSG_MAGIC_NUM != ulMagic)
 	{
@@ -714,24 +757,32 @@ int SYSMNG_PacketParse(char *pszCmd, int len)
 	}
 
 	/* 获取报文类型 */	
-	(void)strncpy(szType, pszCmd + 8, 4);
+	(void)strncpy(szType, pszCmd + SYSMNG_PKT_MAGIC_LEN, SYSMNG_PKT_MSGTYPE_LEN);
 	usType = util_strtol(szType, 16);
 	
 	/* 获取报文数据区长度 */	
-	(void)strncpy(szLen, pszCmd + 8 + 4, 4);
-	usLen = util_strtol(szLen, 16);
+	(void)strncpy(szLen, pszCmd + SYSMNG_PKT_MAGIC_LEN + SYSMNG_PKT_MSGTYPE_LEN, SYSMNG_PKT_MSGLEN_LEN);
+	ulLen = util_strtol(szLen, 16);
 	
+	/* 检查长度合法性 */
+	if (ulLen != len - SYSMNG_PKT_MAGIC_LEN - SYSMNG_PKT_MSGTYPE_LEN - SYSMNG_PKT_MSGLEN_LEN) {
+		SYSMNG_Debug(DEBUG_TYPE_ERROR, 
+			"SYSMNG_PacketParse: ulLen is invalid. (ulLen=%u, realLen=%u)",
+			ulLen, len - SYSMNG_PKT_MAGIC_LEN - SYSMNG_PKT_MSGTYPE_LEN - SYSMNG_PKT_MSGLEN_LEN);
+		return OS_ERR;
+	}
+
 	/* 获取报文数据内容 */
-	pszBuf = (char*)malloc(usLen * 2 + 1);
+	pszBuf = (char*)malloc(ulLen * 2 + 1);
 	if (NULL == pszBuf) {
 		return OS_ERR;
 	}
-	(void)memset(pszBuf, 0, usLen * 2 + 1);
-	(void)strncpy(pszBuf, pszCmd + 8 + 4 + 4, usLen * 2);
+	(void)memset(pszBuf, 0, ulLen * 2 + 1);
+	(void)strncpy(pszBuf, pszCmd + SYSMNG_PKT_MSGHEAD_LEN, ulLen * 2);
 
-	SYSMNG_Debug(DEBUG_TYPE_MSG, "SYSMNG_PacketParse: usType=0x%x, usLen=0x%x, pszBuf=%s", usType, usLen, pszBuf);
+	SYSMNG_Debug(DEBUG_TYPE_MSG, "SYSMNG_PacketParse: usType=0x%x, ulLen=0x%x, pszBuf=%s", usType, ulLen, pszBuf);
 	
-	(VOID)SYSMNG_TLVMsgProcess(usType, usLen, pszBuf);
+	(VOID)SYSMNG_TLVMsgProcess(usType, ulLen, pszBuf);
 
 	free(pszBuf);
 	pszBuf = NULL;
@@ -926,6 +977,8 @@ int SYSMNG_Init()
 	(VOID)SYSMNG_InitConfigData();
 
 	(VOID)SYSMNG_InitWindows();
+	
+	SYSMNG_PacketRecvRun();
 
 	return OS_OK;
 }

@@ -455,12 +455,16 @@ int judge_get_testcases(JUDGE_SUBMISSION_S *submission, char szTestcases[JUDGE_M
 		char fname[UTIL_MAX_FNAME];
 		char ext[UTIL_MAX_EXT];
 
+
 		util_splitpath(FileInfo.name, drive, dir, fname, ext);
 		sprintf(szTestcases[caseNum++], "%s", fname);
 
 		while (_findnext(Handle,&FileInfo) == 0) {
 			util_splitpath(FileInfo.name, drive, dir, fname, ext);
 			sprintf(szTestcases[caseNum++], "%s", fname);
+			if (caseNum >= JUDGE_MAX_CASE) {
+				break;
+			}
 		}
 
 		_findclose(Handle);

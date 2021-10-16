@@ -26,7 +26,7 @@ typedef struct tag_Judge_ProblemInfo_S
 	int isSpecialJudge;
 
 	int isVirtualJudge;
-	int virtualPID;
+	char virtualPID[32];
 	char szVirJudgerName[JUDGE_OJNAME_SIZE_MAX]; /* oj name */
 
 }JUDGE_PROBLEM_S;

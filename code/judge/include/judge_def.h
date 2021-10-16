@@ -54,7 +54,7 @@ const int MAX_TITLE = 200;
 const int MAX_CONTENT = 100000;
 const int MAX_WAITTIME = 10000 ;
 
-#define JUDGE_MAX_CASE 100
+#define JUDGE_MAX_CASE 128
 
 #define VJUDGE_MAX_SIZE_BUF 10000000
 #define VJUDGE_OVECCOUNT 30    /* should be a multiple of 3 */

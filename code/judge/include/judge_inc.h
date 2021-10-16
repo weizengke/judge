@@ -69,6 +69,7 @@
 #include "judge/include/judge_hdu.h"
 #include "judge/include/judge_guet.h"
 #include "judge/include/judge_leetcode.h"
+#include "judge/include/judge_codeforces.h"
 #include "judge/include/judge_cmd.h"
 #include "judge/include/judge.h"
 

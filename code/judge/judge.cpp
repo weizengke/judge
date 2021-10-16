@@ -991,6 +991,38 @@ int judge_vjudge_leetcode(JUDGE_SUBMISSION_S *submission)
 	return ret;
 }
 
+int judge_vjudge_codeforces(JUDGE_SUBMISSION_S *submission)
+{
+	int ret = OS_OK;
+
+	Judge_Debug(DEBUG_TYPE_FUNC, "virtual-judge codeforces. (codeforces_vjudge_enable=%u, codeforces_remote_enable=%d)",
+							codeforces_vjudge_enable, codeforces_remote_enable);
+
+	if (codeforces_vjudge_enable == OS_NO) {
+		write_log(JUDGE_ERROR, "Error: codeforces-judge is not enable.");
+		return OS_ERR;
+	}
+
+	if (OS_YES == codeforces_remote_enable) {
+		extern char codeforces_judgerIP[20];
+		extern int codeforces_sockport;
+		write_log(JUDGE_INFO, "Send to remote judger(%s:%d).", codeforces_judgerIP, codeforces_sockport);
+		ret = judge_sendto_remote(submission->solution.solutionId, codeforces_sockport, codeforces_judgerIP);
+		if (OS_OK == ret) {
+			/* virdict置quieue , 由远程judger继续执行 */
+			submission->solution.verdictId = V_Q;
+		}
+
+		return ret;
+	}
+
+	/* local vjudge */
+	#if(JUDGE_VIRTUAL == VOS_YES)
+	ret = codeforces_vjudge(submission);
+	#endif
+
+	return ret;
+}
 int judge_vjudge(JUDGE_SUBMISSION_S *submission)
 {
 	write_log(JUDGE_INFO, "Start virtua-judge. (solutionId=%u, szVirJudgerName=%s)",
@@ -1007,7 +1039,9 @@ int judge_vjudge(JUDGE_SUBMISSION_S *submission)
 	if (0 == strcmp(submission->problem.szVirJudgerName,"LEETCODE")) {
 		return judge_vjudge_leetcode(submission);
 	}
-
+	if (0 == strcmp(submission->problem.szVirJudgerName,"CF")) {
+		return judge_vjudge_codeforces(submission);
+	}
 	write_log(JUDGE_INFO, "virtua-judge is not support (%s).", submission->problem.szVirJudgerName);
 
 	return OS_ERR;
@@ -1174,14 +1208,11 @@ void judge_request_enqueue(int vtyId, int solutionId)
 	jd.solutionId = solutionId;
 	jd.vtyId = vtyId;
 	
-	if (OS_YES == g_judge_enable)
-	{
+	if (OS_YES == g_judge_enable) {
 		Judge_Debug(DEBUG_TYPE_MSG, "Recieve judge request. (solution=%d, vtyId=%u).",solutionId, vtyId);
 		write_log(JUDGE_INFO,"Recieve judge request. (solution=%d, vtyId=%u).",solutionId, vtyId);
 		g_judge_queue.push(jd);
-	}
-	else
-	{
+	} else {
 		Judge_Debug(DEBUG_TYPE_MSG, "Recieve judge request, but judger is disable. (solution=%d, vtyId=%u).",solutionId, vtyId);
 		write_log(JUDGE_INFO,"Recieve judge request, but judger is disable. (solution=%d, vtyId=%u).",solutionId, vtyId);
 
@@ -1195,9 +1226,11 @@ void judge_request_enqueue(int vtyId, int solutionId)
 int judge_thread_msg(void *pEntry)
 {
 	JUDGE_REQ_MSG_S req;
+	extern int judgeThreadPing;
 
 	for (;;) {
 		judge_sem_p();
+		judgeThreadPing++;
 
 		if(!g_judge_queue.empty()) {
 			req = g_judge_queue.front();
@@ -1246,6 +1279,7 @@ void judge_timer_auto_detect()
 	reqHead = req;
 	SQL_getSolutionsByVerdict(V_Q, req, &n, g_judge_auto_detect_num);
 	for (i = 0; i < n; i++) {
+		write_log(JUDGE_INFO,"Auto detect solution. (solution=%d, n=%d).", req->solutionId, n);
 		judge_request_enqueue(CMD_VTY_INVALID_ID, req->solutionId);
 		req++;
 	}
@@ -1259,8 +1293,6 @@ void judge_timer_auto_detect()
 	}
 #endif
 
-	Judge_Debug(DEBUG_TYPE_INFO, "Timer to process auto detect ok. (n=%d)", n);
-	
 	free(reqHead);
 
 	return;
@@ -1302,11 +1334,11 @@ void judge_timer_recent_contests_collect()
 
 int judge_thread_timer(void *pEntry)
 {
+
 	for (;;){
         Sleep(1000);
 
 		judge_sem_p();
-
 		judge_timer_check_testcase_path();
 		judge_timer_auto_detect();
 		judge_timer_recent_contests_collect();

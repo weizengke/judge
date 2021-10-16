@@ -55,10 +55,8 @@ int FTPC_ListenThread(void *pEntry)
 		if (user->sockClient == INVALID_SOCKET) {
 			break;
 		}
-
-		Sleep(1);
+		break;
 	}
-
 	return FTP_OK;
 }
 ULONG FTPC_EnterPasv(FTPC_USER_S *user, char *ip, int *port)
@@ -167,6 +165,12 @@ ULONG FTPC_Upload(FTPC_USER_S *user, CHAR *filePath, char *fileName)
 		FTP_CLOSESOCKET(user->sockData);
 		FTP_CLOSESOCKET(user->sockClient);
 		return FTP_ERR;
+	}
+
+	int wait = 10;
+	while(user->sockClient == INVALID_SOCKET && wait >=0 ) {
+		wait--;
+		Sleep(50);
 	}
 
     char buff[FTP_DATABUF_SIZE] = {0};
@@ -600,6 +604,7 @@ ULONG FTPC_PUB_Upload(CHAR *ip, ULONG port,
     FTPC_USER_S user = {0};
 
 	user.vtyId = CMD_VTY_INVALID_ID;
+	user.sockClient = INVALID_SOCKET;
 
     ret = FTPC_Login(&user, ip, port, username, password);
     if (ret != FTP_OK) {

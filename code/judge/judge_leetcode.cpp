@@ -53,8 +53,10 @@ void leetcode_solution_log(char *judge_log_filename, int verdictId, int memory, 
 
 int leetcode_python(JUDGE_SUBMISSION_S *submission)
 {
+	(void)util_freset(g_leetcode_result);
+
 	char cmd_string[MAX_PATH];
-	sprintf(cmd_string,"python -O leetcode.py %s %s %d %s %s %s",
+	sprintf(cmd_string,"python -O leetcode.py %s %s %s %s %s %s",
 			leetcode_username,
 			leetcode_password,
 			submission->problem.virtualPID, 
@@ -180,7 +182,7 @@ int leetcode_vjudge(JUDGE_SUBMISSION_S *submisssion)
 int leetcode_test()
 {
 	JUDGE_SUBMISSION_S submisssion = {0};
-	submisssion.problem.virtualPID = 3;
+	strcpy(submisssion.problem.virtualPID, "3");
 	strcpy(submisssion.sourcePath, "D:\\code\\leetcode\\solution.c");
 	strcpy(submisssion.DebugFile, "D:\\code\\leetcode\\compile.txt");
 

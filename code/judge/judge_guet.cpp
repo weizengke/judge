@@ -308,7 +308,7 @@ int GUET_getGUETLangID(int GDOJlangID)
 }
 
 
-ULONG GUET_getStatus(string username, int pid,int lang, string &runid, string &result,string& ce_info,string &tu,string &mu)
+ULONG GUET_getStatus(string username, int lang, string &runid, string &result,string& ce_info,string &tu,string &mu)
 {
 	ULONG ulRet = OS_TRUE;
 	tu=mu="0";
@@ -355,68 +355,6 @@ ULONG GUET_getStatus(string username, int pid,int lang, string &runid, string &r
 	return OS_TRUE;
 }
 
-ULONG GUET_getStatusEx(char *username)
-{
-
-
-	char cmd_string[MAX_PATH];
-	char current_path[MAX_PATH] = {0};
-	char tmp_source_path[MAX_PATH] = {0};
-	char tmp_return_path[MAX_PATH] = {0};
-
-	int ret = OS_OK;
-
-	string pid = "1000";
-	string lang = "C++";
-	string runid;
-	string result;
-	string ce_info;
-	string tu;
-	string mu;
-
-	get_current_directory(sizeof(current_path),current_path);
-	sprintf(tmp_return_path, "%s/\OJ_TMP",current_path);
-
-	if( (file_access(tmp_return_path, 0 )) == -1 )
-	{
-		create_directory(tmp_return_path);
-	}
-
-	sprintf(tmp_return_path, "%s/\OJ_TMP/\guet-judge.tmp",current_path);
-	strcpy(g_Vjudgetfilename,tmp_return_path);
-
-	sprintf(cmd_string,"python -O guet-vjudge.py status %s %s",guet_username,tmp_return_path);
-	system(cmd_string) ;
-
-	/* idת�� */
-	int lang_id = GUET_getGUETLangID(0);
-	lang_id = 2;
-	ret =GUET_getStatus(guet_username, 1000, lang_id, runid, result,ce_info,tu,mu);
-
-	if (result.find("Queuing")!=string::npos
-		|| result.find("Compiling")!=string::npos
-		|| result.find("Running")!=string::npos)
-	{
-		Judge_Debug(DEBUG_TYPE_FUNC, "Get Status, Queuing or Compiling or Running , try again...");
-		ret = OS_ERR;
-	}
-
-	if (result.find("Compile Error")!=string::npos)
-	{
-		//��ȡ���������Ϣ
-		sprintf(cmd_string,"python -O guet-vjudge.py ce %s %s %s %s",guet_username, guet_password, runid.c_str(), tmp_return_path);
-		system(cmd_string) ;
-
-		string CE_Info = GUET_getCEinfo_brief(tmp_return_path);
-		ce_info = CE_Info;
-	}
-
-	Judge_Debug(DEBUG_TYPE_FUNC, "Info: problem[%d] language[%d]  verdict[%s] submissionID[%s] time[%s ms] memory[%s kb].\r\n\r\n", 1000, lang_id, result.c_str(), runid.c_str(), tu.c_str(), mu.c_str());
-
-	return ret;
-
-}
-
 int GUET_Login(char *uname, char *psw)
 {
 	char cmd_string[MAX_PATH];
@@ -443,7 +381,7 @@ int GUET_Judge_python(JUDGE_SUBMISSION_S *pstJudgeSubmission)
 		int lang_id = GUET_getGUETLangID(pstJudgeSubmission->solution.languageId);
 
 		char cmd_string[MAX_PATH];
-		sprintf(cmd_string,"python -O guet-vjudge.py submit %d %d %s %s %s %s",
+		sprintf(cmd_string,"python -O guet-vjudge.py submit %s %d %s %s %s %s",
 				pstJudgeSubmission->problem.virtualPID, lang_id, guet_username, guet_password, tmp_source_path,tmp_return_path);
 		system(cmd_string) ;
 
@@ -465,7 +403,7 @@ int GUET_Judge_python(JUDGE_SUBMISSION_S *pstJudgeSubmission)
 
 			system(cmd_string) ;
 
-			ret =GUET_getStatus(guet_username, pstJudgeSubmission->problem.virtualPID, lang_id, runid, result,ce_info,tu,mu);
+			ret =GUET_getStatus(guet_username, lang_id, runid, result,ce_info,tu,mu);
 
 			if (result.find("Queuing")!=string::npos
 				|| result.find("Compiling")!=string::npos

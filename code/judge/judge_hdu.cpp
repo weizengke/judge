@@ -1091,11 +1091,11 @@ ULONG DLL_HDULogin()
 	return OS_TRUE;
 }
 
-ULONG DLL_HDUSubmit(int pid, int langid, string source)
+ULONG DLL_HDUSubmit(char *pid, int langid, string source)
 {
 	char tmp[10]={0};
 	
-	sprintf(tmp, "%d", pid);
+	sprintf(tmp, "%s", pid);
 	
 	string pid_s = tmp;
 
@@ -1112,11 +1112,11 @@ ULONG DLL_HDUSubmit(int pid, int langid, string source)
 	return OS_TRUE;
 }
 
-ULONG DLL_HDUGetStatus(string hdu_username, int pid, int langid, string &runid, string &result,string& ce_info,string &tu,string &mu)
+ULONG DLL_HDUGetStatus(string hdu_username, char *pid, int langid, string &runid, string &result,string& ce_info,string &tu,string &mu)
 {
 	char tmp[10]={0};
 	
-	sprintf(tmp, "%d", pid);
+	sprintf(tmp, "%s", pid);
 	
 	string pid_s = tmp;
 
@@ -1235,13 +1235,13 @@ int Judge_Via_CurlLib(JUDGE_SUBMISSION_S *pstJudgeSubmission)
 		if (OS_TRUE != ret)
 		{
 			Judge_Debug(DEBUG_TYPE_ERROR, "Error: Submit solution to hdu-judge failed.");
-            write_log(JUDGE_INFO, "HDU submit failed. (solutionId=%u, virtualPID=%u)",
+            write_log(JUDGE_INFO, "HDU submit failed. (solutionId=%u, virtualPID=%s)",
 				pstJudgeSubmission->solution.solutionId,
 				pstJudgeSubmission->problem.virtualPID);
 			return OS_ERR;
 		}
 
-        write_log(JUDGE_INFO, "HDU submit ok. (solutionId=%u, virtualPID=%u)",
+        write_log(JUDGE_INFO, "HDU submit ok. (solutionId=%u, virtualPID=%s)",
 				pstJudgeSubmission->solution.solutionId,
 				pstJudgeSubmission->problem.virtualPID);
         
@@ -1265,14 +1265,14 @@ int Judge_Via_CurlLib(JUDGE_SUBMISSION_S *pstJudgeSubmission)
 				|| result.find("Running")!=string::npos)
 			{
 				Judge_Debug(DEBUG_TYPE_FUNC, "Get Status, Queuing or Compiling or Running , try again...");
-                write_log(JUDGE_INFO, "HDU get status failed. (solutionId=%u, virtualPID=%u)",
+                write_log(JUDGE_INFO, "HDU get status failed. (solutionId=%u, virtualPID=%s)",
                         pstJudgeSubmission->solution.solutionId,
                         pstJudgeSubmission->problem.virtualPID);
 
                 ret = OS_FALSE;
 			}
 
-            write_log(JUDGE_INFO, "HDU get status ok. (solutionId=%u, virtualPID=%u)",
+            write_log(JUDGE_INFO, "HDU get status ok. (solutionId=%u, virtualPID=%s)",
                     pstJudgeSubmission->solution.solutionId,
                     pstJudgeSubmission->problem.virtualPID);
                 
