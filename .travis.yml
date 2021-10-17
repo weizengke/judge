@@ -16,4 +16,5 @@ script:
     - cmake --build . --config release
     
 after_success:
+    - cd ..
     - ./upload.bat $FTP_USER $FTP_PASSWORD
