@@ -1,7 +1,7 @@
 @Echo Off
-echo open 139.159.160.103>> ftp.txt
-echo ci>> ftp.txt
-echo online-judge-ci>> ftp.txt
+echo open %1>> ftp.txt
+echo %2>> ftp.txt
+echo %3>> ftp.txt
 echo put build\VSBuild\bin\Release\judger.exe>> ftp.txt
 echo bye>> ftp.txt
 FTP -s:ftp.txt
