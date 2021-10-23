@@ -5,6 +5,9 @@ jobs:
     - os: windows
       arch: amd64
       env: OS=windows
+    - os: linux
+      arch: arm64
+      env: OS=arm64_linux      
 branches:
   only:
     - master
@@ -17,4 +20,3 @@ script:
     
 after_success:
     - cd ..
-    - ./upload.bat $FTP_IP $FTP_USER $FTP_PASSWORD

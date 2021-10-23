@@ -707,8 +707,10 @@ int SYSMNG_TLVMsgProcess(USHORT usType, USHORT usLen, CHAR *pszBuf)
 		}
 		
 		case SYSMNG_MSG_TYPE_JUDGE_REQ: {
+			#if (OS_YES == OSP_MODULE_JUDGE)
 			extern void judge_request_enqueue_test(char *jsonMsg);
 			judge_request_enqueue_test(pszBuf);
+			#endif
 			break;
 		}
 
