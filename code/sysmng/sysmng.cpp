@@ -392,11 +392,11 @@ int SYSMNG_AcceptThread(void *pEntry)
 					return 0;
 				}
 				memset(buff_, 0, len + 1);
-				strcat_s(buff_, len, buff);
+				strcat(buff_, buff);
 				free(buff);
 				buff = buff_;
 			}
-			strcat_s(buff, len, recvBuff);
+			strcat(buff, recvBuff);
 			
 		}
 	} while(ret > 0);
