@@ -17,6 +17,6 @@ script:
     - cd builds
     - cmake ..
     - cmake --build . --config release
+
 after_success:
-    - ll
-    - curl -u $FTP_USER:$FTP_PASSWORD -T ../build/suse/bin/judger ftp://$FTP_IP/
+
