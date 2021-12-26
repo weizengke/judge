@@ -348,7 +348,7 @@ int SQL_getSolutionSource(JUDGE_SUBMISSION_S *submission)
 	MYSQL_ROW row;
 
 	if (row = mysql_fetch_row(recordSet)) {
-		sprintf(code, "%s", row[0]);
+		sprintf_s(code, sizeof(code), "%s", row[0]);
 	} else {
 		write_log(JUDGE_ERROR, "SQL_getSolutionSource Error");
 	}
@@ -556,19 +556,36 @@ int SQL_getProblemInfo(JUDGE_PROBLEM_S *pstProblem)
 	MYSQL_ROW row;
 	if (row = mysql_fetch_row(recordSet))
 	{
-		pstProblem->time_limit = atoi(row[0]);
-		pstProblem->memory_limit = atoi(row[1]);
-		pstProblem->isSpecialJudge = atoi(row[2]);
-		pstProblem->isVirtualJudge = atoi(row[3]);
-		strcpy(pstProblem->virtualPID, row[4]);
-		strcpy(pstProblem->szVirJudgerName, row[5]);
+		if (row[0] != NULL) {
+			pstProblem->time_limit = atoi(row[0]);
+		}
+
+		if (row[0] != NULL) {
+			pstProblem->memory_limit = atoi(row[1]);
+		}
+
+		if (row[2] != NULL) {
+			pstProblem->isSpecialJudge = atoi(row[2]);
+		}
+
+		if (row[3] != NULL) {
+			pstProblem->isVirtualJudge = atoi(row[3]);
+		}
+
+		if (row[4] != NULL) {
+			strcpy(pstProblem->virtualPID, row[4]);
+		}
+
+		if (row[5] != NULL) {
+			strcpy(pstProblem->szVirJudgerName, row[5]);
+		}
 	}
 
 	mysql_free_result(recordSet);
 
 	SQL_SemV();
 
-	write_log(JUDGE_INFO, "SQL get problem info ok. (problemId=%u)", pstProblem->problemId);
+	write_log(JUDGE_INFO, "SQL get problem info ok. (problemId=%d)", pstProblem->problemId);
 
 	return OS_OK;
 }
@@ -594,7 +611,9 @@ int SQL_getProblemInfo_contest(int contestId, int problemId, char *num)
 	MYSQL_ROW row;
 	if (row = mysql_fetch_row(recordSet))
 	{
-		strcpy(num, row[0]);
+		if (row[0] != NULL) {
+			strcpy(num, row[0]);
+		}
 	}
 
 	mysql_free_result(recordSet);
@@ -622,8 +641,12 @@ int SQL_getContestInfo(int contestId, time_t &start_time, time_t &end_time)
 	MYSQL_ROW row;
 	if (row = mysql_fetch_row(recordSet))
 	{
-		(void)util_string_to_time(row[0], start_time);
-		(void)util_string_to_time(row[1], end_time);
+		if (row[0] != NULL) {
+			(void)util_string_to_time(row[0], start_time);
+		}
+		if (row[1] != NULL) {
+			(void)util_string_to_time(row[1], end_time);
+		}
 	}
 
 	mysql_free_result(recordSet);
@@ -907,7 +930,9 @@ int SQL_getContestType(int contestId)
 
 	MYSQL_ROW row;
 	if (row = mysql_fetch_row(recordSet)) {
-		type = atoi(row[0]);
+		if (row[0] != NULL) {
+			type = atoi(row[0]);
+		}		
 	}
 
 	mysql_free_result(recordSet);
@@ -939,7 +964,9 @@ int SQL_countContestActiveUser(int contestId)
 	int num = 0;
 	MYSQL_ROW row;
 	if (row = mysql_fetch_row(recordSet)) {
-		num = atoi(row[0]);
+		if (row[0] != NULL) {
+			num = atoi(row[0]);
+		}	
 	}
 
 	mysql_free_result(recordSet);

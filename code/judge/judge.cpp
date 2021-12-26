@@ -229,7 +229,7 @@ void judge_solution_result_submit_log_upload(JUDGE_SUBMISSION_S *submission)
 void judge_solution_testcase_retult_to_file(JUDGE_SUBMISSION_S *submission)
 {	
 	char buf[40960] = {0};
-
+	
 	write_log(JUDGE_INFO,"Run testcase %d ok. "
 				"(sessionId=%s, verdictId=%s, timeused=%d(%d)ms, time_limit=%dms, "
 				"memoryused=%d(%d)kb, memory_limit=%dkb, errorcode=%u, inFileName=%s, "
@@ -396,7 +396,6 @@ void judge_request_json_get_code(JUDGE_SUBMISSION_S *submission) {
 
 	cJSON *json_code = cJSON_GetObjectItem(json, "code");
     if(json_code != NULL && json_code->type == cJSON_String) {
-        write_log(JUDGE_INFO, "code=%s\n", json_code->valuestring);
         FILE *fp = fopen(submission->sourcePath, "w");
         if (fp != NULL) {
             fprintf(fp, "%s", json_code->valuestring);
@@ -752,6 +751,7 @@ void judge_solution_result_to_db(JUDGE_SUBMISSION_S *submission)
 {
 	/* update sql data */
 	if (submission->mode == JUDGE_SUBMIT_MODE) {
+		write_log(JUDGE_INFO, "Judge solution result to db. (sessionId=%s)", submission->sessionId);
 		SQL_updateCompileInfo(submission);
 		SQL_updateSolution(submission);
 		SQL_updateProblem(submission->solution.problemId);

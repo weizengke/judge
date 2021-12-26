@@ -44,6 +44,7 @@
 #include "cjson/cJSON.h"
 
 #include "kernel.h"
+#include "securec.h"
 
 /* BEGIN: Added by weizengke, 2013/11/15 for debug center*/
 #include "include/pdt_common_inc.h"

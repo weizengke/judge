@@ -12,12 +12,13 @@ message("CMAKE_CXX_COMPILER_ID=${CMAKE_CXX_COMPILER_ID}")
 message("CMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}")
 message("CMAKE_SYSTEM=${CMAKE_SYSTEM}")
 
+set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/release)
+
 if (MINGW)
 	add_definitions("-DMINGW")	
 	set(EXTRA_LIBS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/build/MinGW/lib")
-	set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/build/MinGW/bin)
 	set(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/build/MinGW/libs)	
-	set(COMPILE_DEFAULT_OPTION "-w -c -m32 -DWIN32 -std=gnu++0x -DGTEST_ENABLE")
+	set(COMPILE_DEFAULT_OPTION "-w -g -c -m32 -DWIN32 -std=gnu++0x -DGTEST_ENABLE")
 	set(EXTRA_DEFAULT_LIBS -lwsock32 -lcurl -lwldap32 -lssl -lcrypto -lws2_32 mysql dbghelp psapi)
 	set(LINK_STATIC_OPT -static)
 elseif (CYGWIN)
@@ -25,7 +26,6 @@ elseif (CYGWIN)
 elseif (MSVC)
 	add_definitions("-DMSVC")
 	set(EXTRA_LIBS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/build/VSBuild/lib")
-	set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/build/VSBuild/bin)
 	set(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/build/VSBuild/libs)
 	set(COMPILE_DEFAULT_OPTION "/nologo /W0 /wd4127 /FD /c /EHsc /MD /Zi /DWIN32 /DHAVE_CONFIG_H /DPCRE_STATIC")
 	set(EXTRA_DEFAULT_LIBS 
@@ -35,16 +35,12 @@ elseif (MSVC)
 else()			
 	if (ubuntu) #cmake -D ubuntu=1 ..
 		set(EXTRA_LIBS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/build/ubuntu/lib")
-		set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/build/ubuntu/bin)
 		set(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/build/ubuntu/libs)	
-		set(EXTRA_DEFAULT_LIBS -ldl -lpthread)
-		#set(EXTRA_DEFAULT_LIBS -lmysql -lcurl -ldl -lgtest -lgmock -lcrypt -lpthread)
+		set(EXTRA_DEFAULT_LIBS -lmysql -lcurl -ldl -lgtest -lgmock -lcrypt -lpthread)
 	else() # suse
 		set(EXTRA_LIBS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/build/suse/lib")
-		set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/build/suse/bin)
 		set(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/build/suse/libs)
-		set(EXTRA_DEFAULT_LIBS -ldl -lpthread)
-		#set(EXTRA_DEFAULT_LIBS -lmysql -lcurl -ldl -lgtest  -lssl -lcrypto -lgmock -lcrypt -lpthread)
+		set(EXTRA_DEFAULT_LIBS -lmysql -lcurl -ldl -lgtest  -lssl -lcrypto -lgmock -lcrypt -lpthread)
 	endif()
 	set(COMPILE_DEFAULT_OPTION "-w -c -D_LINUX_ -std=gnu++11")
 endif()
@@ -55,7 +51,8 @@ message("CMAKE_C_FLAGS_RELEASE=${CMAKE_C_FLAGS_RELEASE}")
 include_directories(
 "${CMAKE_CURRENT_SOURCE_DIR}/code/include/"
 "${CMAKE_CURRENT_SOURCE_DIR}/code/util/"
-"${CMAKE_CURRENT_SOURCE_DIR}/code/thirdpart32/"
+"${CMAKE_CURRENT_SOURCE_DIR}/code/third_party/bounds_checking_function/include/"
+"${CMAKE_CURRENT_SOURCE_DIR}/code/third_party/"
 "${CMAKE_CURRENT_SOURCE_DIR}/code/"
 )
 
@@ -73,7 +70,7 @@ endif()
 target_link_libraries(judger
 	${LINK_STATIC_OPT}
 	${EXTRA_LIBS}
-	sysmng	
+	sysmng
 	cli
 	ftp
 	telnet
@@ -86,5 +83,6 @@ target_link_libraries(judger
 	cjson
 	pcre
 	mytest
+	securec
 	)
 

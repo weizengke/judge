@@ -19,6 +19,7 @@
 #include "kernel.h"
 #include "root.h"
 #include "util/util.h"
+#include "securec.h"
 
 #include "osp_common_def.h"
 #include "pdt_common_inc.h"
@@ -173,8 +174,8 @@ void debugcenter_print(MID_ID_EM mid, DEBUG_TYPE_EM type, const char *format, ..
 
 	char module[32] = {0};
 	char typeName[32] = {0};
-	strcpy(module, g_szModuleName[mid]);
-	strcpy(typeName, g_szDebugName[type]);
+	strcpy_s(module, sizeof(module), g_szModuleName[mid]);
+	strcpy_s(typeName, sizeof(typeName), g_szDebugName[type]);
 	std::transform(module, module + 31,module,::toupper);  
 	std::transform(typeName, typeName + 31,typeName,::toupper);  
 	

@@ -10,6 +10,6 @@ add_subdirectory(util)
 add_subdirectory(judge)  
 add_subdirectory(sysmng)
 add_subdirectory(ndp)
-add_subdirectory(thirdpart32)
+add_subdirectory(third_party)
 add_subdirectory(test)
 

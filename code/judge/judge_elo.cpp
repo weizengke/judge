@@ -177,8 +177,7 @@ void judge_elo_rating_caculate(int contestId) {
     Contestant *players = NULL;
     players = (Contestant *)malloc(num * sizeof(Contestant));
     if (players == NULL) {
-        free(users);
-        return;
+        goto RESULT;
     }
     memset(players, 0, num * sizeof(Contestant));
 
@@ -204,12 +203,18 @@ void judge_elo_rating_caculate(int contestId) {
     for (int i = 0; i < num; i++) { 
         SQL_updateRating(players[i].name, contestId, players[i].rank, players[i].newRating, players[i].delta);        
     }  
-    
-    for (int i = 0; i < num; i++) {
-        free(users[i]);
+
+RESULT:    
+    if (users) {
+        for (int i = 0; i < num; i++) {
+            free(users[i]);
+        }
+        free(users);
     }
-    free(users);
-    free(players);
+
+    if (players) {
+        free(players);
+    }
 }
 
 int judge_elo_get_ranking_rand() {

@@ -3,6 +3,7 @@
 
 #include "../include/icli.h"
 #include "kernel.h"
+#include "securec.h"
 
 #include "ic/include/debug_center_inc.h"
 #include "include/pdt_common_inc.h"
@@ -189,7 +190,7 @@ ULONG FTPC_Upload(FTPC_USER_S *user, CHAR *filePath, char *fileName)
             FTP_debug("FTPC_PUB_Upload, fread finish. (num_read=%u)", num_read);
             break;
         }
-
+		
         /* send block */
         if (FTP_OK != FTP_Send(user->sockClient, buff, num_read)) {
             FTP_debug("FTPC_PUB_Upload, send error in send. (num_read=%u)", num_read);
@@ -563,11 +564,8 @@ ULONG FTPC_Run(ULONG vtyId, ULONG port, CHAR * szIP)
 	}
 
 	CHAR buff[FTP_CMD_ARGV_SIZE + FTP_CMD_CODE_SIZE + 1] = {0};
-#ifdef MSVC
+
 	while(gets_s(buff, sizeof(buff) - 1)) {	
-#else
-	while(gets(buff)) {
-#endif
 		CHAR cmd[FTP_CMD_CODE_SIZE] = {0};
 		CHAR arg[FTP_CMD_ARGV_SIZE]= {0};
 		char recvBuff[FTP_DATABUF_SIZE];
@@ -614,7 +612,7 @@ ULONG FTPC_PUB_Upload(CHAR *ip, ULONG port,
 
     ret = FTPC_Upload(&user, filePath, fileName);
     if (ret != FTP_OK) {
-        FTP_debug("FTPC_Upload failed, ret=%d.\r\n", ret);
+		FTP_debug("FTPC_Upload failed, ret=%d.\r\n", ret);
         return FTP_ERR;
     }
 

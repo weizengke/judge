@@ -27,6 +27,7 @@
 #endif
 
 #include "kernel.h"
+#include "securec.h"
 
 #include "osp_common_def.h"
 #include "pdt_common_inc.h"
@@ -293,20 +294,124 @@ void UninitTrack()
 
 #endif
 
+/* Resolve symbol name and source location given the path to the executable
+   and an address */
+int addr2line(char const *const program_name, void const *const addr, char const *dstFile)
+{
+	char addr2line_cmd[512] = {0};
+
+	/* have addr2line map the address to the relent line in the code */
+	sprintf(addr2line_cmd,"addr2line %p -e %.256s -a -p -f -i >> %s 2>&1 ", addr, program_name, dstFile);
+
+	/* This will print a nicely formatted string specifying the
+		function and source line of the address */
+	return system(addr2line_cmd);
+}
+
+void stacktrace(CONTEXT* context, char const *dstFile)
+{
+	SymInitialize(GetCurrentProcess(), 0, true);
+
+	STACKFRAME frame = { 0 };
+
+	/* setup initial stack frame */
+	frame.AddrPC.Offset         = context->Eip;
+	frame.AddrPC.Mode           = AddrModeFlat;
+	frame.AddrStack.Offset      = context->Esp;
+	frame.AddrStack.Mode        = AddrModeFlat;
+	frame.AddrFrame.Offset      = context->Ebp;
+	frame.AddrFrame.Mode        = AddrModeFlat;
+
+	while (StackWalk(IMAGE_FILE_MACHINE_I386, GetCurrentProcess(), GetCurrentThread(),
+		&frame, context, 0, SymFunctionTableAccess, SymGetModuleBase, 0)){
+		addr2line("judger.exe", (void*)frame.AddrPC.Offset, dstFile);
+	}
+
+	SymCleanup(GetCurrentProcess());
+}
+
+char* exception_name(DWORD exceptionCode)
+{
+	switch(exceptionCode) {
+		case EXCEPTION_ACCESS_VIOLATION:
+			return "EXCEPTION_ACCESS_VIOLATION";
+		case EXCEPTION_ARRAY_BOUNDS_EXCEEDED:
+			return "EXCEPTION_ARRAY_BOUNDS_EXCEEDED";
+		case EXCEPTION_BREAKPOINT:
+			return "EXCEPTION_BREAKPOINT";
+		case EXCEPTION_DATATYPE_MISALIGNMENT:
+			return "EXCEPTION_DATATYPE_MISALIGNMENT";
+			break;
+		case EXCEPTION_FLT_DENORMAL_OPERAND:
+			return "EXCEPTION_FLT_DENORMAL_OPERAND";
+		case EXCEPTION_FLT_DIVIDE_BY_ZERO:
+			return "EXCEPTION_FLT_DIVIDE_BY_ZERO";
+		case EXCEPTION_FLT_INEXACT_RESULT:
+			return "EXCEPTION_FLT_INEXACT_RESULT";
+		case EXCEPTION_FLT_INVALID_OPERATION:
+			return "EXCEPTION_FLT_INVALID_OPERATION";
+		case EXCEPTION_FLT_OVERFLOW:
+			return "EXCEPTION_FLT_OVERFLOW";
+		case EXCEPTION_FLT_STACK_CHECK:
+			return "EXCEPTION_FLT_STACK_CHECK";
+		case EXCEPTION_FLT_UNDERFLOW:
+			return "EXCEPTION_FLT_UNDERFLOW";
+		case EXCEPTION_ILLEGAL_INSTRUCTION:
+			return "EXCEPTION_ILLEGAL_INSTRUCTION";
+		case EXCEPTION_IN_PAGE_ERROR:
+			return "EXCEPTION_IN_PAGE_ERROR";
+		case EXCEPTION_INT_DIVIDE_BY_ZERO:
+			return "EXCEPTION_INT_DIVIDE_BY_ZERO";
+		case EXCEPTION_INT_OVERFLOW:
+			return "EXCEPTION_INT_OVERFLOW";
+		case EXCEPTION_INVALID_DISPOSITION:
+			return "EXCEPTION_INVALID_DISPOSITION";
+		case EXCEPTION_NONCONTINUABLE_EXCEPTION:
+			return "EXCEPTION_NONCONTINUABLE_EXCEPTION";
+		case EXCEPTION_PRIV_INSTRUCTION:
+			return "EXCEPTION_PRIV_INSTRUCTION";
+		case EXCEPTION_SINGLE_STEP:
+			return "EXCEPTION_SINGLE_STEP";
+		case EXCEPTION_STACK_OVERFLOW:
+			return "EXCEPTION_STACK_OVERFLOW";
+		default:
+			return "Unrecognized Exception";
+	}
+}
+
 long WINAPI SYSMNG_ExceptionFilter(EXCEPTION_POINTERS * excp)
 {
-	int err = GetLastError();
+	time_t  timep = time(NULL);
+	struct tm *p;
+	p = localtime(&timep);
+    p->tm_year = p->tm_year + 1900;
+    p->tm_mon = p->tm_mon + 1;
 
-	printf("\r\nWarning: An exceptions happened, please check the system logfile. (ErrorCode=%u)", err);
-	
-	write_log(JUDGE_ERROR,"Warning: An exceptions happened, please check the system logfile. (ErrorCode=%u)", err);
+	write_log(JUDGE_ERROR,"Warning: An exceptions happened, please check the system logfile. (ExceptionCode=0x%x)", excp->ExceptionRecord->ExceptionCode);
+
+	char filename[256] = {0};
+	sprintf_s(filename, sizeof(filename), "exception-%04d%02d%02d%02d%02d%02d.log",
+		p->tm_year, p->tm_mon, p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec);
+
+	util_fwrite(filename, "Exception time: %04d-%02d-%02d %02d:%02d:%02d\n",
+		 p->tm_year, p->tm_mon, p->tm_mday, p->tm_hour, p->tm_min, p->tm_sec);
+	util_fwrite(filename, "Exception code: 0x%x\n", excp->ExceptionRecord->ExceptionCode);
+	util_fwrite(filename, "Exception name: %s\n", exception_name(excp->ExceptionRecord->ExceptionCode));
+	util_fwrite(filename, "Exception stack callback:\n");
+
+	if (EXCEPTION_STACK_OVERFLOW != excp->ExceptionRecord->ExceptionCode) {
+		stacktrace(excp->ContextRecord, filename);
+	}
+
+	char execption[2048] = {0};
+	util_fread(filename, execption, sizeof(execption) - 1);
+	write_log(JUDGE_ERROR,"\n%s", execption);
+
+	printf("%s", execption);
 
 #ifdef _MSC_VER
-
 	OPEN_STACK_TRACK
-
 	//dumpStack();
-
 #endif	
 
 	Sleep(5000);
@@ -392,12 +497,15 @@ int SYSMNG_AcceptThread(void *pEntry)
 					return 0;
 				}
 				memset(buff_, 0, len + 1);
-				strcat(buff_, buff);
+				strcat_s(buff_, len, buff);
 				free(buff);
 				buff = buff_;
 			}
-			strcat(buff, recvBuff);
-			
+			strcat_s(buff, len, recvBuff);
+		}
+		
+		if (ret < 1023) {
+			break;
 		}
 	} while(ret > 0);
 	
@@ -466,7 +574,7 @@ int judgeThreadPing = 1;
 void SYSMNG_TimerHeartPing()
 {
 	static int tick = 0;
-
+	
 	if (0 != tick % 300) {
 		tick++;
 		return;
@@ -486,7 +594,7 @@ void SYSMNG_TimerHeartPing()
 int SYSMNG_TimerThread(void *pEntry)
 {
 	while (TRUE) {
-		//SYSMNG_TimerHeartPing();
+		SYSMNG_TimerHeartPing();
 		Sleep(1000);
 	}
 
@@ -737,7 +845,7 @@ int SYSMNG_PacketParse(char *pszCmd, int len)
 	CHAR *pszBuf = NULL;
 
 	SYSMNG_Debug(DEBUG_TYPE_MSG, "SYSMNG_PacketParse: len=%u, pszCmd=%s", len, pszCmd);
-	
+
 	/* 检查长度合法性 */
 	if (len < SYSMNG_PKT_MSGHEAD_LEN) {
 		return OS_ERR;
@@ -750,26 +858,25 @@ int SYSMNG_PacketParse(char *pszCmd, int len)
 	*/
 
 	/* 检查魔术字 0xabcddcba */	
-	(void)strncpy(szMagic, pszCmd, SYSMNG_PKT_MAGIC_LEN);
+	(void)strncpy_s(szMagic, sizeof(szMagic), pszCmd, SYSMNG_PKT_MAGIC_LEN);
 	ulMagic = util_strtol(szMagic, 16);
 	if (SYSMNG_MSG_MAGIC_NUM != ulMagic)
 	{
-		SYSMNG_Debug(DEBUG_TYPE_ERROR, "SYSMNG_PacketParse: magic num is invalid. (ulMagic=%x)", ulMagic);
+		write_log(JUDGE_ERROR, "SYSMNG_PacketParse: magic num is invalid. (ulMagic=%x)", ulMagic);	
 		return OS_ERR;
 	}
 
 	/* 获取报文类型 */	
-	(void)strncpy(szType, pszCmd + SYSMNG_PKT_MAGIC_LEN, SYSMNG_PKT_MSGTYPE_LEN);
+	(void)strncpy_s(szType, sizeof(szType), pszCmd + SYSMNG_PKT_MAGIC_LEN, SYSMNG_PKT_MSGTYPE_LEN);
 	usType = util_strtol(szType, 16);
 	
 	/* 获取报文数据区长度 */	
-	(void)strncpy(szLen, pszCmd + SYSMNG_PKT_MAGIC_LEN + SYSMNG_PKT_MSGTYPE_LEN, SYSMNG_PKT_MSGLEN_LEN);
+	(void)strncpy_s(szLen, sizeof(szLen), pszCmd + SYSMNG_PKT_MAGIC_LEN + SYSMNG_PKT_MSGTYPE_LEN, SYSMNG_PKT_MSGLEN_LEN);
 	ulLen = util_strtol(szLen, 16);
 	
 	/* 检查长度合法性 */
 	if (ulLen != len - SYSMNG_PKT_MAGIC_LEN - SYSMNG_PKT_MSGTYPE_LEN - SYSMNG_PKT_MSGLEN_LEN) {
-		SYSMNG_Debug(DEBUG_TYPE_ERROR, 
-			"SYSMNG_PacketParse: ulLen is invalid. (ulLen=%u, realLen=%u)",
+		write_log(JUDGE_ERROR, "SYSMNG_PacketParse: ulLen is invalid. (ulLen=%u, realLen=%u)",
 			ulLen, len - SYSMNG_PKT_MAGIC_LEN - SYSMNG_PKT_MSGTYPE_LEN - SYSMNG_PKT_MSGLEN_LEN);
 		return OS_ERR;
 	}
@@ -777,13 +884,14 @@ int SYSMNG_PacketParse(char *pszCmd, int len)
 	/* 获取报文数据内容 */
 	pszBuf = (char*)malloc(ulLen * 2 + 1);
 	if (NULL == pszBuf) {
+		write_log(JUDGE_ERROR, "SYSMNG_PacketParse, malloc err. (ulLen=%u)", ulLen);
 		return OS_ERR;
 	}
-	(void)memset(pszBuf, 0, ulLen * 2 + 1);
-	(void)strncpy(pszBuf, pszCmd + SYSMNG_PKT_MSGHEAD_LEN, ulLen * 2);
+	(void)memset_s(pszBuf, ulLen * 2 + 1, 0, ulLen * 2 + 1);
+	(void)strncpy_s(pszBuf, ulLen * 2 + 1, pszCmd + SYSMNG_PKT_MSGHEAD_LEN, ulLen);
 
 	SYSMNG_Debug(DEBUG_TYPE_MSG, "SYSMNG_PacketParse: usType=0x%x, ulLen=0x%x, pszBuf=%s", usType, ulLen, pszBuf);
-	
+
 	(VOID)SYSMNG_TLVMsgProcess(usType, ulLen, pszBuf);
 
 	free(pszBuf);
