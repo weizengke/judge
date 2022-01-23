@@ -769,6 +769,7 @@ void SYSMNG_InitConfigData()
     }
     
 	util_ini_get_string("Judge","JudgeLogPath","",g_judge_log_path,sizeof(g_judge_log_path),g_judge_ini_cfg_path);
+	util_ini_get_string("Judge","apiHookDllPath","hook.dll",g_judge_apihook_path, sizeof(g_judge_apihook_path),g_judge_ini_cfg_path);
 	
 	util_ini_get_string("MySQL","url","",Mysql_url,sizeof(Mysql_url),g_judge_ini_cfg_path);
 	util_ini_get_string("MySQL","username","NULL",Mysql_username,sizeof(Mysql_username),g_judge_ini_cfg_path);

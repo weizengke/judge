@@ -25,6 +25,7 @@ using namespace std;
 char g_judge_ini_cfg_path[] = STARTUP_CFG;
 char g_judge_work_path[MAX_PATH];
 char g_judge_log_path[MAX_PATH];
+char g_judge_apihook_path[MAX_PATH];
 char g_judge_testcase_path[MAX_PATH];
 int g_judge_mode = JUDGE_MODE_ACM;
 int g_judge_timer_enable = OS_NO;

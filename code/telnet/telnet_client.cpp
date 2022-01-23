@@ -179,7 +179,7 @@ VOID TELNETC_Read(CMD_VTY_S* vty)
 	extern UCHAR vty_getchar(CMD_VTY_S *vty);
 
 	/* single char mode */
-	while((c = vty_getchar(vty)) > 0) {
+	while((c = vty_getchar(cmd_vty_getById(vty->vtyId))) > 0) {
 		buff[0] = c;
 		if (OS_OK != TELNETC_Send(vty->user.socket, (CHAR*)buff, 1)) {
 			TELNET_Debug(DEBUG_TYPE_ERROR, "TELNETC_Read, telnetc send failed.");
@@ -194,13 +194,6 @@ ULONG TELNETC_Run(ULONG vtyId, ULONG ulPort, CHAR *szIP)
 {
 	TELNETC_THREAD_S para = {0};
 	LONG sock = INVALID_SOCKET;
-
-#if 0	
-	if (CMD_VTY_CONSOLE_ID != vtyId) {
-		vty_printf(vtyId, "Error: Only console user support telnet client.\r\n");
-		return OS_ERR;
-	}
-#endif
 
 	/* connect socket */
 	sock = TELNETC_Connect(ulPort, szIP);

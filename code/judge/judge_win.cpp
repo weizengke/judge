@@ -4,8 +4,7 @@
 using namespace std;
 
 #ifdef WIN32
-char g_hook_dll_path[MAX_PATH] = "hook.dll";
-
+extern char g_judge_apihook_path[MAX_PATH];
 int judge_privilege_disable(thread_id_t process)
 {
 	thread_id_t token;
@@ -241,7 +240,12 @@ BOOL judge_api_hook_injeck(DWORD processId, char* dll)
 		return FALSE;
     }
 
-    DWORD dwSize = strlen(dll) + 1;
+	char current_path[MAX_PATH] = {0};
+	char dllpath[MAX_PATH] = {0};
+	get_current_directory(sizeof(current_path), current_path);
+	sprintf(dllpath, "%s//%s",current_path, dll);
+
+    DWORD dwSize = strlen(dllpath) + 1;
     LPVOID RemoteBuf = VirtualAllocEx(process, NULL, dwSize, MEM_COMMIT, PAGE_READWRITE);
     if (NULL == RemoteBuf) {
 		write_log(JUDGE_ERROR,"VirtualAllocEx error %u", GetLastError());
@@ -249,7 +253,7 @@ BOOL judge_api_hook_injeck(DWORD processId, char* dll)
 	}
 
     DWORD dwRealSize;
-    if (WriteProcessMemory(process, RemoteBuf, dll, dwSize, &dwRealSize)) {
+    if (WriteProcessMemory(process, RemoteBuf, dllpath, dwSize, &dwRealSize)) {
         thread_id_t hRemoteThread = CreateRemoteThread(process, NULL, 0, (LPTHREAD_START_ROUTINE)FuncAddr, RemoteBuf, 0, NULL);
         if (hRemoteThread == NULL) {
 			write_log(JUDGE_ERROR,"CreateRemoteThread error %u", GetLastError());
@@ -266,6 +270,8 @@ BOOL judge_api_hook_injeck(DWORD processId, char* dll)
         CloseHandle(hRemoteThread);
         VirtualFreeEx(process, RemoteBuf, dwSize, MEM_COMMIT);
         CloseHandle(process);
+
+		write_log(JUDGE_INFO,"Api hook ok. dllpath=%s", dllpath);
         return TRUE;
     } else {
 		write_log(JUDGE_ERROR,"WriteProcessMemory error %u", GetLastError());
@@ -389,7 +395,7 @@ int judge_solution_run(JUDGE_SUBMISSION_S *submission)
 		/* 安全防护api hook */
 		/* Begin add for apihook 2013/05/18 */
 		if (OS_YES == g_judge_api_hook_enable) {
-			if (FALSE == judge_api_hook_injeck(submission->stProRunInfo.dwProcessId, g_hook_dll_path)) {
+			if (FALSE == judge_api_hook_injeck(submission->stProRunInfo.dwProcessId, g_judge_apihook_path)) {
 				write_log(JUDGE_ERROR,"InjectAPIHookDll Error, dwProcessId[%u]", submission->stProRunInfo.dwProcessId);
 			}
 
