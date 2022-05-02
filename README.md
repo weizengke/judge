@@ -3,9 +3,11 @@
 # 最好的跨平台Online Judge
 
 ## Table of contents
+* [安装或者开发指导](#安装或者开发指导)
 * [演示地址](#演示地址)
 * [平台简介](#平台简介)
 * [支持特性](#支持特性)
+* [目录说明](#目录说明)
 * [部署指导](#部署指导)
   * [运行环境](#运行环境)
   * [部署网站](#部署网站)
@@ -18,9 +20,33 @@
   * [FTP配置](#FTP配置)
   * [日常维护命令](#日常维护命令)
 * [Linux下部署](#Linux下部署)  
-  
+* [特别鸣谢](#特别鸣谢)  
+
+## 安装或者开发指导：
+XXXX
+
 ## 演示地址： 
 http://happyoj.com
+
+HappyOJ当前支持的程序语言，如需添加其他语言或者版本，可在此留言~
+| 语言 | 编译环境 |
+|----|------|
+| C  | GNU C 4.5.2|
+| C++   | GNU C++ 4.5.2    |
+| Java |  Java 1.8    |
+| Pascal   | Pascal 2.6.4   |
+|  Python  | Python 3.10 |
+|  Ruby | Ruby 3.1.1    |
+|  Perl | Perl 5.32.1.1|
+|  Lua | Lua 0.9.8 |
+|  Tcl | Tcl 8.6.7.0  |
+|  Pike | Pike 7.8.352  |
+|  GO| GO 1.18.1  |
+|  JS| nodejs 16.14.2 |
+|  Groovy | Groovy 1.8.4 |
+|  Rust | Rust 1.60.0 |
+|  Kotlin | Kotlin 1.1.2 |
+|  R| R 4.1.3|
 
 ## 平台简介
 没错，我们支持Windows平台，也支持Linux平台（Linux下当前仅支持Virtual Judge）。<br>
@@ -29,119 +55,256 @@ Online Judge平台系统（简称OJ）是一个B/S架构的源程序判题系统
 
 ## 支持特性:
 1. Online Judge Kernel支持所有可命令行编译和运行的程序语言；支持按语言分布式部署；支持动态添加程序语言。
-2. Online Judge Kernel支持Virtual Judge：http://acm.hdu.edu.cn 。
+2. Online Judge Kernel支持Virtual Judge：http://acm.hdu.edu.cn，http://leetcode-cn.com 。
 3. Online Judge Kernel支持命令行管理，命令行特性支持命令联想、自动补全等功能，极大方便了系统的管理。（这是我们的特色）
 4. Online Judge Kernel支持ACM和OI模式的判题，可以通过命令行judge mode acm(oi)灵活切换，默认为ACM模式；
-5. Online Judge Kernel支持作为Telnet服务器，被远程连接管理。
+5. Online Judge Kernel支持作为Telnet服务器、客户端，远程连接管理。
 6. Online Judge Kernel支持作为FTP服务器，提供FTP服务。 
 7. Online Judge Kernel支持API Hook安全防护。 
 8. Online Judge Web Platform支持ACM和CodeJam两种竞赛模式。
-9. Online Judge Kernel支持采集知名OJ的最近比赛信息（[Codeforces](http://codeforces.com/contests)、[ZOJ](http://acm.zju.edu.cn/onlinejudge/showContests.do)、[HDU](http://acm.hdu.edu.cn/contests/contest_list.php)、[AtCoder](http://atcoder.jp)、[HihoCoder](https://hihocoder.com/contests)，持续添加）。
+9. Online Judge Web Platform支持ELO rating system,更好的给参赛选手评估水平
+10. Online Judge Kernel支持采集知名OJ的最近比赛信息（[Codeforces](http://codeforces.com/contests)、[ZOJ](http://acm.zju.edu.cn/onlinejudge/showContests.do)、[HDU](http://acm.hdu.edu.cn/contests/contest_list.php)、[AtCoder](http://atcoder.jp)、[HihoCoder](https://hihocoder.com/contests)，持续添加）。每天定时采集，开放json给大家：[http://happyoj.com/otheroj.json](http://happyoj.com/otheroj.json)
+
+## 目录说明：
+1. judger-kernel：OJ的判题核心代码，C语言
+2. judger-web-platform：OJ的Web端代码，java语言
+3. judger_sql：OJ的数据库文件
 
 ## 部署指导
 ### 运行环境
 1. 操作系统：Windows XP/7/8/8.1/10， Windows Server 2003/2008/2012
 
-2. JAVA JDK：Java JDK1.6（推荐）<br>
-    OJ系统对JDK安装位置没有要求，直接安装完成。以安装D:\Java\jdk1.6.0_10为例。<br>
+2. JAVA JDK：Java JDK1.8（推荐）<br>
+    OJ系统对JDK安装位置没有要求，直接安装完成。以安装D:\Java\jdk1.8.0_201为例。<br>
     然后添加环境变量：<br>
 ```
-    JAVA_HOME=D:\Java\jdk1.6.0_10
+    JAVA_HOME=D:\Java\jdk1.8.0_201
     path=%JAVA_HOME%\bin
 ```
-3. Web容器：Apache Tomcat 6(推荐)；安装目录：D:\tomcat6<br>
+3. Web容器：Apache Tomcat 8(推荐)；安装目录：D:\tomcat8<br>
 
 4. 数据库：MySQL 5.1.55(推荐)<br>
    字符集选择GBK，端口选择默认的3306，设置用户名root，密码rootpwd<br>
    然后创建gdoj命名的数据库，并执行online-judge\judger_sql目录下的sql_import_struct.bat一键导入gdoj_struct.sql<br>
 
 5. 编译环境：GCC、JAVA、PASCAL、Python、Ruby等编程语言编译环境<br>
-   可下载online-judge/judger_compiler后，运行env.bat一键配置GCC、JAVA、PASCAL,但要注意修改JAVA_HOME的正确路径: <br>
+   可下载https://gitee.com/jungle/online-judge-compiler后，运行env.bat一键配置GCC、JAVA、PASCAL,但要注意修改JAVA_HOME的正确路径: <br>
 ```
-     set JAVA_HOME=D:\Java\jdk1.6.0_10
-     setx JAVA_HOME "D:\Java\jdk1.6.0_10" /m
+     set JAVA_HOME=D:\Java\jdk1.8.0_201
+     setx JAVA_HOME "D:\Java\jdk1.8.0_201" /m
 ```
 ### 部署网站
-- 删除目录D:\tomcat6\webapps\ROOT里的文件，然后直接拷贝judger-web-platform/gdoj/WebRoot目录里的文件到ROOT。
+- 删除目录D:\tomcat8\webapps\ROOT里的文件，然后直接拷贝judger-web-platform/gdoj/WebRoot目录里的文件到ROOT。
 如：![输入图片说明](https://gitee.com/uploads/images/2017/1206/211620_7e973ace_6154.jpeg "web-download-ok.jpg")
-- 根据需要配置D:\tomcat6\webapps\ROOT\WEB-INF\classes\config.properties
+- 根据需要配置D:\tomcat8\webapps\ROOT\WEB-INF\classes\config.properties
 ```
-OJ_WEB=D\:\\tomcat6\\webapps\\ROOT\\   
+OJ_WEB=D\:\\tomcat8\\webapps\\ROOT\\
 OJ_PATH=D\:\\OJ\\
 OJ_DATA_PATH=D\:\\OJ\\data\\
-OJ_JUDGE_LOG=D\:\\OJ\\OJ_JUDGE_LOG\\
-OJ_LANG_PATH=D\:\\OJ\\conf\\Language.xml
-OJ_JUDGER_IP=127.0.0.1   ------> 这个很重要，用于WEB与OJ-Kernel通信的IP
-OJ_JUDGER_PORT=5000      ------> 这个很重要，用于WEB与OJ-Kernel通信的端口号，必须与OJ-Kernel的配置一致
+OJ_TMP=D\:\\OJ\\temp
+OJ_JUDGE_LOG=D\:\\OJ\\logfile\\judge_log\\        ---> 必须配置正确，否则web端无法查看判题日志
+OJ_CONFIG_FILE_PATH=D\:\\OJ\\conf\\config.json    ---> 必须配置正确，否则web无法获取支持的编译语言
+OJ_JUDGER_IP=127.0.0.1   ------> 必须配置正确，用于WEB与OJ-Kernel通信的IP
+OJ_JUDGER_PORT=5000      ------> 必须配置正确，用于WEB与OJ-Kernel通信的端口号，必须与OJ-Kernel的配置一致
 ```
-- 配置D:\tomcat6\webapps\ROOT\WEB-INF\classes\applicationContext.xml中mysql数据库的密码
+- 配置D:\tomcat8\webapps\ROOT\WEB-INF\classes\applicationContext.xml中mysql数据库的密码
 ```
 <property name="username" value="root"></property>
 <property name="password" value="rootpwd"></property>
 ```
-### 部署判题核心
-- 创建目录D:\OJ，并拷贝judger-kernel/build/release到OJ目录下，如：![输入图片说明](https://gitee.com/uploads/images/2017/1206/212651_0331a9c6_6154.jpeg "OJ-ls.jpg")
-
-- 预配置OJ启动配置文件D:\OJ\conf\config.ini
+- 配置D:\tomcat8\webapps\ROOT\WEB-INF\classes\hibernate.cfg.xml中mysql数据库的密码
 ```
-[System]
-sock_port=5000  -----> 系统本地Socket监听的端口号，需要保持与config.properties中的一致
+	<property name="connection.username">root</property>
+	<property name="connection.url">jdbc:mysql://localhost:3306/gdoj</property>
+	<property name="dialect">org.hibernate.dialect.MySQLDialect</property>
+	<property name="myeclipse.connection.profile">localhost</property>
+	<property name="connection.password">rootpwd</property>
+	<property name="connection.driver_class">com.mysql.jdbc.Driver</property>
+```
+- 进入 http://域名/admin，登录管理员界面，进行题目添加/比赛创建/用户权限管理等
+  详细可参见文档：[https://gitee.com/jungle/online-judge/blob/master/judger-web-platform/doc/软件使用说明书.doc](https://gitee.com/jungle/online-judge/blob/master/judger-web-platform/doc/%E8%BD%AF%E4%BB%B6%E4%BD%BF%E7%94%A8%E8%AF%B4%E6%98%8E%E4%B9%A6.doc)
+
+### 部署判题核心
+- 创建目录D:\OJ，并拷贝online-judge/judger-kernel/release到OJ目录下，如：![输入图片说明](https://gitee.com/uploads/images/2017/1206/212651_0331a9c6_6154.jpeg "OJ-ls.jpg")
+
+- 预配置OJ启动配置文件D:\OJ\conf\config.json, 配置sock_port和mysql账号密码, 配置支持的编译语言languages
+```
+    "system": {
+        "startup_config": "config.cfg",
+        "sysname": "Judge-Kernel",
+        "JudgePath": "judger.exe",
+        "sock_port": 5000    -----> 系统本地Socket监听的端口号，需要保持与config.properties中的一致
+    },
+
+    "mysql": {
+        "url": "localhost",
+        "username": "root",
+        "password": "rootpwd",
+        "table": "gdoj",
+        "port": 3306
+    },
+
+    "languages": [
+        { 
+            "id": 1, 
+            "language_name": "MS 2010 C++",  --> 编译语言别名，可现实与web上语言下拉框
+            "Transcoding": 1,
+            "TimeLimit": 1,
+            "ProcessLimit": 1,            
+            "SourcePath": "%PATH%%SUBPATH%%NAME%.%EXT%",
+            "ExePath": "%PATH%%SUBPATH%%NAME%.%EXE%",   
+            "RunCmd": "%PATH%%SUBPATH%%NAME%.%EXE%",
+            "JudgeIP": "127.0.0.1",
+            "disable": 1      --> 禁用此语言
+        }, 
+        { 
+            "id": 2, 
+            "language_name": "MS 2010 C",
+            "Transcoding": 1,
+            "disable": 1
+        }, 
+        {
+            "id": 3, 
+            "language_name": "GNU C++ 4.5.2",
+            "LanguageExt": "cc",
+            "LanguageExe": "exe",
+            "CompileCmd": "g++ -ansi -fno-asm -Wall -Wl,--stack=67108864 -lm -s -static -std=c++98  -DONLINE_JUDGE -o %PATH%%SUBPATH%%NAME% %PATH%%SUBPATH%%NAME%.%EXT%  2>%PATH%%SUBPATH%%NAME%.txt"
+        }, 
+        { 
+            "id": 4, 
+            "language_name": "GNU C 4.5.2",
+            "LanguageExt": "c",
+            "LanguageExe": "exe",         
+            "CompileCmd": "gcc -ansi -fno-asm -Wall -Wl,--stack=67108864 -lm -s -static -std=c99  -DONLINE_JUDGE -o %PATH%%SUBPATH%%NAME% %PATH%%SUBPATH%%NAME%.%EXT%  2>%PATH%%SUBPATH%%NAME%.txt"
+        }, 
+        { 
+            "id": 5, 
+            "language_name": "Java 1.8",
+            "TimeLimit": 2,
+            "LanguageExt": "java",
+            "LanguageExe": "class",
+            "SourcePath": "%PATH%%SUBPATH%Main.%EXT%",
+            "ExePath": "%PATH%%SUBPATH%Main.%EXE%",              
+            "CompileCmd": "javac %PATH%%SUBPATH%Main.%EXT% 2>%PATH%%SUBPATH%%NAME%.txt",
+            "RunCmd": "java Main"
+        }
+    ],
+
+    "hdu_languages": [
+        { 
+            "id": 3,                  --> 此语言对应HDU上的ID
+            "language_name": "C++",
+            "local_language_id": 3    --> 对应本地编译的语言id。可不填，则表示不支持
+        },
+        { 
+            "id": 4,             
+            "language_name": "C",
+            "local_language_id": 4
+        },
+        { 
+            "id": 5,
+            "language_name": "Java",
+            "local_language_id": 5
+        }
+    ],
+
+    "cf_languages": [
+        { 
+            "id": 54,                           --> 此语言对应codeforces上的ID
+            "language_name": "GNU G++17 7.3.0",
+            "local_language_id": 3
+        },
+        { 
+            "id": 43,             
+            "language_name": "GNU GCC C11 5.1.0",
+            "local_language_id": 4
+        },
+        { 
+            "id": 36,             
+            "language_name": "Java 1.8.0_241",
+            "local_language_id": 5
+        },
+        { 
+            "id": 7,             
+            "language_name": "Python 2.7.18",
+            "local_language_id": 9
+        },
+        { 
+            "id": 31,             
+            "language_name": "Python 3.8.10",
+            "local_language_id": 27
+        },
+        { 
+            "id": 67,             
+            "language_name": "Ruby 3.0.0",
+            "local_language_id": 10
+        }
+    ]
 ```
 - 运行judge.exe启动判题核心程序
 ```
 启动后界面如下，并通过display current-configuration查看当前配置
-=====================================================
-OS Main-task Running...
-Command Task init ok...
-Command Task RegistAppInfo ok...
-Debug-Center Task RegistAppInfo ok...
-TELNET Task init ok...
-TELNET Task RegistAppInfo ok...
-Connect MySQL(localhost, root, rootpwd, gdoj, 3306) ok...
-Judge Task init ok...
-Judge Task RegistAppInfo ok...
-NDP Task init ok...
-NDP Task RegistAppInfo ok...
-Command Task running ok...
-Debug-Center Task running ok...
-TELNET Task running ok...
-Judge Task running ok...
-NDP Task running ok...
-OS Main-task init ok...
-Socket bind port 5000 ok...
-Socket listen ok...
+Command APP RegistInfo ok...
+Debug APP RegistInfo ok...
+AAA APP init ok...
+AAA APP RegistInfo ok...
+Telnet APP init ok...
+Telnet APP RegistInfo ok...
+Connect MySQL(localhost, root, xxxxxxx, gdoj, 3306) ok...
+Judge APP init ok...
+Judge APP RegistInfo ok...
+NDP APP init ok...
+NDP APP RegistInfo ok...
+FTPS APP init ok...
+FTPS APP RegistInfo ok...
+Sysmng APP running ok...
+Command APP running ok...
+Debug APP running ok...
+AAA APP running ok...
+Telnet APP running ok...
+Judge APP running ok...
+NDP APP running ok...
+FTPS APP running ok...
 Recover configuration begin.
-Info: system name change to judger successful.
-TELNET server socket bind port 23 ok...
-TELNET server socket listen port 23 ok...
-Info: Please reboot to take effect.
 Eecover configuration end.
 Press any key to continue.
 
-judger>
-judger>display current-configuration
-#version V100R001C00B090
-sysname judger
+Huawei_judger>display  current-configuration include-default
+#version 1.1.173
+sysname Huawei_judger
 #
 telnet server enable
+telnet authentication-mode aaa
+#
+ftp server enable
 #
 aaa
- local-user admin password Root@123
+ local-user root password Root@123
+ local-user root service-type telnet ftp
 #
-mysql url localhost port 3306 username root password rootpwd table gdoj
+judge enable
+virtual-judge enable
 #
+contests-collect enable
+contests-collect interval 30
+contests-collect save-file D:\tomcat8\webapps\ROOT\otheroj.json
 #
 judge-mgr
- mode oi
- testcase-path D:\OJ\data\
+ mode acm
+ undo auto-detect enable
+ auto-detect interval 10
+ security enable
+ ignore extra-space enable
+ testcase-path data
 #
 virtual-judge-mgr
- hdu-judge username weizengke password weizengke
- hdu-judge ip 127.0.0.1 port 5000
+ hdu-judge enable
+ hdu-judge username root password Root@123
+ undo hdu-judge remote-judge enable
 #
 return
 #
-judger>
+Huawei_judger>
 ```
 
 ## 高级配置
@@ -744,4 +907,8 @@ Judge-Kernel>
 ```
 ## Linux下部署： 
 目前Linux下除了本地判题，Kernel其他特性都支持，文档暂没有时间写。主要就是在bin目录下直接./vos.o启动kernel。
+
+## 特别鸣谢
+感谢[jetbrains的open source license](https://jb.gg/OpenSource)<br>
+![输入图片说明](https://images.gitee.com/uploads/images/2021/0910/220841_a1cd33bc_6154.png "屏幕截图.png")
 
