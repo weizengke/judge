@@ -31,11 +31,11 @@ int codeforces_python(JUDGE_SUBMISSION_S *submission)
 	(void)util_freset(submission->judge_log_filename);
 
 	char cmd_string[MAX_PATH];
-	sprintf(cmd_string,"python -O codeforces.py %s %s %s %s %s %s",
+	sprintf(cmd_string,"python -O codeforces.py %s %s %s %d %s %s",
 			codeforces_username,
 			codeforces_password,
 			submission->problem.virtualPID, 
-			"c", 
+			submission->solution.languageId, 
 			submission->sourcePath,
 			g_codeforces_result);
 

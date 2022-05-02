@@ -36,6 +36,7 @@
 #include "util/util.h"
 #include "judge/include/judge_inc.h"
 #include "sysmng/sysmng.h"
+#include "sysmng/config.h"
 #include "stack_walker/stackwalker.h"
 
 using namespace std;
@@ -745,57 +746,40 @@ void SYSMNG_InitConfigData()
 
 #if (OS_YES == OSP_MODULE_JUDGE)
 	
-	if( (file_access(g_judge_ini_cfg_path, 0 )) == -1 )
-	{
-		printf("\r\nWarnning: config.ini path '%s' is not exist, please check.", g_judge_ini_cfg_path);
-		write_log(JUDGE_ERROR,"config.ini path '%s' is not exist, please check.", g_judge_testcase_path);
+	if( (file_access(CONFIG_JSON_PATH, 0 )) == -1 ) {
+		printf("\r\nWarnning: config.json path '%s' is not exist, please check.", CONFIG_JSON_PATH);
+		write_log(JUDGE_ERROR,"config.json path '%s' is not exist, please check.", CONFIG_JSON_PATH);
 	}
 
-	util_ini_get_string("System","startup_config","config.cfg",g_startup_config,sizeof(g_startup_config),g_judge_ini_cfg_path);
-	util_ini_get_string("System","sysname","Judge-Kernel",g_sysname,sizeof(g_sysname),g_judge_ini_cfg_path);
-	g_sock_port=util_ini_get_int("System","sock_port",SOCKET_PORT,g_judge_ini_cfg_path);
-	util_ini_get_string("System","JudgePath","",judgePath,sizeof(judgePath),g_judge_ini_cfg_path);
+	config_json_get_string("system", "startup_config", "config.cfg", g_startup_config, sizeof(g_startup_config));
+	config_json_get_string("system", "sysname", "Judge-Kernel", g_sysname, sizeof(g_sysname));
+	g_sock_port= config_json_get_int("system","sock_port", SOCKET_PORT);
+	config_json_get_string("system","JudgePath","",judgePath, sizeof(judgePath));
 
-	g_judge_mode=util_ini_get_int("Judge","judge_mode",0,g_judge_ini_cfg_path);
-	g_judge_log_buffsize=util_ini_get_int("Judge","judge_logbuf_size",500,g_judge_ini_cfg_path);
-	g_vjudge_enable=util_ini_get_int("Judge","vjudge_enable",OS_NO,g_judge_ini_cfg_path);
-
-	util_ini_get_string("Judge","WorkingPath","", g_judge_work_path, sizeof(g_judge_work_path),g_judge_ini_cfg_path);
-	util_ini_get_string("Judge","DataPath","data\/",g_judge_testcase_path,sizeof(g_judge_testcase_path),g_judge_ini_cfg_path);
-
+	g_judge_log_buffsize = config_json_get_int("judger","judge_logbuf_size",500);
+	config_json_get_string("judger","WorkingPath","", g_judge_work_path, sizeof(g_judge_work_path));
+	config_json_get_string("judger","DataPath","data\/",g_judge_testcase_path,sizeof(g_judge_testcase_path));
     if( (file_access(g_judge_testcase_path, 0 )) == -1 ) {
     	printf("\r\nWarnning: Data path '%s' is not exist, please check.", g_judge_testcase_path);
     	write_log(JUDGE_ERROR,"Judge data path '%s' is not exist, please check.", g_judge_testcase_path);
     }
-    
-	util_ini_get_string("Judge","JudgeLogPath","",g_judge_log_path,sizeof(g_judge_log_path),g_judge_ini_cfg_path);
-	util_ini_get_string("Judge","apiHookDllPath","hook.dll",g_judge_apihook_path, sizeof(g_judge_apihook_path),g_judge_ini_cfg_path);
-	
-	util_ini_get_string("MySQL","url","",Mysql_url,sizeof(Mysql_url),g_judge_ini_cfg_path);
-	util_ini_get_string("MySQL","username","NULL",Mysql_username,sizeof(Mysql_username),g_judge_ini_cfg_path);
-	util_ini_get_string("MySQL","password","NULL",Mysql_password,sizeof(Mysql_password),g_judge_ini_cfg_path);
-	util_ini_get_string("MySQL","table","",Mysql_table,sizeof(Mysql_table),g_judge_ini_cfg_path);
-	Mysql_port=util_ini_get_int("MySQL","port",0,g_judge_ini_cfg_path);
-	no_database = util_ini_get_int("MySQL","no_database", 0,g_judge_ini_cfg_path);
+	config_json_get_string("judger","JudgeLogPath","",g_judge_log_path,sizeof(g_judge_log_path));
+
+	config_json_get_string("mysql","url","", Mysql_url, sizeof(Mysql_url));
+	config_json_get_string("mysql","username", "NULL", Mysql_username, sizeof(Mysql_username));
+	config_json_get_string("mysql","password", "NULL",Mysql_password, sizeof(Mysql_password));
+	config_json_get_string("mysql","table","", Mysql_table, sizeof(Mysql_table));
+	Mysql_port=config_json_get_int("mysql","port",0);
+	no_database = config_json_get_int("mysql","no_database", 0);
 	
 	/* BEGIN: Added by weizengke,for hdu-vjudge*/
-    util_ini_get_string("HDU","domain","http://acm.hdu.edu.cn",hdu_domain,sizeof(hdu_domain),g_judge_ini_cfg_path);
-	util_ini_get_string("HDU","username","",hdu_username,sizeof(hdu_username),g_judge_ini_cfg_path);
-	util_ini_get_string("HDU","password","",hdu_password,sizeof(hdu_password),g_judge_ini_cfg_path);
-	util_ini_get_string("HDU","judgerIP","127.0.0.1",hdu_judgerIP,sizeof(hdu_judgerIP),g_judge_ini_cfg_path);
-	hdu_sockport=util_ini_get_int("HDU","sock_port",SOCKET_PORT,g_judge_ini_cfg_path);
-	hdu_remote_enable=util_ini_get_int("HDU","remote_enable",OS_NO,g_judge_ini_cfg_path);
-	hdu_vjudge_enable=util_ini_get_int("HDU","vjudge_enable",OS_NO,g_judge_ini_cfg_path);
-
-#if 0
-	/* BEGIN: Added by weizengke, for guet-dept3-vjudge */
-	GetPrivateProfileString("GUET_DEPT3","username","NULL",guet_username,sizeof(guet_username),g_judge_ini_cfg_path);
-	GetPrivateProfileString("GUET_DEPT3","password","NULL",guet_password,sizeof(guet_password),g_judge_ini_cfg_path);
-	GetPrivateProfileString("GUET_DEPT3","judgerIP","127.0.0.1",guet_judgerIP,sizeof(guet_judgerIP),g_judge_ini_cfg_path);
-	guet_sockport=GetPrivateProfileInt("GUET_DEPT3","sock_port",7706,g_judge_ini_cfg_path);
-	guet_remote_enable=GetPrivateProfileInt("GUET_DEPT3","remote_enable",OS_NO,g_judge_ini_cfg_path);
-	guet_vjudge_enable=GetPrivateProfileInt("GUET_DEPT3","vjudge_enable",OS_NO,g_judge_ini_cfg_path);
-#endif
+    config_json_get_string("HDU","domain","http://acm.hdu.edu.cn", hdu_domain, sizeof(hdu_domain));
+	config_json_get_string("HDU","username", "", hdu_username, sizeof(hdu_username));
+	config_json_get_string("HDU","password", "", hdu_password, sizeof(hdu_password));
+	config_json_get_string("HDU","judgerIP","127.0.0.1",hdu_judgerIP,sizeof(hdu_judgerIP));
+	hdu_sockport=config_json_get_int("HDU","sock_port",SOCKET_PORT);
+	hdu_remote_enable=config_json_get_int("HDU","remote_enable",OS_NO);
+	hdu_vjudge_enable=config_json_get_int("HDU","vjudge_enable",OS_NO);
 
 	write_log(JUDGE_INFO,"DataPath:%s, Workpath:%s",g_judge_testcase_path,g_judge_work_path);
 	write_log(JUDGE_INFO,"MySQL:%s %s %s %s %d",Mysql_url,Mysql_username,Mysql_password,Mysql_table,Mysql_port);

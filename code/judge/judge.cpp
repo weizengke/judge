@@ -22,7 +22,6 @@
 
 using namespace std;
 
-char g_judge_ini_cfg_path[] = STARTUP_CFG;
 char g_judge_work_path[MAX_PATH];
 char g_judge_log_path[MAX_PATH];
 char g_judge_apihook_path[MAX_PATH];
@@ -56,20 +55,21 @@ void judge_sem_v()
 
 void judge_solution_init_path(JUDGE_SUBMISSION_S *psubmission)
 {
-	char keyname[100]={0};
-	sprintf(keyname,"Language%d", psubmission->solution.languageId);
-
-	util_ini_get_string("Language",keyname,"",psubmission->languageName, sizeof(psubmission->languageName), g_judge_ini_cfg_path);
-	util_ini_get_string("LanguageExt",psubmission->languageName,"",psubmission->languageExt, sizeof(psubmission->languageExt),g_judge_ini_cfg_path);
-	util_ini_get_string("LanguageExe",psubmission->languageName,"",psubmission->languageExe,sizeof(psubmission->languageExe),g_judge_ini_cfg_path);
-	util_ini_get_string("CompileCmd",psubmission->languageName,"",psubmission->compileCmd,sizeof(psubmission->compileCmd),g_judge_ini_cfg_path);
-	util_ini_get_string("RunCmd",psubmission->languageName,"",psubmission->runCmd,sizeof(psubmission->runCmd),g_judge_ini_cfg_path);
-	util_ini_get_string("SourcePath",psubmission->languageName,"",psubmission->sourcePath,sizeof(psubmission->sourcePath),g_judge_ini_cfg_path);
-	util_ini_get_string("ExePath",psubmission->languageName,"",psubmission->exePath,sizeof(psubmission->exePath),g_judge_ini_cfg_path);
-
-	psubmission->isTranscoding=util_ini_get_int("Transcoding",psubmission->languageName,0,g_judge_ini_cfg_path);
-	psubmission->limitIndex=util_ini_get_int("TimeLimit",psubmission->languageName,1,g_judge_ini_cfg_path);
-	psubmission->nProcessLimit=util_ini_get_int("ProcessLimit",psubmission->languageName,1,g_judge_ini_cfg_path);
+	config_json_get_array_item_string("languages", psubmission->solution.languageId, "language_name", "", psubmission->languageName, sizeof(psubmission->languageName));
+	config_json_get_array_item_string("languages", psubmission->solution.languageId, "LanguageExt", "", psubmission->languageExt, sizeof(psubmission->languageExt));
+	config_json_get_array_item_string("languages", psubmission->solution.languageId, "LanguageExe", "", psubmission->languageExe, sizeof(psubmission->languageExe));
+	config_json_get_array_item_string("languages", psubmission->solution.languageId, "CompileCmd", "", psubmission->compileCmd, sizeof(psubmission->compileCmd));
+	config_json_get_array_item_string("languages", psubmission->solution.languageId, "RunCmd", "%PATH%%SUBPATH%%NAME%.%EXE%", psubmission->runCmd, sizeof(psubmission->runCmd));
+	config_json_get_array_item_string("languages", psubmission->solution.languageId, "SourcePath", "%PATH%%SUBPATH%%NAME%.%EXT%", psubmission->sourcePath, sizeof(psubmission->sourcePath));
+	config_json_get_array_item_string("languages", psubmission->solution.languageId, "ExePath", "%PATH%%SUBPATH%%NAME%.%EXE%", psubmission->exePath, sizeof(psubmission->exePath));
+	config_json_get_array_item_string("languages", psubmission->solution.languageId, "APIHook", "", g_judge_apihook_path, sizeof(g_judge_apihook_path));
+	if (strlen(g_judge_apihook_path) == 0) {		
+		config_json_get_string("judger","apiHookDllPath","hook.dll", g_judge_apihook_path, sizeof(g_judge_apihook_path));
+		write_log(JUDGE_INFO, "Judge get apiHookDllPath. %s"), g_judge_apihook_path;
+	}
+	psubmission->isTranscoding=config_json_get_array_item_int("languages", psubmission->solution.languageId, "Transcoding", 0);
+	psubmission->limitIndex=config_json_get_array_item_int("languages", psubmission->solution.languageId, "TimeLimit", 1);
+	psubmission->nProcessLimit=config_json_get_array_item_int("languages", psubmission->solution.languageId, "ProcessLimit", 1);
 
 	char buf[128];
 	sprintf(buf, "%s", psubmission->sessionId);

@@ -48,16 +48,16 @@ def login(user, password, cnt):
         else:
             logger.error("Login timeout.")
 
-def submit(contestId, problemIndex, source, cnt):
+def submit(contestId, problemIndex, languageId, source, cnt):
     try:
-        logger.info("Start submit problem %s%s, cnt %d.", contestId, problemIndex, cnt)
+        logger.info("Start submit problem %s%s, programTypeId %s, cnt %d.", contestId, problemIndex, languageId, cnt)
         source = "// " + datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') + "\n" +   source    
         wait = WebDriverWait(browser, 30)
         url = "https://codeforces.com/problemset/submit/" + contestId + "/" + problemIndex
         logger.info(url)
         browser.get(url)
         programTypeId = wait.until(lambda browser: browser.find_element_by_name("programTypeId"))
-        Select(programTypeId).select_by_value("54")
+        Select(programTypeId).select_by_value(languageId)
         logger.info("Start input code")
         js = 'var ucode = document.getElementById("sourceCodeTextarea"); ucode.value=arguments[0]'
         browser.execute_script(js, source)
@@ -68,7 +68,7 @@ def submit(contestId, problemIndex, source, cnt):
     except:
         if cnt > 0:
             logger.info("Submit again")
-            submit(contestId, problemIndex, source, cnt-1)
+            submit(contestId, problemIndex, languageId, source, cnt-1)
         else:
             logger.error("Submit timeout.")
 
@@ -207,7 +207,7 @@ def codeforces_judge(user, password, problem, language, solutionPath, resultPath
         if lastSubmissionId != "":
             contestId = re.sub("\D", "", problem) 
             problemIndex = ''.join(re.findall(r'[A-Za-z]', problem))
-            submit(contestId, problemIndex, getCode(solutionPath), 5)
+            submit(contestId, problemIndex, language, getCode(solutionPath), 5)
             saveLastSubmissionResult(user, contestId, resultPath, lastSubmissionId)
 
         logger.info("Codeforces virtual judge end. user:%s.", user)

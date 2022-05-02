@@ -77,6 +77,9 @@ int APIHOOK_TRACE(char *szFuncName)
     return 0;
 }
 
+/*
+�����߳����
+*/
 HANDLE WINAPI MyGetCurrentProcess(VOID)
 {
     APIHOOK_TRACE("GetCurrentProcess");
@@ -104,6 +107,9 @@ HANDLE WINAPI MyCreateThread(LPSECURITY_ATTRIBUTES lpThreadAttributes, DWORD dwS
     return 0;
 }
 
+/*
+�ļ����
+*/
 HANDLE WINAPI MyCreateFileA(
     LPCWSTR lpFileName,
     DWORD dwDesiredAccess,
@@ -142,6 +148,9 @@ WINBOOL WINAPI MyDeleteFileW(LPCSTR lpFileName)
     return 0;
 }
 
+/*
+CMD���
+*/
 UINT WINAPI MyShellExecuteA(HWND hwnd, LPCSTR lpOperation, LPCSTR lpFile, LPCSTR lpParameters, LPCSTR lpDirectory, INT nShowCmd)
 {
     APIHOOK_TRACE("ShellExecuteA");
@@ -165,6 +174,9 @@ UINT WINAPI MyFindFirstFileA(LPCSTR lpFileName, LPWIN32_FIND_DATAA lpFindFileDat
     return 0;
 }
 
+/*
+�������
+*/
 int WINAPI MyMessageBoxA(HWND hWnd, LPCSTR lpText, LPCSTR lpCaption, UINT uType)
 {
     APIHOOK_TRACE("MessageBoxA");
@@ -177,6 +189,9 @@ int WINAPI MyMessageBoxW(HWND hWnd, LPCSTR lpText, LPCSTR lpCaption, UINT uType)
     return 0;
 }
 
+/*
+Socket���
+*/
 int WSAAPI MyWSAStartup(WORD wVersionRequired, LPWSADATA lpWSAData)
 {
     APIHOOK_TRACE("WSAStartup");
@@ -253,9 +268,9 @@ FARPROC __stdcall MyGetProcAddress(
     return 0;
 }
 
-FARPROC __stdcall Myfindfirst()
+FARPROC __stdcall Myfindfirst32()
 {
-    APIHOOK_TRACE("findfirst");
+    APIHOOK_TRACE("findfirst32");
     return 0;
 }
 
@@ -377,6 +392,7 @@ static BOOL HookImportFunction(HMODULE hModule, LPCSTR szImportModule, LPCSTR sz
             }
             if (bDoHook)
             {
+                // write_log(0, "Hook %s", pByName->Name);
                 MEMORY_BASIC_INFORMATION mbi_thunk;
                 DWORD dwOldProtect;
 
@@ -406,6 +422,8 @@ BOOL HookAPI(LPCSTR szImportModule, LPCSTR szFunc, PROC paHookFuncs, PROC *paOri
     {
         return FALSE;
     }
+
+    // write_log(0, "szImportModule=%s, szFunc=%s, paHookFuncs=0x%x\r\n", szImportModule, szFunc, paHookFuncs);
 
     hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, 0);
 
@@ -451,22 +469,16 @@ API_FUNC_ID MANDATORY_API_FUNCS[] =
         {"ntdll.dll", (LPCSTR) "ZwShutdownSystem", (PROC)MyZwShutdownSystem, NULL},
         {"ntdll.dll", (LPCSTR) "NtShutdownSystem", (PROC)MyNtShutdownSystem, NULL},
 
-        {"msvcrt.dll", (LPCSTR) "_findfirst", (PROC)Myfindfirst, NULL},
-        //{"msvcrt.dll", (LPCSTR)"_findnext", (PROC)Myfindfirst, NULL},
-        //{"msvcrt.dll", (LPCSTR)"_findclose", (PROC)Myfindfirst, NULL},
+        {"msvcrt.dll", (LPCSTR) "_findfirst", (PROC)Myfindfirst32, NULL},
+        //{"msvcrt.dll", (LPCSTR)"_findnext", (PROC)Myfindfirst32, NULL},
+        //{"msvcrt.dll", (LPCSTR)"_findclose", (PROC)Myfindfirst32, NULL},
         {"msvcrt.dll", (LPCSTR) "system", (PROC)Mysystem, NULL},
-        {"msvcrt.dll", (LPCSTR) "fprintf", (PROC)Myfprintf, NULL},
+        {"msvcrt.dll", (LPCSTR) "fprintf", (PROC)Myfprintf, NULL}, //lua
         {"msvcrt.dll", (LPCSTR) "freopen", (PROC)Myfreopen, NULL},
-        {"msvcrt.dll", (LPCSTR) "fscanf", (PROC)Myfscanf, NULL},
-        {"msvcrt.dll", (LPCSTR) "fopen", (PROC)Myfopen, NULL},
-        {"msvcrt.dll", (LPCSTR) "fdopen", (PROC)Myfopen, NULL},
-        {"msvcrt.dll", (LPCSTR) "fread", (PROC)Myfread, NULL},
-        {"msvcrt.dll", (LPCSTR) "fwrite", (PROC)Myfread, NULL},
+        {"msvcrt.dll", (LPCSTR) "fscanf", (PROC)Myfscanf, NULL},   //lua
+        {"msvcrt.dll", (LPCSTR) "fopen", (PROC)Myfopen, NULL},     //lua
+        {"msvcrt.dll", (LPCSTR) "fread", (PROC)Myfread, NULL},     //lua
         {"msvcrt.dll", (LPCSTR) "_read", (PROC)Myfread, NULL},
-        {"msvcrt.dll", (LPCSTR) "_write", (PROC)Myfread, NULL},
-        {"msvcrt.dll", (LPCSTR) "_fdopen", (PROC)Myfopen, NULL},
-        {"msvcrt.dll", (LPCSTR) "_fstat", (PROC)Myfopen, NULL},
-        {"msvcrt.dll", (LPCSTR) "_fseek", (PROC)Myfopen, NULL},
 #endif
 };
 

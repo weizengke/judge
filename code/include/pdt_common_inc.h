@@ -14,9 +14,7 @@
 /* os version */
 #define OS_VERSION_MAJOR 1
 #define OS_VERSION_MINOR 1
-#define OS_VERSION_PATCH 320
-
-#define STARTUP_CFG "conf\/config.ini"
+#define OS_VERSION_PATCH 330
 
 /* 模块id定义 */
 enum MID_ID_EM
@@ -87,9 +85,6 @@ extern void MSGQueueMain();
 
 extern void MSG_StartDot();
 extern void MSG_StopDot();
-
-
-extern char g_judge_ini_cfg_path[];
 
 #define PDT_Debug(x, format, ...) debugcenter_print(MID_OS, x, format, ##__VA_ARGS__)
 

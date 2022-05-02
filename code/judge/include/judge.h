@@ -12,7 +12,6 @@ int judge_is_vjudge_enable();
 
 extern char g_judge_work_path[MAX_PATH];
 extern char g_judge_log_path[MAX_PATH];
-extern char g_judge_apihook_path[MAX_PATH];
 extern int g_judge_log_buffsize;
 extern char g_judge_testcase_path[MAX_PATH];
 extern int g_judge_mode;

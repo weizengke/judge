@@ -60,6 +60,7 @@
 
 #include "ic/include/debug_center_inc.h"
 #include "event/include/event_pub.h"
+#include "sysmng/config.h"
 
 #include "judge/include/judge_def.h"
 #include "judge/include/judge_type.h"

@@ -39,8 +39,6 @@ typedef struct tag_Judge_test_ST
 */
 char g_jsonBuff[1000000] = {0};
 
-extern char g_judge_ini_cfg_path[];
-
 int judge_test_init(JUDGE_TEST_S *test) {
 
     write_log(JUDGE_INFO, "testId=%s, languageId=%d", test->testId, test->languageId);
@@ -49,13 +47,11 @@ int judge_test_init(JUDGE_TEST_S *test) {
     sprintf(test->inputFile, "%s\/%s\/data.in", g_judge_work_path, test->testId);
     sprintf(test->outputFile, "%s\/%s\/data.out", g_judge_work_path, test->testId);
 
-	char keyname[100]={0};
-	sprintf(keyname,"Language%d", test->languageId);
-	util_ini_get_string("Language", keyname, "", test->languageName, sizeof(test->languageName), g_judge_ini_cfg_path);
-	util_ini_get_string("LanguageExt", test->languageName,"",test->languageExt, sizeof(test->languageExt),g_judge_ini_cfg_path);
-	util_ini_get_string("LanguageExe", test->languageName,"",test->languageExe,sizeof(test->languageExe),g_judge_ini_cfg_path);
-	util_ini_get_string("CompileCmd",test->languageName,"",test->compileCmd,sizeof(test->compileCmd),g_judge_ini_cfg_path);
-	util_ini_get_string("RunCmd", test->languageName,"",test->runCmd,sizeof(test->runCmd),g_judge_ini_cfg_path);
+	config_json_get_array_item_string("languages", test->languageId, "language_name", "", test->languageName, sizeof(test->languageName));
+	config_json_get_array_item_string("languages", test->languageId, "LanguageExt", "", test->languageExt, sizeof(test->languageExt));
+	config_json_get_array_item_string("languages", test->languageId, "LanguageExe", "exe", test->languageExe, sizeof(test->languageExe));
+	config_json_get_array_item_string("languages", test->languageId, "CompileCmd", "NULL", test->compileCmd, sizeof(test->compileCmd));
+	config_json_get_array_item_string("languages", test->languageId, "RunCmd", "", test->runCmd, sizeof(test->runCmd));
 
     write_log(JUDGE_INFO, "sourcePath=%s", test->sourcePath);
     write_log(JUDGE_INFO, "inputFile=%s", test->inputFile);
